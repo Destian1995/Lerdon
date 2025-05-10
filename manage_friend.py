@@ -1,25 +1,7 @@
+from lerdon_libraries import *
 
 
-from kivy.clock import Clock
-from kivy.properties import partial, StringProperty, NumericProperty, ObjectProperty
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.dropdown import DropDown
-from kivy.uix.label import Label
-from kivy.uix.modalview import ModalView
-from kivy.uix.popup import Popup
-from kivy.uix.gridlayout import GridLayout
-from kivy.graphics import Line, Color, RoundedRectangle
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
-from kivy.uix.progressbar import ProgressBar
-from kivy.metrics import dp
-from kivy.core.window import Window
-import sqlite3
-import time
 
-from kivy.uix.widget import Widget
-from kivy.utils import platform
 if platform == 'android':
     from android.storage import app_storage_path
     import os

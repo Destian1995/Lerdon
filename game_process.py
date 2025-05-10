@@ -1,32 +1,17 @@
-import os
-from kivy.metrics import dp, sp
-from kivy.utils import platform
-from kivy.app import App
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.popup import Popup
-from kivy.uix.screenmanager import Screen
-from kivy.uix.image import Image
-from kivy.uix.behaviors import ButtonBehavior
-from kivy.graphics import Color, Rectangle, RoundedRectangle
-from kivy.clock import Clock
-import economic
+from lerdon_libraries import *
 
-from economic import Faction
+from economic import *
+import economic
 import army
 import politic
 from ii import AIController
 from sov import AdvisorView
 from event_manager import EventManager
-import sqlite3
-import random
 from results_game import ResultsGame
 
-from kivy.properties import ListProperty, StringProperty
 
-from kivy.utils import platform
+
+
 if platform == 'android':
     from android.storage import app_storage_path
     db_path = os.path.join(app_storage_path(), 'game_data.db')

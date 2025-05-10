@@ -1,8 +1,6 @@
-import sqlite3
-import random
-
+from lerdon_libraries import *
 from fight import fight
-from kivy.utils import platform
+
 if platform == 'android':
     from android.storage import app_storage_path
     import os

@@ -1,22 +1,7 @@
+from lerdon_libraries import *
 
-import sqlite3
-
-from kivy.animation import Animation
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.spinner import Spinner
-from kivy.uix.textinput import TextInput
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.modalview import ModalView
-from kivy.core.window import Window
-from kivy.graphics import Color, RoundedRectangle, Rectangle
 from economic import format_number
 
-import threading
-
-from kivy.utils import platform
 if platform == 'android':
     from android.storage import app_storage_path
     import os
@@ -26,7 +11,6 @@ else:
 
 # Глобальная блокировка для работы с БД
 db_lock = threading.Lock()
-from kivy.uix.behaviors import ButtonBehavior
 from manage_friend import ManageFriend
 
 translation_dict = {

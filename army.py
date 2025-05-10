@@ -1,22 +1,8 @@
 # army.py
-from kivy.animation import Animation
-
-from kivy.uix.carousel import Carousel
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.popup import Popup
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
-from kivy.uix.image import Image
-from kivy.graphics import Color, RoundedRectangle
-from kivy.metrics import dp
-
-from kivy.utils import get_color_from_hex
+from lerdon_libraries import *
 
 from economic import format_number
 
-import sqlite3
 
 from kivy.utils import platform
 if platform == 'android':

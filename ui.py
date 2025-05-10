@@ -1,22 +1,8 @@
-
-from kivy.core.window import Window
-from kivy.graphics import Rectangle, Color
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.label import Label
-from kivy.uix.image import Image
-from kivy.uix.button import Button
-from kivy.uix.popup import Popup
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.slider import Slider
-
-from kivy.uix.image import Image as KivyImage
-from kivy.uix.textinput import TextInput
+from lerdon_libraries import *
 
 from fight import fight
 from economic import format_number
-import sqlite3
-from kivy.utils import platform
+
 if platform == 'android':
     from android.storage import app_storage_path
     import os
@@ -976,7 +962,7 @@ class FortressInfoPopup(Popup):
 
                 # Изображение юнита
                 image_container = BoxLayout(size_hint_y=None, height=image_height)
-                unit_image_widget = KivyImage(
+                unit_image_widget = Image(
                     source=unit_image,
                     size_hint=(None, None),
                     size=(image_width, image_height)

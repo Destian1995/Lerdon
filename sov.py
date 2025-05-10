@@ -1,20 +1,7 @@
-from kivy.uix.image import Image
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.button import Button
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.popup import Popup
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.label import Label
-from kivy.uix.scrollview import ScrollView
-from kivy.graphics import Color, Rectangle
-from kivy.metrics import dp
-from kivy.core.window import Window
-import os
 
-import sqlite3
-import random
+from lerdon_libraries import *
 
-from kivy.utils import platform
+
 if platform == 'android':
     from android.storage import app_storage_path
     db_path = os.path.join(app_storage_path(), 'game_data.db')

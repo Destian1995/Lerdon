@@ -1,25 +1,10 @@
-import os
-import shutil
-
-from kivy.animation import Animation
-from kivy.app import App
-from kivy.graphics import Line
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.widget import Widget
-from kivy.core.text import Label as CoreLabel
-import random
+from lerdon_libraries import *
 from game_process import GameScreen
 from ui import *
-import ast
-import logging
-import sqlite3
-from kivy.clock import Clock
-
-
 
 # Размеры окна
 screen_width, screen_height = 1200, 800
-from kivy.utils import platform
+
 
 if platform == 'android':
     from android.storage import app_storage_path

@@ -1,14 +1,5 @@
+from lerdon_libraries import *
 
-import json
-import random
-from kivy.clock import Clock
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.popup import Popup
-from kivy.graphics import Color, Rectangle
-import sqlite3
-from kivy.utils import platform
 if platform == 'android':
     from android.storage import app_storage_path
     import os

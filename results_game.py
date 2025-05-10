@@ -1,20 +1,5 @@
-import sqlite3
+from lerdon_libraries import *
 
-from kivy.clock import Clock
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.popup import Popup
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.floatlayout import FloatLayout
-from kivy.graphics import Color, RoundedRectangle
-from kivy.app import App
-from kivy.uix.scrollview import ScrollView
-from kivy.metrics import dp
-from kivy.core.window import Window
-
-
-from kivy.utils import platform
 if platform == 'android':
     from android.storage import app_storage_path
     import os
