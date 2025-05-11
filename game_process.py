@@ -231,7 +231,6 @@ class ResourceBox(BoxLayout):
                 height=self.calculate_label_height(),
                 font_size=self.calculate_font_size(),
                 color=text_color,
-                font_name='Arial',
                 bold=True,
                 markup=True
             )
