@@ -6,6 +6,7 @@ from ui import *
 screen_width, screen_height = 1200, 800
 
 # Путь к БД
+# === Настройка пути к базе данных ===
 if platform == 'android':
     from android.storage import app_storage_path
     storage_dir = app_storage_path()
@@ -15,19 +16,17 @@ else:
 original_db_path = os.path.join(os.path.dirname(__file__), 'game_data.db')
 copied_db_path = os.path.join(storage_dir, 'game_data.db')
 
-# Копируем БД, если её нет
+# Принудительно задаём глобальный db_path
+db_path = copied_db_path  # ← Эта строка делает db_path доступным сразу
+
+# Копируем БД, если её нет в пользовательской директории
 if not os.path.exists(copied_db_path):
-    print("📦 Копируем game_data.db в", copied_db_path)
-    try:
-        if os.path.exists(original_db_path):
-            shutil.copy(original_db_path, copied_db_path)
-        else:
-            raise Exception("❌ Файл game_data.db отсутствует в проекте!")
-    except Exception as e:
-        print("🚨 Ошибка при копировании БД:", str(e))
-        with open(os.path.join(storage_dir, 'error_log.txt'), 'w') as f:
-            f.write(f"Ошибка копирования БД: {str(e)}\n")
-        raise
+    if os.path.exists(original_db_path):
+        import shutil
+        shutil.copy(original_db_path, copied_db_path)
+        print(f"✅ База данных скопирована в {copied_db_path}")
+    else:
+        raise FileNotFoundError(f"❌ game_data.db отсутствует в проекте!")
 
 # Теперь можно подключаться к БД
 db_path = copied_db_path

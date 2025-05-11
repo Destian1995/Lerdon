@@ -1,11 +1,26 @@
 from lerdon_libraries import *
 
+# === Настройка пути к базе данных ===
 if platform == 'android':
     from android.storage import app_storage_path
-    import os
-    db_path = os.path.join(app_storage_path(), 'game_data.db')
+    storage_dir = app_storage_path()
 else:
-    db_path = 'game_data.db'
+    storage_dir = os.path.dirname(__file__)
+
+original_db_path = os.path.join(os.path.dirname(__file__), 'game_data.db')
+copied_db_path = os.path.join(storage_dir, 'game_data.db')
+
+# Принудительно задаём глобальный db_path
+db_path = copied_db_path  # ← Эта строка делает db_path доступным сразу
+
+# Копируем БД, если её нет в пользовательской директории
+if not os.path.exists(copied_db_path):
+    if os.path.exists(original_db_path):
+        import shutil
+        shutil.copy(original_db_path, copied_db_path)
+        print(f"✅ База данных скопирована в {copied_db_path}")
+    else:
+        raise FileNotFoundError(f"❌ game_data.db отсутствует в проекте!")
 
 class ResultsGame:
     def __init__(self, game_status, reason):
