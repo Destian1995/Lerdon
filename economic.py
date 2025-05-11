@@ -1264,13 +1264,13 @@ class Faction:
             city_count_valid = isinstance(self.get_city_count(), int) and self.get_city_count() >= 0
 
             if not population_valid or not city_count_valid:
-                message = "Города опустели, население опустилось до 0."
+                message = "Города опустели, уровень налогов распугал всех граждан..."
                 print(message)
                 return False, message
 
             # Условия завершения игры
             if self.population == 0:
-                message = "Города опустели, население опустилось до 0."
+                message = "Города опустели из-за отсутствия еды...."
                 print(message)
                 return False, message
 
