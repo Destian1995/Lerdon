@@ -16,9 +16,6 @@ else:
 original_db_path = os.path.join(os.path.dirname(__file__), 'game_data.db')
 copied_db_path = os.path.join(storage_dir, 'game_data.db')
 
-# Принудительно задаём глобальный db_path
-db_path = copied_db_path  # ← Эта строка делает db_path доступным сразу
-
 # Копируем БД, если её нет в пользовательской директории
 if not os.path.exists(copied_db_path):
     if os.path.exists(original_db_path):
@@ -747,6 +744,9 @@ class KingdomSelectionWidget(FloatLayout):
 class EmpireApp(App):
     def __init__(self, **kwargs):
         super(EmpireApp, self).__init__(**kwargs)
+        # Флаг, что мы на мобильной платформе Android
+        self.is_mobile = (platform == 'android')
+        # Можно завести другие глобальные настройки здесь
         self.selected_kingdom = None  # Атрибут для хранения выбранного королевства
 
     def build(self):

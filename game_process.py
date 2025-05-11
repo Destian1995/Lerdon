@@ -158,29 +158,48 @@ class ResourceBox(BoxLayout):
         self.orientation = 'vertical'
         self.spacing = dp(5)
         self.padding = [dp(15), dp(25), dp(15), dp(25)]
+        # дефолтные size/pos — будут переопределены ниже
         self.size_hint = (0.25, 0.35)
-        self.pos_hint = {'x': 0, 'top': 1}  # Изменено позиционирование
-
-        # Адаптивные размеры для мобильных устройств
-        if platform == 'android':
-            self.size_hint = (0.35, 0.4) if App.get_running_app().is_mobile else (0.25, 0.35)
-        else:
-            self.size_hint = (0.25, 0.35)
-
         self.pos_hint = {'x': 0, 'top': 1}
 
-        with self.canvas.before:
-            self.bg_color = Color(0.11, 0.15, 0.21, 0.9)
-            self.rect = RoundedRectangle(radius=[25])
-        self.bind(pos=self.update_rect, size=self.update_rect)
+        # узнаём, мобильная ли платформа
+        app = App.get_running_app()
+        is_mobile = getattr(app, 'is_mobile', False)
 
+        # текущие размеры окна
+        width, height = Window.size
+        is_landscape = width > height
+
+        # адаптивный size_hint
+        if is_mobile:
+            if is_landscape:
+                self.size_hint = (0.45, 0.3)
+            else:
+                self.size_hint = (0.35, 0.4)
+        else:
+            if width >= 1200:
+                self.size_hint = (0.2, 0.3)
+            elif width >= 800:
+                self.size_hint = (0.25, 0.35)
+            else:
+                self.size_hint = (0.3, 0.4)
+
+        # фон с закруглёнными углами
+        with self.canvas.before:
+            Color(0.11, 0.15, 0.21, 0.9)
+            self.rect = RoundedRectangle(radius=[25])
+
+        # чтобы фон перемещался/масштабировался вместе с виджетом
+        self.bind(pos=self._update_rect, size=self._update_rect)
+
+        # ваши лейблы и начальная инициализация
         self.labels = {}
         self.update_resources()
         self.bind(size=self.update_font_sizes)
 
-    def update_rect(self, *args):
-        self.rect.size = self.size
+    def _update_rect(self, *args):
         self.rect.pos = self.pos
+        self.rect.size = self.size
 
     def update_resources(self):
         resources = self.resource_manager.get_resources()
