@@ -24,18 +24,23 @@ source.main = main.py
 # Requirements (зависимости)
 requirements = python3==3.10.13,kivy==2.1.0,kivymd==1.1.1,pyjnius==1.5.0,cython==0.29.33,android
 p4a.python_version = 3.10
+p4a.whitelist = python3.10
+
 
 # Application version
-version = 0.11
+version = 0.12
 
 # Application author
 author = Lerdon Team
+# Icon file
+icon.filename = assets/icon.png
+# Splash Screen image
+android.presplash = assets/splash.png
+
+orientation = landscape
 
 # Application description
 description = Стратегическая игра Lerdon с элементами экономики и политики.
-
-# Icon file
-icon.filename = icon.png
 
 # Android permissions
 android.permissions = INTERNET, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
