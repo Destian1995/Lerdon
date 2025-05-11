@@ -734,7 +734,7 @@ class KingdomSelectionWidget(FloatLayout):
             return
 
         # Передаем выбранное княжество на новый экран игры
-        game_screen = GameScreen(selected_kingdom, cities)
+        game_screen = GameScreen(selected_kingdom, cities, db_path=db_path)
         app.root.clear_widgets()
 
         # Создаем MapWidget с правильными параметрами

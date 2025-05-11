@@ -241,10 +241,11 @@ class ImageButton(ButtonBehavior, Image):
 
 
 class GameScreen(Screen):
-    def __init__(self, selected_faction, cities, **kwargs):
+    def __init__(self, selected_faction, cities, db_path=None, **kwargs):
         super(GameScreen, self).__init__(**kwargs)
         self.selected_faction = selected_faction
         self.cities = cities
+        self.db_path = db_path or 'game_data.db'
         # Инициализация GameStateManager
         self.game_state_manager = GameStateManager()
         self.game_state_manager.initialize(selected_faction)
