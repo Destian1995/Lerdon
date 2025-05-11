@@ -49,9 +49,13 @@ class ResultsGame:
                 faction,
             ) = row
 
+            if units_combat != 0:
+                bonus_arms = round(units_killed / units_combat, 2)
+            else:
+                bonus_arms = 0
             # Вычисляем Army_Efficiency_Ratio
             if units_destroyed != 0:
-                army_efficiency_ratio = round(units_killed / units_destroyed, 2)
+                army_efficiency_ratio = round((units_killed / units_destroyed) * bonus_arms, 2)
             else:
                 army_efficiency_ratio = 0  # Защита от деления на ноль
 

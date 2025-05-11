@@ -75,8 +75,9 @@ def calculate_experience(losing_side, db_connection):
     experience_points = {
         '1': 0.5,
         '2': 1.4,
-        '3': 2.3,
-        '4': 7.0
+        '3': 4.3,
+        '4': 8.0,
+        '5': 23.0,
     }
 
     total_experience = 0
@@ -477,7 +478,8 @@ def calculate_unit_power(unit, is_attacking):
         '1': 1.3,
         '2': 1.7,
         '3': 2.0,
-        '4': 3.0
+        '4': 3.0,
+        '5': 4.0
     }
 
     unit_class = unit['units_stats']['Класс юнита']

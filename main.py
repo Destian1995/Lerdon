@@ -5,13 +5,33 @@ from ui import *
 # Размеры окна
 screen_width, screen_height = 1200, 800
 
-
+# Путь к БД
 if platform == 'android':
     from android.storage import app_storage_path
-    db_path = os.path.join(app_storage_path(), 'game_data.db')
+    storage_dir = app_storage_path()
 else:
-    db_path = 'game_data.db'
+    storage_dir = os.path.dirname(__file__)
 
+original_db_path = os.path.join(os.path.dirname(__file__), 'game_data.db')
+copied_db_path = os.path.join(storage_dir, 'game_data.db')
+
+# Копируем БД, если её нет
+if not os.path.exists(copied_db_path):
+    print("📦 Копируем game_data.db в", copied_db_path)
+    try:
+        if os.path.exists(original_db_path):
+            shutil.copy(original_db_path, copied_db_path)
+        else:
+            raise Exception("❌ Файл game_data.db отсутствует в проекте!")
+    except Exception as e:
+        print("🚨 Ошибка при копировании БД:", str(e))
+        with open(os.path.join(storage_dir, 'error_log.txt'), 'w') as f:
+            f.write(f"Ошибка копирования БД: {str(e)}\n")
+        raise
+
+# Теперь можно подключаться к БД
+db_path = copied_db_path
+print("✅ Используем БД по пути:", db_path)
 
 
 def save_last_clicked_city(city_name: str):

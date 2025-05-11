@@ -467,7 +467,9 @@ class GameScreen(Screen):
 
         # Обновляем статус уничтоженных фракций
         self.update_destroyed_factions()
+        # Обновляем статус ходов
         self.reset_check_attack_flags()
+        self.initialize_turn_check_move()
         # Логирование или обновление интерфейса после хода
         print(f"Ход {self.turn_counter} завершён")
 
@@ -631,6 +633,22 @@ class GameScreen(Screen):
             print("Флаги check_attack успешно сброшены на False.")
         except sqlite3.Error as e:
             print(f"Ошибка при сбросе флагов check_attack: {e}")
+
+    def initialize_turn_check_move(self):
+        """
+        Инициализирует запись о возможности перемещения для текущей фракции.
+        Устанавливает значение 'can_move' = True по умолчанию.
+        """
+
+        try:
+            self.cursor.execute("""
+                UPDATE turn_check_move
+                SET can_move = ?
+            """, (True,))
+            self.conn.commit()
+            print("Флаги can_move успешно сброшены на True.")
+        except sqlite3.Error as e:
+            print(f"Ошибка при сбросе флагов can_move: {e}")
 
     def init_ai_controllers(self):
         """Создание контроллеров ИИ для каждой фракции кроме выбранной"""

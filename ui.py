@@ -1172,6 +1172,37 @@ class FortressInfoPopup(Popup):
         except sqlite3.Error as e:
             print(f"Ошибка при инициализации turn_check_attack_faction: {e}")
 
+    def initialize_turn_check_move(self):
+        """
+        Инициализирует запись о возможности перемещения для текущей фракции.
+        Устанавливает значение 'can_move' = True по умолчанию.
+        """
+        try:
+            cursor = self.cursor
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS turn_check_move (
+                    faction TEXT PRIMARY KEY,
+                    can_move BOOLEAN
+                )
+            """)
+            self.conn.commit()
+
+            # Проверяем, существует ли запись для текущей фракции
+            cursor.execute("SELECT faction FROM turn_check_move WHERE faction = ?", (self.player_fraction,))
+            result = cursor.fetchone()
+            if not result:
+                # Если записи нет, создаем новую с can_move = True
+                cursor.execute("""
+                    INSERT INTO turn_check_move (faction, can_move)
+                    VALUES (?, ?)
+                """, (self.player_fraction, True))
+                self.conn.commit()
+                print(f"Инициализирована запись для фракции {self.player_fraction} с can_move=True")
+            else:
+                print(f"Запись для фракции {self.player_fraction} уже существует.")
+        except sqlite3.Error as e:
+            print(f"Ошибка при инициализации turn_check_move: {e}")
+
     def transfer_troops_between_cities(self, source_fortress_name, destination_fortress_name, unit_name, taken_count):
         """
         Переносит войска из одного города в другой с проверкой расстояния по координатам.
@@ -1191,51 +1222,75 @@ class FortressInfoPopup(Popup):
                 show_popup_message("Ошибка", "Один из городов не существует.")
                 return
 
-            # Проверяем, что исходный город принадлежит текущему игроку
             current_player_kingdom = self.player_fraction
+
+            # Проверяем, что исходный город принадлежит текущему игроку
+            if source_owner != current_player_kingdom:
+                show_popup_message("Ошибка", "Вы можете перемещать только свои войска.")
+                return
 
             # Получаем координаты городов
             source_coords = self.get_city_coordinates(source_fortress_name)
             destination_coords = self.get_city_coordinates(destination_fortress_name)
 
-            # Вычисляем разницу между координатами
             x_diff = abs(source_coords[0] - destination_coords[0])
             y_diff = abs(source_coords[1] - destination_coords[1])
             total_diff = x_diff + y_diff
             print('total_diff:', total_diff)
 
-            # Проверяем статус города назначения
+            # Проверка на возможность перемещения (один раз за ход)
+            cursor.execute("SELECT can_move FROM turn_check_move WHERE faction = ?", (current_player_kingdom,))
+            move_data = cursor.fetchone()
+
+            if not move_data:
+                # Если записи нет, создаём с can_move=True
+                cursor.execute("""
+                    INSERT INTO turn_check_move (faction, can_move)
+                    VALUES (?, ?)
+                """, (current_player_kingdom, True))
+                self.conn.commit()
+                move_data = (True,)
+            elif not move_data[0]:
+                show_popup_message("Ошибка", "Вы уже использовали своё перемещение на этом ходу.")
+                return
+
+            # Статус города назначения
             if destination_owner == current_player_kingdom:
-                # Город назначения — свой
+                # Свой город — перемещение разрешено
                 self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
+
+                # Устанавливаем can_move = False после успешного перемещения
+                cursor.execute("UPDATE turn_check_move SET can_move = ? WHERE faction = ?",
+                               (False, current_player_kingdom))
+                self.conn.commit()
+
             elif self.is_ally(current_player_kingdom, destination_owner):
-                # Город назначения — союзный
                 if total_diff < 300:
                     self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
+
+                    # Устанавливаем can_move = False после успешного перемещения
+                    cursor.execute("UPDATE turn_check_move SET can_move = ? WHERE faction = ?",
+                                   (False, current_player_kingdom))
+                    self.conn.commit()
                 else:
                     show_popup_message("Логистика не выдержит", "Слишком далеко. Найдите ближайший населенный пункт")
-            elif self.is_enemy(current_player_kingdom, destination_owner):
-                # Город назначения — вражеский
-                if total_diff < 225:
-                    # Проверяем флаг check_attack для фракции-цели
-                    cursor.execute("""
-                        SELECT check_attack FROM turn_check_attack_faction
-                        WHERE faction = ?
-                    """, (destination_owner,))
-                    result = cursor.fetchone()
 
-                    if result and result[0]:  # Если check_attack уже True
-                        show_popup_message(
-                            "Ошибка",
-                            f"Фракция '{destination_owner}' уже была атакована на этом ходу."
-                        )
+            elif self.is_enemy(current_player_kingdom, destination_owner):
+                if total_diff < 225:
+                    # Проверка атаки на фракцию
+                    cursor.execute("SELECT check_attack FROM turn_check_attack_faction WHERE faction = ?",
+                                   (destination_owner,))
+                    attack_data = cursor.fetchone()
+
+                    if attack_data and attack_data[0]:
+                        show_popup_message("Ошибка", f"Фракция '{destination_owner}' уже была атакована на этом ходу.")
                         return
 
-                    # Устанавливаем check_attack в True для фракции-цели
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO turn_check_attack_faction (faction, check_attack)
-                        VALUES (?, ?)
-                    """, (destination_owner, True))
+                    # Устанавливаем флаг атаки
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO turn_check_attack_faction (faction, check_attack) VALUES (?, ?)",
+                        (destination_owner, True)
+                    )
                     self.conn.commit()
 
                     # Запускаем бой
@@ -1244,10 +1299,15 @@ class FortressInfoPopup(Popup):
                         destination_fortress_name=destination_fortress_name,
                         attacking_units=self.selected_group
                     )
+
+                    # Устанавливаем can_move = False после начала атаки
+                    cursor.execute("UPDATE turn_check_move SET can_move = ? WHERE faction = ?",
+                                   (False, current_player_kingdom))
+                    self.conn.commit()
+
                 else:
                     show_popup_message("Логистика не выдержит", "Слишком далеко. Найдите ближайший населенный пункт")
             else:
-                # Город назначения — нейтральный, нельзя передавать войска
                 show_popup_message("Ошибка", "Нельзя нападать на нейтральный город.")
 
         except sqlite3.Error as e:
