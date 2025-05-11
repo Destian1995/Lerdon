@@ -17,10 +17,10 @@ export ANDROIDNDK=$HOME/.buildozer/android/platform/android-ndk-r25b
 export ANDROIDAPI=34
 export ANDROIDMINAPI=21
 
-# Установка временной зоны MSK+1 (UTC+4)
-export TZ=:/usr/share/zoneinfo/Europe/Moscow
+# Установка временной зоны
+export TZ=:/usr/share/zoneinfo/Etc/GMT-4
 START_TIME=$(date +%s)
-echo "⏰ Текущее время (MSK): $(date '+%Y-%m-%d %H:%M:%S')"
+echo "⏰ Текущее время Saratov): $(date '+%Y-%m-%d %H:%M:%S')"
 echo "🚀 Старт сборки: $(date '+%Y-%m-%d %H:%M:%S')"
 
 # === Функция для вывода ошибок и выхода ===
@@ -135,4 +135,20 @@ START_BUILD_TIME=$(date +%s)
 buildozer -v android debug > "$LOG_FILE" 2>&1
 BUILD_EXIT_CODE=$?
 END_BUILD_TIME=$(date +%s)
-BUILD_DURATION=$((END_BUILD_TIME - START_BUILD_TIME
+BUILD_DURATION=$((END_BUILD_TIME - START_BUILD_TIME))
+
+# === Проверка результата сборки ===
+echo "⏱️ Сборка завершена за $BUILD_DURATION сек."
+if [ $BUILD_EXIT_CODE -eq 0 ]; then
+    echo "✅ Сборка успешно завершена!"
+    APK_PATH=$(find ~/Lerdon/bin -name "*-$NEW_VERSION-debug.apk" | head -n1)
+    if [ -f "$APK_PATH" ]; then
+        echo "📲 APK готов: $APK_PATH"
+    else
+        error_exit "Файл APK не найден после успешной сборки"
+    fi
+else
+    error_exit "Ошибка при сборке APK (код: $BUILD_EXIT_CODE)"
+fi
+
+exit 0
