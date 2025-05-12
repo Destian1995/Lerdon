@@ -238,13 +238,19 @@ class ResourceBox(BoxLayout):
             self.add_widget(label)
 
     def calculate_font_size(self):
-        # Увеличим базовый размер для лучшей читаемости
-        base_font_size = sp(18) if platform == 'android' else sp(20)
+        # Увеличиваем базовый размер для Android
+        if platform == 'android':
+            base_font_size = sp(22)
+            min_size = sp(16)
+        else:
+            base_font_size = sp(20)
+            min_size = sp(12)
+
         scale_factor = min(self.height / 800, self.width / 600)
-        return max(base_font_size * scale_factor, sp(12))
+        return max(base_font_size * scale_factor, min_size)
 
     def calculate_label_height(self):
-        return self.calculate_font_size() * 2
+        return self.calculate_font_size() * 2.2
 
     def update_font_sizes(self, *args):
         new_font_size = self.calculate_font_size()
@@ -282,6 +288,7 @@ class GameScreen(Screen):
         # Инициализация EventManager
         self.event_manager = EventManager(self.selected_faction, self, self.game_state_manager.faction)
         # Инициализация UI
+        self.is_android = platform == 'android'
         self.init_ui()
         # Запускаем обновление ресурсов каждую 1 секунду
         Clock.schedule_interval(self.update_cash, 1)
@@ -291,8 +298,8 @@ class GameScreen(Screen):
         exit_container = BoxLayout(
             orientation='vertical',
             size_hint=(None, None),
-            size=(120, 60),  # Размер контейнера
-            pos_hint={'right': 0.57, 'top': 1},  # Позиция контейнера
+            size=(dp(120) if self.is_android else 120, dp(60) if self.is_android else 60),
+            pos_hint={'right': 0.57, 'top': 1},
             padding=dp(10),
             spacing=dp(5)
         )
@@ -324,19 +331,21 @@ class GameScreen(Screen):
         # Название фракции - размещаем ПОД кнопкой выхода
         self.faction_label = Label(
             text=f"{self.selected_faction}",
-            font_size='30sp',
-            size_hint=(1, 0.1),
-            pos_hint={'right': 1, 'top': 0.9},
+            font_size=sp(24) if self.is_android else '30sp',
+            size_hint=(1, None),
+            height=dp(50) if self.is_android else 50,
+            pos_hint={'center_x': 0.5, 'top': 0.95},
             color=(0, 0, 0, 1)
         )
         self.add_widget(self.faction_label)
 
         # Контейнер для боковой панели с кнопками режимов
+        mode_panel_width = dp(80) if self.is_android else 80
         mode_panel_container = BoxLayout(
             orientation='vertical',
-            size_hint=(None, 0.6),  # Занимает 60% высоты экрана
-            width=dp(80),  # Ширина контейнера
-            pos_hint={'x': 0, 'y': 0},  # Левый нижний угол
+            size_hint=(None, 0.6),
+            width=mode_panel_width,
+            pos_hint={'x': 0, 'y': 0.2} if self.is_android else {'x': 0, 'y': 0},
             padding=dp(10),
             spacing=dp(10)
         )
@@ -390,11 +399,12 @@ class GameScreen(Screen):
         self.add_widget(self.game_area)
 
         # Контейнер для счетчика ходов
+        turn_counter_size = (dp(200), dp(50)) if self.is_android else (220, 60)
         turn_counter_container = BoxLayout(
             orientation='vertical',
             size_hint=(None, None),
-            size=(220, 60),
-            pos_hint={'right': 1, 'top': 0.93},
+            size=turn_counter_size,
+            pos_hint={'right': 0.98, 'top': 0.88} if self.is_android else {'right': 1, 'top': 0.93},
             padding=dp(10),
             spacing=dp(5)
         )
@@ -422,27 +432,44 @@ class GameScreen(Screen):
         self.add_widget(turn_counter_container)
 
         # Кнопка "Завершить ход"
+        end_turn_size = (dp(200), dp(50)) if self.is_android else (220, 50)
         self.end_turn_button = Button(
             text="Завершить ход",
             size_hint=(None, None),
-            size=(220, 50),
-            pos_hint={'right': 1, 'top': 1},
-            background_color=(0.1, 0.5, 0.1, 1),  # Зеленый фон
-            font_size='20sp',
+            size=end_turn_size,
+            pos_hint={'center_x': 0.5, 'y': 0.02} if self.is_android else {'right': 1, 'top': 1},
+            background_color=(0.1, 0.5, 0.1, 1),
+            font_size=sp(18) if self.is_android else '20sp',
             bold=True,
-            color=(1, 1, 1, 1)  # Белый текст
+            color=(1, 1, 1, 1)
         )
         self.end_turn_button.bind(on_press=self.process_turn)
         self.add_widget(self.end_turn_button)
 
         # Добавление ResourceBox в верхний правый угол
         self.resource_box = ResourceBox(resource_manager=self.faction)
-        self.resource_box.size_hint = (0.25, 0.4)  # Высота ResourceBox
-        self.resource_box.pos_hint = {'x': 0, 'top': 1}  # Размещение в верхнем левом углу
+        if self.is_android:
+            self.resource_box.size_hint = (0.3, 0.35)
+            self.resource_box.pos_hint = {'x': 0.02, 'top': 0.65}
+        else:
+            self.resource_box.size_hint = (0.25, 0.4)
+            self.resource_box.pos_hint = {'x': 0, 'top': 1}
+
+        # Добавляем обработчик изменения ориентации
+        Window.bind(on_resize=self.on_window_resize)
         self.add_widget(self.resource_box)
 
         # Инициализация ИИ для остальных фракций
         self.init_ai_controllers()
+
+    def on_window_resize(self, instance, width, height):
+        # Адаптация при повороте экрана
+        if self.is_android:
+            is_landscape = width > height
+            # Регулируем размеры для ландшафтного режима
+            self.resource_box.size_hint = (0.25, 0.3) if is_landscape else (0.3, 0.35)
+            self.end_turn_button.pos_hint = {'center_x': 0.5, 'y': 0.02} if is_landscape else {'right': 0.98, 'y': 0.02}
+            self.turn_counter_container.pos_hint = {'right': 0.98, 'top': 0.78} if is_landscape else {'right': 0.98, 'top': 0.88}
 
     def save_selected_faction_to_db(self):
         """
