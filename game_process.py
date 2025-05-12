@@ -437,7 +437,7 @@ class GameScreen(Screen):
             text="Завершить ход",
             size_hint=(None, None),
             size=end_turn_size,
-            pos_hint={'x': 0.02, 'y': 0.02},
+            pos_hint={'x': 0, 'y': 0},
             background_color=(0.1, 0.5, 0.1, 1),
             font_size=sp(18),
             bold=True,

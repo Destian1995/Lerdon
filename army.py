@@ -595,7 +595,7 @@ def start_army_mode(faction, game_area, class_faction):
         time_icon = Label(
             text="[color=#FFFFFF]Рабочие[/color]",  # Символ времени
             markup=True,
-            font_size=set_font_size(0.025),
+            font_size='14sp',
             halign='left',
             size_hint=(0.2, 1)
         )

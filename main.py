@@ -209,7 +209,6 @@ class MapWidget(Widget):
         self.current_player_kingdom = player_kingdom  # Текущее королевство игрока
         self.map_pos = self.map_positions_start()  # Позиция карты
         self.map_scale = 3 if platform == 'android' else 1  # Троекратное увеличение на Android
-        self.map_pos = self.map_positions_start()  # Позиция карты
 
         # Размеры базовой карты (исходный размер)
         base_map_width, base_map_height = screen_width, screen_height
@@ -290,39 +289,44 @@ class MapWidget(Widget):
         return total_diff
 
     def update_map_position(self):
-        """
-        Обновляет позицию изображения карты и дорог.
-        """
-        # Обновляем позицию карты
+        base_map_width, base_map_height = screen_width, screen_height
+        scaled_map_width = base_map_width * self.map_scale
+        scaled_map_height = base_map_height * self.map_scale
+
         self.map_image.pos = self.map_pos
-        # Очищаем canvas и снова рисуем карту, крепости и дороги
+        self.map_image.size = (scaled_map_width, scaled_map_height)
+
         self.canvas.clear()
         self.draw_fortresses()
         self.draw_roads()
 
     def map_positions_start(self):
         if self.current_player_kingdom == 'Хиперион':
-            return [-200, -100]
+            return [-200 * self.map_scale, -100 * self.map_scale]
         elif self.current_player_kingdom == 'Аркадия':
-            return [0, -240]
+            return [0, -240 * self.map_scale]
         elif self.current_player_kingdom == 'Селестия':
             return [0, 0]
         elif self.current_player_kingdom == 'Этерия':
-            return [-400, -210]
+            return [-400 * self.map_scale, -210 * self.map_scale]
         elif self.current_player_kingdom == 'Халидон':
-            return [-360, 0]
+            return [-360 * self.map_scale, 0]
 
     def draw_fortresses(self):
         self.fortress_rectangles.clear()
         self.canvas.clear()
-        # Отрисовываем фон карты
+
+        base_map_width, base_map_height = screen_width, screen_height
+        scaled_map_width = base_map_width * self.map_scale
+        scaled_map_height = base_map_height * self.map_scale
+
         with self.canvas:
             self.map_image = Rectangle(
                 source='files/map/map.png',
                 pos=self.map_pos,
-                size=(screen_width, screen_height)
+                size=(scaled_map_width, scaled_map_height)
             )
-            # Словарь для соответствия фракций и изображений
+
             faction_images = {
                 'Хиперион': 'files/buildings/giperion.png',
                 'Аркадия': 'files/buildings/arkadia.png',
@@ -330,22 +334,19 @@ class MapWidget(Widget):
                 'Этерия': 'files/buildings/eteria.png',
                 'Халидон': 'files/buildings/halidon.png'
             }
-            # Запрашиваем данные о городах из базы данных
+
             try:
                 cursor = self.conn.cursor()
-                cursor.execute("""
-                    SELECT fortress_name, kingdom, coordinates 
-                    FROM city
-                """)
+                cursor.execute("SELECT fortress_name, kingdom, coordinates FROM city")
                 fortresses_data = cursor.fetchall()
             except sqlite3.Error as e:
                 print(f"Ошибка при загрузке данных о городах: {e}")
                 return
-            # Проверяем, есть ли данные
+
             if not fortresses_data:
-                print("Нет данных о городах в базе данных.")
+                print("Нет данных о городах в БД.")
                 return
-            # Отрисовываем крепости всех фракций
+
             for fortress_name, kingdom, coords_str in fortresses_data:
                 try:
                     coords = ast.literal_eval(coords_str)
@@ -355,29 +356,36 @@ class MapWidget(Widget):
                 except (ValueError, SyntaxError) as e:
                     print(f"Ошибка при разборе координат города '{fortress_name}': {e}")
                     continue
-                # Сдвигаем изображение только для отрисовки
-                drawn_x = fort_x + self.map_pos[0] + 4
-                drawn_y = fort_y + self.map_pos[1] + 2
-                # Получаем путь к изображению для текущей фракции
+
+                # Масштабируем координаты
+                scaled_x = fort_x * self.map_scale
+                scaled_y = fort_y * self.map_scale
+                drawn_x = scaled_x + self.map_pos[0]
+                drawn_y = scaled_y + self.map_pos[1]
+
                 image_path = faction_images.get(kingdom, 'files/buildings/default.png')
                 if not os.path.exists(image_path):
                     image_path = 'files/buildings/default.png'
-                # Сохраняем прямоугольник, имя и владельца для проверки касания
-                fort_rect = (drawn_x, drawn_y, 40, 40)
+
+                # Сохраняем прямоугольник клика
+                fort_rect = (
+                    drawn_x, drawn_y,
+                    40 * self.map_scale, 40 * self.map_scale
+                )
                 self.fortress_rectangles.append((
                     fort_rect,
                     {"coordinates": (fort_x, fort_y), "name": fortress_name},
                     kingdom
                 ))
-                # Рисуем изображение крепости
-                Rectangle(source=image_path, pos=(drawn_x, drawn_y), size=(40, 40))
-                # Добавляем название города под значком
+
+                Rectangle(source=image_path, pos=(drawn_x, drawn_y), size=(40 * self.map_scale, 40 * self.map_scale))
+
                 display_name = (fortress_name[:20] + "...") if len(fortress_name) > 20 else fortress_name
-                label = CoreLabel(text=display_name, font_size=12, color=(0, 0, 0, 1))
+                label = CoreLabel(text=display_name, font_size=12 * self.map_scale, color=(0, 0, 0, 1))
                 label.refresh()
                 text_texture = label.texture
                 text_width, text_height = text_texture.size
-                text_x = drawn_x + (40 - text_width) / 2
+                text_x = drawn_x + (40 * self.map_scale - text_width) / 2
                 text_y = drawn_y - text_height - 5
                 Color(1, 1, 1, 1)
                 Rectangle(texture=text_texture, pos=(text_x, text_y), size=(text_width, text_height))
@@ -563,94 +571,106 @@ class MenuWidget(FloatLayout):
 class KingdomSelectionWidget(FloatLayout):
     def __init__(self, **kwargs):
         super(KingdomSelectionWidget, self).__init__(**kwargs)
-
-        # Подключение к базе данных и загрузка данных о княжествах
+        is_android = platform == 'android'
+        # Подключение к базе данных
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.kingdom_data = self.load_kingdoms_from_db()
 
-        # Фон выбора княжества с размытием
+        # Фон выбора княжества
         self.add_widget(Image(source='files/choice.jpg', allow_stretch=True, keep_ratio=False))
 
-        # Заголовок "Выберите сторону" над изображением советника
+        # === Заголовок ===
+        label_size = '40sp' if is_android else '30sp'
         self.select_side_label = Label(
             text="Выберите сторону",
-            font_size='30sp',
+            font_size=label_size,
             size_hint=(None, None),
-            size=(200, 50),
+            size=(300, 60) if is_android else (200, 50),
             pos_hint={'center_x': 0.75, 'center_y': 0.85},
-            color=(1, 1, 1, 1),  # Белый текст
+            color=(1, 1, 1, 1),
             outline_color=(0, 0, 0, 1),
             outline_width=2,
             markup=True
         )
         self.add_widget(self.select_side_label)
 
-        # Надпись с названием фракции (изначально пустая)
+        # === Надпись с названием фракции ===
+        faction_label_size = '28sp' if is_android else '24sp'
         self.faction_label = Label(
             text="",
-            font_size='24sp',
+            font_size=faction_label_size,
             size_hint=(None, None),
-            size=(300, 100),
+            size=(400, 120) if is_android else (300, 100),
             pos_hint={'center_x': 0.75, 'center_y': 0.30},
-            color=(1, 1, 1, 1),  # Белый текст
+            color=(1, 1, 1, 1),
             outline_color=(0, 0, 0, 1),
             outline_width=2,
             markup=True,
             halign="center",
             valign="middle"
         )
-        self.faction_label.bind(size=self.faction_label.setter('text_size'))  # Для переноса текста
+        self.faction_label.bind(size=self.faction_label.setter('text_size'))
         self.add_widget(self.faction_label)
 
-        # Панель для кнопок выбора княжеств
+        # === Панель кнопок ===
+        button_height = dp(100) if is_android else 60
+        spacing_val = dp(30) if is_android else 15
+        panel_size_hint = (0.5, 0.5) if is_android else (0.4, 0.5)
+
         self.kingdom_buttons = BoxLayout(
             orientation='vertical',
-            spacing=15,
-            size_hint=(0.4, 0.5),
+            spacing=spacing_val,
+            size_hint=panel_size_hint,
             pos_hint={'center_x': 0.4, 'center_y': 0.5},
-            padding=[10, 10, 10, 10]
+            padding=[20, 20, 20, 20]
         )
 
-        # Создание кнопок для каждого княжества с анимацией
         for kingdom in self.kingdom_data.keys():
             btn = Button(
                 text=kingdom,
                 size_hint=(1, None),
-                height=60,
+                height=button_height,
+                font_size='24sp' if is_android else '14sp',
                 background_normal='',
-                background_color=(0.1, 0.5, 0.9, 1),  # Синий цвет кнопок
-                color=(1, 1, 1, 1),  # Белый цвет текста
+                background_color=(0.1, 0.5, 0.9, 1),
+                color=(1, 1, 1, 1),
                 border=(20, 20, 20, 20)
             )
             btn.bind(on_press=self.select_kingdom)
-            # Анимация при наведении
             btn.bind(on_enter=lambda x: Animation(background_color=(0.2, 0.6, 1, 1), duration=0.2).start(x))
             btn.bind(on_leave=lambda x: Animation(background_color=(0.1, 0.5, 0.9, 1), duration=0.2).start(x))
             self.kingdom_buttons.add_widget(btn)
 
         self.add_widget(self.kingdom_buttons)
 
-        # Изображение советника
+        # === Изображение советника ===
+        advisor_size = (0.45, 0.45) if is_android else (0.3, 0.3)
+        advisor_pos = {'center_x': 0.75, 'center_y': 0.6}
         self.advisor_image = Image(
             source='files/null.png',
-            size_hint=(0.3, 0.3),
-            pos_hint={'center_x': 0.75, 'center_y': 0.65}
+            size_hint=advisor_size,
+            pos_hint=advisor_pos
         )
         self.add_widget(self.advisor_image)
 
-        # Кнопка для начала игры с анимацией
+        # === Кнопка "Начать игру" ===
+        start_btn_size = (0.5, None)
+        start_btn_height = dp(100) if is_android else 60
+        start_btn_font = '24sp' if is_android else '14sp'
+
         self.start_game_button = Button(
             text="Начать игру",
-            size_hint=(0.4, None),
-            height=60,
+            size_hint=start_btn_size,
+            height=start_btn_height,
+            font_size=start_btn_font,
+            bold=True,
             pos_hint={'center_x': 0.8, 'center_y': 0.10},
             background_normal='',
             background_color=(0.1, 0.5, 0.9, 1),
-            color=(1, 1, 1, 1),  # Белый цвет текста
+            color=(1, 1, 1, 1),
             border=(20, 20, 20, 20)
         )
         self.start_game_button.bind(on_press=self.start_game)
-        # Анимация при наведении
         self.start_game_button.bind(
             on_enter=lambda x: Animation(background_color=(0.2, 0.6, 1, 1), duration=0.2).start(x))
         self.start_game_button.bind(
