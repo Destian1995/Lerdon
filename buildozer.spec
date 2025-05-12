@@ -32,10 +32,10 @@ version = 0.11
 
 # Application author
 author = Lerdon Team
-# Icon file
-icon.filename = assets/icon.png
-# Splash Screen image
-android.presplash = assets/splash.png
+
+# Image file
+icon.filename = %(source.dir)s/assets/icon.png
+presplash.filename = %(source.dir)s/assets/splash.png
 
 orientation = landscape
 
