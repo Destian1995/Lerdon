@@ -1784,67 +1784,85 @@ def handle_trade(game_instance, action, quantity, trade_popup):
 
 # -----------------------------------
 def open_tax_popup(faction):
-    # Создаем попап с анимированной тенью и градиентным фоном
+    # Проверка платформы
+    is_android = platform == 'android'
+
+    # Размеры popup в зависимости от платформы
+    popup_size_hint = (0.9, 0.7) if is_android else (0.8, 0.6)
+
     tax_popup = Popup(
         title="Управление налогами",
-        size_hint=(0.8, 0.6),
+        size_hint=popup_size_hint,
         background_color=(0.05, 0.05, 0.05, 0.95),
         title_color=(0.8, 0.8, 0.8, 1),
         separator_color=(0.3, 0.3, 0.3, 1),
-        title_size=24,
+        title_size=sp(28) if is_android else sp(24),
         title_align='center'
     )
 
     main_layout = FloatLayout()
 
-    # Получаем начальное значение налога из объекта faction
-    current_tax_rate = (
-        int(faction.current_tax_rate.strip('%'))  # Если это строка с '%'
-        if isinstance(faction.current_tax_rate, str) else
-        int(faction.current_tax_rate)  # Если это число
-    ) if hasattr(faction, 'current_tax_rate') else 0
+    # Получаем текущий уровень налогов
+    try:
+        current_tax_rate = int(faction.current_tax_rate.strip('%')) \
+            if isinstance(faction.current_tax_rate, str) else int(faction.current_tax_rate)
+    except:
+        current_tax_rate = 0
 
-    # Анимированная метка с динамической цветовой индикацией
+    # === Метка с текущим уровнем налогов ===
     tax_label = Label(
         text=f"Налог: {current_tax_rate}%",
         color=(0.7, 0.9, 0.7, 1),
-        font_size=28,
+        font_size=sp(32) if is_android else sp(28),
         bold=True,
-        pos_hint={'center_x': 0.5, 'top': 0.9},
-        size_hint=(0.8, None),
+        pos_hint={'center_x': 0.5, 'top': 0.92},
+        size_hint=(0.9, None),
         halign="center"
     )
+    main_layout.add_widget(tax_label)
 
-    # Кастомный ползунок с градиентной дорожкой
+    # === Ползунок управления налогом ===
     tax_slider = Slider(
         min=0,
         max=100,
-        value=current_tax_rate,  # Устанавливаем значение из faction
+        value=current_tax_rate,
         step=1,
         orientation='horizontal',
-        pos_hint={'center_x': 0.5, 'center_y': 0.6},
-        size_hint=(0.9, 0.15),
-        background_width=8,  # Ширина фона ползунка
-        cursor_size=(30, 30),  # Размер курсора
-        value_track=False,  # Отключаем дорожку под ползунком
+        pos_hint={'center_x': 0.5, 'center_y': 0.65},
+        size_hint=(0.95, 0.12) if is_android else (0.9, 0.15),
+        background_width=dp(10),
+        cursor_size=(dp(40), dp(40)),
+        value_track=False
     )
 
-    # Кнопка с эффектом "матового стекла" и анимацией
+    def update_tax_label(instance, value):
+        tax_label.text = f"Налог: {int(value)}%"
+        r = value / 100
+        g = 1 - r
+        tax_label.color = (r, g, 0, 1)
+        Animation(font_size=sp(36), duration=0.1).start(tax_label)
+        Animation(font_size=sp(32), duration=0.2).start(tax_label)
+
+    tax_slider.bind(value=update_tax_label)
+    main_layout.add_widget(tax_slider)
+
+    # === Кнопка "Применить" ===
     set_tax_button = Button(
         text="Применить",
-        pos_hint={'center_x': 0.5, 'y': 0.1},
-        size_hint=(0.6, 0.15),
-        background_color=(0, 0, 0, 0),  # Прозрачный фон
+        pos_hint={'center_x': 0.5, 'y': 0.08},
+        size_hint=(0.8, 0.15) if is_android else (0.6, 0.15),
+        background_color=(0, 0, 0, 0),
         color=(0.8, 0.8, 0.8, 1),
-        font_size=20
+        font_size=sp(24) if is_android else sp(20),
+        bold=True
     )
 
     with set_tax_button.canvas.before:
-        Color(0.3, 0.3, 0.3, 0.5)  # Цвет фона
+        Color(0.3, 0.3, 0.3, 0.5)
         set_tax_button.rect = RoundedRectangle(
             size=set_tax_button.size,
             pos=set_tax_button.pos,
-            radius=[15]  # Скругленные углы
+            radius=[dp(15)]
         )
 
     def update_rect(instance, value):
@@ -1853,34 +1871,23 @@ def open_tax_popup(faction):
 
     set_tax_button.bind(pos=update_rect, size=update_rect)
 
-    # Обновляем метку с анимацией цвета
-    def update_tax_label(instance, value):
-        tax_label.text = f"Налог: {int(value)}%"
-        r = value / 100
-        g = 1 - r
-        tax_label.color = (r, g, 0, 1)
-        Animation(font_size=32, duration=0.1).start(tax_label)
-        Animation(font_size=28, duration=0.2).start(tax_label)
-
-    tax_slider.bind(value=update_tax_label)
-
-    # Функция для установки налога
     def set_tax(instance):
-        """Установить новый уровень налогов и закрыть попап"""
-        tax_rate = int(tax_slider.value)  # Получаем текущее значение ползунка
-        faction.current_tax_rate = f"{tax_rate}%"  # Сохраняем значение в faction
-        faction.set_taxes(tax_rate)  # Обновляем налоги в объекте faction
-        faction.apply_tax_effect(tax_rate)  # Применяем эффекты от налогов
-        tax_popup.dismiss()  # Закрываем попап
+        tax_rate = int(tax_slider.value)
+        faction.current_tax_rate = f"{tax_rate}%"
+        faction.set_taxes(tax_rate)
+        faction.apply_tax_effect(tax_rate)
+        tax_popup.dismiss()
 
     set_tax_button.bind(on_press=set_tax)
-
-    # Добавляем элементы в layout
-    main_layout.add_widget(tax_label)
-    main_layout.add_widget(tax_slider)
     main_layout.add_widget(set_tax_button)
 
-    # Устанавливаем содержимое попапа
+    # === Закрытие попапа по нажатию вне виджета ===
+    def dismiss_on_outside(instance, touch):
+        if not main_layout.collide_point(*touch.pos):
+            tax_popup.dismiss()
+
+    tax_popup.bind(on_touch_down=dismiss_on_outside)
+
     tax_popup.content = main_layout
     tax_popup.open()
 
