@@ -301,15 +301,16 @@ class MapWidget(Widget):
         self.draw_roads()
 
     def map_positions_start(self):
-        positions = {
-            'Хиперион': [-200, -100],
-            'Аркадия': [0, -240],
-            'Селестия': [0, 0],
-            'Этерия': [-400, -210],
-            'Халидон': [-360, 0],
-        }
-        base_pos = positions.get(self.current_player_kingdom, [0, 0])
-        return [coord * self.map_scale for coord in base_pos]
+        if self.current_player_kingdom == 'Хиперион':
+            return [-200, -100]
+        elif self.current_player_kingdom == 'Аркадия':
+            return [0, -240]
+        elif self.current_player_kingdom == 'Селестия':
+            return [0, 0]
+        elif self.current_player_kingdom == 'Этерия':
+            return [-400, -210]
+        elif self.current_player_kingdom == 'Халидон':
+            return [-360, 0]
 
     def draw_fortresses(self):
         self.fortress_rectangles.clear()
