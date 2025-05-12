@@ -296,7 +296,7 @@ class MapWidget(Widget):
         self.map_image.pos = self.map_pos
         self.map_image.size = (scaled_map_width, scaled_map_height)
 
-        self.canvas.clear()
+        self.canvas.after.clear()
         self.draw_fortresses()
         self.draw_roads()
 
@@ -580,7 +580,7 @@ class KingdomSelectionWidget(FloatLayout):
         self.add_widget(Image(source='files/choice.jpg', allow_stretch=True, keep_ratio=False))
 
         # === Заголовок ===
-        label_size = '40sp' if is_android else '30sp'
+        label_size = '20sp' if is_android else '10sp'
         self.select_side_label = Label(
             text="Выберите сторону",
             font_size=label_size,
@@ -595,7 +595,7 @@ class KingdomSelectionWidget(FloatLayout):
         self.add_widget(self.select_side_label)
 
         # === Надпись с названием фракции ===
-        faction_label_size = '28sp' if is_android else '24sp'
+        faction_label_size = '14sp' if is_android else '24sp'
         self.faction_label = Label(
             text="",
             font_size=faction_label_size,
@@ -630,7 +630,7 @@ class KingdomSelectionWidget(FloatLayout):
                 text=kingdom,
                 size_hint=(1, None),
                 height=button_height,
-                font_size='24sp' if is_android else '14sp',
+                font_size='14sp' if is_android else '14sp',
                 background_normal='',
                 background_color=(0.1, 0.5, 0.9, 1),
                 color=(1, 1, 1, 1),
@@ -656,7 +656,7 @@ class KingdomSelectionWidget(FloatLayout):
         # === Кнопка "Начать игру" ===
         start_btn_size = (0.5, None)
         start_btn_height = dp(100) if is_android else 60
-        start_btn_font = '24sp' if is_android else '14sp'
+        start_btn_font = '15sp' if is_android else '14sp'
 
         self.start_game_button = Button(
             text="Начать игру",
