@@ -208,10 +208,20 @@ class MapWidget(Widget):
         self.fortress_rectangles = []  # Список для хранения крепостей
         self.current_player_kingdom = player_kingdom  # Текущее королевство игрока
         self.map_pos = self.map_positions_start()  # Позиция карты
-        print(self.current_player_kingdom)
+        self.map_scale = 3 if platform == 'android' else 1  # Троекратное увеличение на Android
+        self.map_pos = self.map_positions_start()  # Позиция карты
+
+        # Размеры базовой карты (исходный размер)
+        base_map_width, base_map_height = screen_width, screen_height
+        scaled_map_width = base_map_width * self.map_scale
+        scaled_map_height = base_map_height * self.map_scale
         # Отрисовка карты
         with self.canvas:
-            self.map_image = Rectangle(source='files/map/map.png', pos=self.map_pos, size=(screen_width, screen_height))
+            self.map_image = Rectangle(
+                source='files/map/map.png',
+                pos=self.map_pos,
+                size=(scaled_map_width, scaled_map_height)
+            )
         # Отрисовка всех крепостей и дорог
         self.draw_fortresses()
         self.draw_roads()  # Новый метод для рисования дорог

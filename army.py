@@ -458,7 +458,7 @@ def start_army_mode(faction, game_area, class_faction):
 
         title = Label(
             text=unit_name,
-            font_size=set_font_size(0.03),  # Автоматический размер шрифта
+            font_size='20sp',
             bold=True,
             color=TEXT_COLOR,
             halign='left',
@@ -515,7 +515,7 @@ def start_army_mode(faction, game_area, class_faction):
             lbl_name = Label(
                 text=f"[color={color}]{name}[/color]",
                 markup=True,
-                font_size=set_font_size(0.02),  # Автоматический размер
+                font_size='14sp',  # Автоматический размер
                 halign='left',
                 size_hint=(0.6, 1),
                 text_size=(None, None)
@@ -546,7 +546,7 @@ def start_army_mode(faction, game_area, class_faction):
         # Лейбл "Цена" справа
         price_label = Label(
             text="Цена:  ",
-            font_size=set_font_size(0.025),
+            font_size='16sp',
             bold=True,
             color=TEXT_COLOR,
             halign='right',
@@ -571,7 +571,7 @@ def start_army_mode(faction, game_area, class_faction):
         money_icon = Label(
             text="[color=#FFFFFF]Кроны[/color]",  # Символ валюты
             markup=True,
-            font_size=set_font_size(0.025),
+            font_size='14sp',
             halign='left',
             size_hint=(0.2, 1)
         )
@@ -601,7 +601,7 @@ def start_army_mode(faction, game_area, class_faction):
         )
         time_value = Label(
             text=f"{cost_time}",
-            font_size=set_font_size(0.025),
+            font_size='14sp',
             bold=True,
             color=TEXT_COLOR,
             size_hint=(0.8, 1),
@@ -627,7 +627,7 @@ def start_army_mode(faction, game_area, class_faction):
         input_qty = TextInput(
             hint_text='Количество',
             input_filter='int',
-            font_size=set_font_size(0.025),
+            font_size='14sp',
             size_hint=(0.6, 1),
             background_color=INPUT_BACKGROUND,
             halign='center',
@@ -636,7 +636,7 @@ def start_army_mode(faction, game_area, class_faction):
 
         btn_hire = Button(
             text='НАБРАТЬ',
-            font_size=set_font_size(0.025),
+            font_size='16sp',
             bold=True,
             background_color=PRIMARY_COLOR,
             color=TEXT_COLOR,
@@ -674,7 +674,7 @@ def start_army_mode(faction, game_area, class_faction):
         pos_hint={'top': 0.85, 'right': 0.86},
         background_color=(1, 0, 0, 1),  # Красный цвет
         color=(1, 1, 1, 1),  # Белый текст
-        font_size=set_font_size(0.03),
+        font_size='21sp',
         bold=True
     )
     close_button.bind(on_release=lambda instance: game_area.clear_widgets())  # Закрытие вкладки

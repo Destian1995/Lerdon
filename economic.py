@@ -1996,12 +1996,11 @@ def open_auto_build_popup(faction):
 def start_economy_mode(faction, game_area):
     """Инициализация экономического режима для выбранной фракции"""
 
-    from kivy.metrics import dp, sp  # ← Не забудь импортировать dp и sp
+    from kivy.metrics import dp, sp
+    from kivy.uix.widget import Widget
 
-    # Проверяем, является ли платформа Android
     is_android = platform == 'android'
 
-    # Создаем layout для кнопок
     economy_layout = BoxLayout(
         orientation='horizontal',
         size_hint=(1, None),
@@ -2011,7 +2010,9 @@ def start_economy_mode(faction, game_area):
         padding=[dp(10), dp(5), dp(10), dp(5)] if is_android else [10, 5, 10, 5]
     )
 
-    # Функция для создания стильных закруглённых кнопок
+    # Добавляем пустое пространство слева
+    economy_layout.add_widget(Widget(size_hint_x=None, width=dp(20)))
+
     def create_styled_button(text, on_press_callback):
         button = Button(
             text=text,
@@ -2019,39 +2020,35 @@ def start_economy_mode(faction, game_area):
             width=dp(120) if is_android else 100,
             size_hint_y=None,
             height=dp(60) if is_android else 50,
-            background_color=(0, 0, 0, 0),  # Прозрачный фон
-            color=(1, 1, 1, 1),  # Цвет текста (белый)
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
             font_size=sp(18) if is_android else 16,
             bold=True
         )
 
-        # Рисуем фон с закруглениями
         with button.canvas.before:
-            Color(0.2, 0.8, 0.2, 1)  # Зелёный цвет фона
+            Color(0.2, 0.8, 0.2, 1)
             button.rect = RoundedRectangle(pos=button.pos, size=button.size, radius=[15])
 
-        # Обновляем позицию и размер прямоугольника при изменении кнопки
         def update_rect(instance, value):
             instance.rect.pos = instance.pos
             instance.rect.size = instance.size
 
         button.bind(pos=update_rect, size=update_rect)
-
-        # Привязываем функцию к событию нажатия
         button.bind(on_press=on_press_callback)
         return button
 
-    # Создаем кнопки с новым стилем
     auto_btn = create_styled_button("Стройка", lambda x: open_auto_build_popup(faction))
     build_btn = create_styled_button("Статистика", lambda x: open_build_popup(faction))
     trade_btn = create_styled_button("Торговля", lambda x: open_trade_popup(faction))
     tax_btn = create_styled_button("Налоги", lambda x: open_tax_popup(faction))
 
-    # Добавляем кнопки в layout
     economy_layout.add_widget(auto_btn)
     economy_layout.add_widget(build_btn)
     economy_layout.add_widget(trade_btn)
     economy_layout.add_widget(tax_btn)
 
-    # Добавляем layout с кнопками в нижнюю часть экрана
+    # Опционально: добавить отступ справа
+    # economy_layout.add_widget(Widget(size_hint_x=None, width=dp(20)))
+
     game_area.add_widget(economy_layout)

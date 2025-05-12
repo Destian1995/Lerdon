@@ -1672,12 +1672,11 @@ def show_ratings_popup():
 def start_politic_mode(faction, game_area, class_faction):
     """Инициализация политического режима для выбранной фракции"""
 
-    from kivy.metrics import dp, sp  # ← Не забудь импортировать
+    from kivy.metrics import dp, sp
+    from kivy.uix.widget import Widget
 
-    # Проверяем, является ли платформа Android
     is_android = platform == 'android'
 
-    # === Layout для кнопок ===
     politics_layout = BoxLayout(
         orientation='horizontal',
         size_hint=(1, None),
@@ -1687,7 +1686,9 @@ def start_politic_mode(faction, game_area, class_faction):
         padding=[dp(10), dp(5), dp(10), dp(5)] if is_android else [10, 5, 10, 5]
     )
 
-    # Создаём Popup заранее
+    # Добавляем пустое пространство слева
+    politics_layout.add_widget(Widget(size_hint_x=None, width=dp(20)))
+
     manage_friend_popup = ManageFriend(faction, game_area)
 
     def styled_btn(text, callback):
@@ -1697,18 +1698,16 @@ def start_politic_mode(faction, game_area, class_faction):
             width=dp(120) if is_android else 100,
             size_hint_y=None,
             height=dp(60) if is_android else 50,
-            background_color=(0, 0, 0, 0),  # Прозрачный фон
+            background_color=(0, 0, 0, 0),
             color=(1, 1, 1, 1),
             font_size=sp(18) if is_android else 16,
             bold=True
         )
 
-        # Рисуем фон с закруглениями
         with btn.canvas.before:
-            Color(0.2, 0.6, 1, 1)  # Светло-голубой цвет
+            Color(0.2, 0.6, 1, 1)
             btn.rect = RoundedRectangle(pos=btn.pos, size=btn.size, radius=[15])
 
-        # Обновляем позицию и размер прямоугольника при изменении кнопки
         def update_rect(instance, value):
             instance.rect.pos = instance.pos
             instance.rect.size = instance.size
@@ -1717,15 +1716,15 @@ def start_politic_mode(faction, game_area, class_faction):
         btn.bind(on_release=callback)
         return btn
 
-    # === Кнопки политических действий ===
-    btn_new = styled_btn("Новый договор", lambda btn: show_new_agreement_window(faction, game_area, class_faction))
+    btn_new = styled_btn("Договора", lambda btn: show_new_agreement_window(faction, game_area, class_faction))
     btn_allies = styled_btn("Союзник", lambda btn: manage_friend_popup.open_popup())
     btn_army = styled_btn("Сила армий", lambda btn: show_ratings_popup())
 
-    # Добавляем в layout
     politics_layout.add_widget(btn_new)
     politics_layout.add_widget(btn_allies)
     politics_layout.add_widget(btn_army)
 
-    # Добавляем layout на экран
+    # Опционально: добавить отступ справа
+    # politics_layout.add_widget(Widget(size_hint_x=None, width=dp(20)))
+
     game_area.add_widget(politics_layout)

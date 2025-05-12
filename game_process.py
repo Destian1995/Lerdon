@@ -240,8 +240,8 @@ class ResourceBox(BoxLayout):
     def calculate_font_size(self):
         # Увеличиваем базовый размер для Android
         if platform == 'android':
-            base_font_size = sp(22)
-            min_size = sp(16)
+            base_font_size = sp(18)
+            min_size = sp(12)
         else:
             base_font_size = sp(20)
             min_size = sp(12)
@@ -448,8 +448,8 @@ class GameScreen(Screen):
 
         # Добавление ResourceBox в верхний правый угол
         self.resource_box = ResourceBox(resource_manager=self.faction)
-        self.resource_box.size_hint = (0.2, 0.95)  # Растягиваем почти на всю высоту
-        self.resource_box.pos_hint = {'x': 0, 'y': 0.6}  # Слева по всей высоте
+        self.resource_box.size_hint = (0.2, 0.4)  # Растягиваем почти на всю высоту
+        self.resource_box.pos_hint = {'x': 0, 'y': 0.3}  # Слева по всей высоте
 
         # Добавляем обработчик изменения ориентации
         Window.bind(on_resize=self.on_window_resize)
