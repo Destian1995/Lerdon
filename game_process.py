@@ -334,18 +334,18 @@ class GameScreen(Screen):
             font_size=sp(24) if self.is_android else '30sp',
             size_hint=(1, None),
             height=dp(50) if self.is_android else 50,
-            pos_hint={'center_x': 0.5, 'top': 0.95},
+            pos_hint={'center_x': 0.5, 'top': 0.90},
             color=(0, 0, 0, 1)
         )
         self.add_widget(self.faction_label)
 
         # Контейнер для боковой панели с кнопками режимов
-        mode_panel_width = dp(80) if self.is_android else 80
+        mode_panel_width = dp(80)
         mode_panel_container = BoxLayout(
             orientation='vertical',
-            size_hint=(None, 0.6),
+            size_hint=(None, 0.5),  # Высота — 50% от высоты экрана
             width=mode_panel_width,
-            pos_hint={'x': 0, 'y': 0.2} if self.is_android else {'x': 0, 'y': 0},
+            pos_hint={'right': 1, 'top': 0.75},  # Позиционируем верх контейнера на 75% от высоты экрана
             padding=dp(10),
             spacing=dp(10)
         )
@@ -395,16 +395,16 @@ class GameScreen(Screen):
         self.add_widget(mode_panel_container)
 
         # Центральная часть для отображения карты и игрового процесса
-        self.game_area = FloatLayout(size_hint=(0.8, 1), pos_hint={'x': 0.2, 'y': 0})
+        self.game_area = FloatLayout(size_hint=(0.7, 1), pos_hint={'x': 0.25, 'y': 0})
         self.add_widget(self.game_area)
 
         # Контейнер для счетчика ходов
-        turn_counter_size = (dp(200), dp(50)) if self.is_android else (220, 60)
+        turn_counter_size = (dp(200), dp(50))
         turn_counter_container = BoxLayout(
             orientation='vertical',
             size_hint=(None, None),
             size=turn_counter_size,
-            pos_hint={'right': 0.98, 'top': 0.88} if self.is_android else {'right': 1, 'top': 0.93},
+            pos_hint={'right': 1, 'top': 1},
             padding=dp(10),
             spacing=dp(5)
         )
@@ -424,7 +424,7 @@ class GameScreen(Screen):
         self.turn_label = Label(
             text=f"Текущий ход: {self.turn_counter}",
             font_size='18sp',
-            color=(1, 1, 1, 1),  # Белый текст
+            color=(1, 1, 1, 1),
             bold=True,
             halign='center'
         )
@@ -432,14 +432,14 @@ class GameScreen(Screen):
         self.add_widget(turn_counter_container)
 
         # Кнопка "Завершить ход"
-        end_turn_size = (dp(200), dp(50)) if self.is_android else (220, 50)
+        end_turn_size = (dp(200), dp(50))
         self.end_turn_button = Button(
             text="Завершить ход",
             size_hint=(None, None),
             size=end_turn_size,
-            pos_hint={'center_x': 0.5, 'y': 0.02} if self.is_android else {'right': 1, 'top': 1},
+            pos_hint={'x': 0.02, 'y': 0.02},
             background_color=(0.1, 0.5, 0.1, 1),
-            font_size=sp(18) if self.is_android else '20sp',
+            font_size=sp(18),
             bold=True,
             color=(1, 1, 1, 1)
         )
@@ -448,12 +448,8 @@ class GameScreen(Screen):
 
         # Добавление ResourceBox в верхний правый угол
         self.resource_box = ResourceBox(resource_manager=self.faction)
-        if self.is_android:
-            self.resource_box.size_hint = (0.3, 0.35)
-            self.resource_box.pos_hint = {'x': 0.02, 'top': 0.65}
-        else:
-            self.resource_box.size_hint = (0.25, 0.4)
-            self.resource_box.pos_hint = {'x': 0, 'top': 1}
+        self.resource_box.size_hint = (0.2, 0.95)  # Растягиваем почти на всю высоту
+        self.resource_box.pos_hint = {'x': 0, 'y': 0.6}  # Слева по всей высоте
 
         # Добавляем обработчик изменения ориентации
         Window.bind(on_resize=self.on_window_resize)
@@ -463,13 +459,20 @@ class GameScreen(Screen):
         self.init_ai_controllers()
 
     def on_window_resize(self, instance, width, height):
-        # Адаптация при повороте экрана
-        if self.is_android:
-            is_landscape = width > height
-            # Регулируем размеры для ландшафтного режима
-            self.resource_box.size_hint = (0.25, 0.3) if is_landscape else (0.3, 0.35)
-            self.end_turn_button.pos_hint = {'center_x': 0.5, 'y': 0.02} if is_landscape else {'right': 0.98, 'y': 0.02}
-            self.turn_counter_container.pos_hint = {'right': 0.98, 'top': 0.78} if is_landscape else {'right': 0.98, 'top': 0.88}
+        is_landscape = width > height
+        if is_landscape:
+            self.resource_box.size_hint = (0.2, 0.9)
+            self.resource_box.pos_hint = {'x': 0, 'y': 0}
+            self.game_area.size_hint = (0.6, 1)
+            self.game_area.pos_hint = {'x': 0.2, 'y': 0}
+            self.end_turn_button.pos_hint = {'x': 0.02, 'y': 0.02}
+            self.turn_label.text = f"Ход: {self.turn_counter}"
+        else:
+            self.resource_box.size_hint = (0.25, 0.95)
+            self.resource_box.pos_hint = {'x': 0, 'y': 0}
+            self.game_area.size_hint = (0.7, 1)
+            self.game_area.pos_hint = {'x': 0.25, 'y': 0}
+            self.end_turn_button.pos_hint = {'x': 0.02, 'y': 0.02}
 
     def save_selected_faction_to_db(self):
         """

@@ -1671,54 +1671,61 @@ def show_ratings_popup():
 #------------------------------------------------------------------
 def start_politic_mode(faction, game_area, class_faction):
     """Инициализация политического режима для выбранной фракции"""
-    # основное окно политических кнопок
+
+    from kivy.metrics import dp, sp  # ← Не забудь импортировать
+
+    # Проверяем, является ли платформа Android
+    is_android = platform == 'android'
+
+    # === Layout для кнопок ===
     politics_layout = BoxLayout(
         orientation='horizontal',
-        size_hint=(1, 0.1),
+        size_hint=(1, None),
+        height=dp(70) if is_android else 60,
         pos_hint={'x': 0, 'y': 0},
-        spacing=10,
-        padding=10
+        spacing=dp(10) if is_android else 10,
+        padding=[dp(10), dp(5), dp(10), dp(5)] if is_android else [10, 5, 10, 5]
     )
 
-    # создаём Popup заранее
+    # Создаём Popup заранее
     manage_friend_popup = ManageFriend(faction, game_area)
 
     def styled_btn(text, callback):
         btn = Button(
             text=text,
-            size_hint_x=0.33,
+            size_hint_x=None,
+            width=dp(120) if is_android else 100,
             size_hint_y=None,
-            height=50,
-            background_color=(0, 0, 0, 0),
+            height=dp(60) if is_android else 50,
+            background_color=(0, 0, 0, 0),  # Прозрачный фон
             color=(1, 1, 1, 1),
-            font_size=16,
+            font_size=sp(18) if is_android else 16,
             bold=True
         )
-        # фон кнопки
+
+        # Рисуем фон с закруглениями
         with btn.canvas.before:
-            Color(0.2, 0.6, 1, 1)
-            btn._rect = Rectangle(pos=btn.pos, size=btn.size)
-        btn.bind(pos=lambda inst, val: setattr(inst._rect, 'pos', inst.pos))
-        btn.bind(size=lambda inst, val: setattr(inst._rect, 'size', inst.size))
+            Color(0.2, 0.6, 1, 1)  # Светло-голубой цвет
+            btn.rect = RoundedRectangle(pos=btn.pos, size=btn.size, radius=[15])
+
+        # Обновляем позицию и размер прямоугольника при изменении кнопки
+        def update_rect(instance, value):
+            instance.rect.pos = instance.pos
+            instance.rect.size = instance.size
+
+        btn.bind(pos=update_rect, size=update_rect)
         btn.bind(on_release=callback)
         return btn
 
-    # кнопки политических действий
-    btn_new = styled_btn(
-        "Новый договор",
-        lambda btn: show_new_agreement_window(faction, game_area, class_faction)
-    )
-    btn_allies = styled_btn(
-        "Союзник",
-        lambda btn: manage_friend_popup.open_popup()
-    )
-    btn_army = styled_btn(
-        "Сила армий",
-        lambda btn: show_ratings_popup()
-    )
+    # === Кнопки политических действий ===
+    btn_new = styled_btn("Новый договор", lambda btn: show_new_agreement_window(faction, game_area, class_faction))
+    btn_allies = styled_btn("Союзник", lambda btn: manage_friend_popup.open_popup())
+    btn_army = styled_btn("Сила армий", lambda btn: show_ratings_popup())
 
-    # добавляем в layout
+    # Добавляем в layout
     politics_layout.add_widget(btn_new)
     politics_layout.add_widget(btn_allies)
     politics_layout.add_widget(btn_army)
+
+    # Добавляем layout на экран
     game_area.add_widget(politics_layout)

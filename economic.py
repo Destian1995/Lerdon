@@ -1996,34 +1996,41 @@ def open_auto_build_popup(faction):
 def start_economy_mode(faction, game_area):
     """Инициализация экономического режима для выбранной фракции"""
 
+    from kivy.metrics import dp, sp  # ← Не забудь импортировать dp и sp
+
+    # Проверяем, является ли платформа Android
+    is_android = platform == 'android'
+
     # Создаем layout для кнопок
     economy_layout = BoxLayout(
         orientation='horizontal',
-        size_hint=(1, 0.1),
+        size_hint=(1, None),
+        height=dp(70) if is_android else 60,
         pos_hint={'x': 0, 'y': 0},
-        spacing=10,  # Расстояние между кнопками
-        padding=10  # Отступы внутри layout
+        spacing=dp(10) if is_android else 10,
+        padding=[dp(10), dp(5), dp(10), dp(5)] if is_android else [10, 5, 10, 5]
     )
 
-    # Функция для создания стильных кнопок
+    # Функция для создания стильных закруглённых кнопок
     def create_styled_button(text, on_press_callback):
         button = Button(
             text=text,
-            size_hint_x=0.33,
+            size_hint_x=None,
+            width=dp(120) if is_android else 100,
             size_hint_y=None,
-            height=50,
+            height=dp(60) if is_android else 50,
             background_color=(0, 0, 0, 0),  # Прозрачный фон
             color=(1, 1, 1, 1),  # Цвет текста (белый)
-            font_size=16,  # Размер шрифта
-            bold=True  # Жирный текст
+            font_size=sp(18) if is_android else 16,
+            bold=True
         )
 
-        # Добавляем кастомный фон с помощью Canvas
+        # Рисуем фон с закруглениями
         with button.canvas.before:
-            Color(0.2, 0.8, 0.2, 1)  # Цвет фона кнопки (зеленый)
-            button.rect = Rectangle(pos=button.pos, size=button.size)
+            Color(0.2, 0.8, 0.2, 1)  # Зелёный цвет фона
+            button.rect = RoundedRectangle(pos=button.pos, size=button.size, radius=[15])
 
-        # Обновляем позицию и размер прямоугольника при изменении размера кнопки
+        # Обновляем позицию и размер прямоугольника при изменении кнопки
         def update_rect(instance, value):
             instance.rect.pos = instance.pos
             instance.rect.size = instance.size
@@ -2036,12 +2043,12 @@ def start_economy_mode(faction, game_area):
 
     # Создаем кнопки с новым стилем
     auto_btn = create_styled_button("Стройка", lambda x: open_auto_build_popup(faction))
-    economy_layout.add_widget(auto_btn)
     build_btn = create_styled_button("Статистика", lambda x: open_build_popup(faction))
     trade_btn = create_styled_button("Торговля", lambda x: open_trade_popup(faction))
     tax_btn = create_styled_button("Налоги", lambda x: open_tax_popup(faction))
 
     # Добавляем кнопки в layout
+    economy_layout.add_widget(auto_btn)
     economy_layout.add_widget(build_btn)
     economy_layout.add_widget(trade_btn)
     economy_layout.add_widget(tax_btn)

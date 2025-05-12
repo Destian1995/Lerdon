@@ -79,37 +79,40 @@ class FortressInfoPopup(Popup):
 
     def create_ui(self):
         """
-        Создает масштабируемый пользовательский интерфейс.
+        Создает масштабируемый пользовательский интерфейс для окна города (Гарнизон / Здания).
         """
+        from kivy.core.window import Window  # Убедимся, что Window доступен
+
+        is_android = platform == 'android'
+
         # Базовые параметры для масштабирования
         screen_width, screen_height = Window.size
-        scale_factor = screen_width / 360  # Масштабный коэффициент (360 — базовая ширина экрана)
+        scale_factor = screen_width / 360  # Относительно стандартной ширины
 
-        base_font_size = 8  # Базовый размер шрифта
-        base_padding = 7  # Базовый отступ
-        base_spacing = 7  # Базовое расстояние между виджетами
-        base_button_height = 20  # Базовая высота кнопок
+        base_font_size = 14 if is_android else 12
+        base_button_height = dp(50) if is_android else 40
+        padding = dp(15)
+        spacing = dp(10)
 
-        font_size = int(base_font_size * scale_factor)
-        padding = int(base_padding * scale_factor)
-        spacing = int(base_spacing * scale_factor)
-        button_height = int(base_button_height * scale_factor)
+        font_size = sp(base_font_size)
+        button_height = base_button_height
 
         # Главный макет
         main_layout = BoxLayout(orientation='vertical', padding=padding, spacing=spacing)
 
-        # Верхняя часть: Гарнизон и здания
+        # === Верхняя часть: Гарнизон и здания в двух колонках ===
         columns_layout = GridLayout(cols=2, spacing=spacing, size_hint_y=0.7)
 
-        # Левая колонка: Гарнизон
+        # --- Левая колонка: Гарнизон ---
         troops_column = BoxLayout(orientation='vertical', spacing=spacing)
+
         troops_label = Label(
             text="Гарнизон",
-            font_size=f'{font_size*1.2}sp',
+            font_size=font_size * 1.2,
             bold=True,
             size_hint_y=None,
-            height=int(30 * scale_factor),
-            color=(1, 1, 1, 1)  # Черный текст
+            height=dp(40),
+            color=(1, 1, 1, 1)
         )
         troops_column.add_widget(troops_label)
 
@@ -120,15 +123,16 @@ class FortressInfoPopup(Popup):
         troops_column.add_widget(self.attacking_units_list)
         columns_layout.add_widget(troops_column)
 
-        # Правая колонка: Здания
+        # --- Правая колонка: Здания ---
         buildings_column = BoxLayout(orientation='vertical', spacing=spacing)
+
         buildings_label = Label(
             text="Здания",
-            font_size=f'{font_size*1.2}sp',
+            font_size=font_size * 1.2,
             bold=True,
             size_hint_y=None,
-            height=int(30 * scale_factor),
-            color=(1, 1, 1, 1)  # Черный текст
+            height=dp(40),
+            color=(1, 1, 1, 1)
         )
         buildings_column.add_widget(buildings_label)
 
@@ -141,47 +145,49 @@ class FortressInfoPopup(Popup):
 
         main_layout.add_widget(columns_layout)
 
-        # Нижняя часть: Кнопки действий
-        button_layout = GridLayout(cols=3, size_hint_y=None, height=button_height, spacing=spacing)
+        # === Нижняя часть: Кнопки действий ===
+        button_layout = BoxLayout(orientation='horizontal', spacing=spacing, size_hint_y=None, height=button_height)
 
-        # Кнопка "Ввести войска"
-        send_troops_button = Button(
-            text="Ввести войска",
-            font_size=f'{font_size}sp',
-            size_hint_y=None,
-            height=button_height,
-            background_color=(0.6, 0.8, 0.6, 1)
-        )
+        def create_styled_button(text, bg_color, height=dp(50) if is_android else 40):
+            btn = Button(
+                text=text,
+                size_hint=(None, None),
+                width=Window.width / 3 - spacing * 2,
+                height=height,  # Теперь можно задать нужную высоту
+                background_color=(0, 0, 0, 0),
+                color=(1, 1, 1, 1),
+                font_size=font_size,
+            )
+            with btn.canvas.before:
+                Color(*bg_color)
+                btn.rect = RoundedRectangle(pos=btn.pos, size=btn.size, radius=[15])
+            btn.bind(pos=lambda inst, val: setattr(inst.rect, 'pos', inst.pos))
+            btn.bind(size=lambda inst, val: setattr(inst.rect, 'size', inst.size))
+            return btn
+
+        # Ввести войска
+        send_troops_button = create_styled_button("Ввести войска", (0.2, 0.8, 0.2, 1), height=dp(40) if is_android else 30)
+        send_troops_button.size_hint_x = 1
         send_troops_button.bind(on_press=self.select_troop_type)
         button_layout.add_widget(send_troops_button)
 
-        # Кнопка "Разместить армию"
-        place_army_button = Button(
-            text="Разместить армию",
-            font_size=f'{font_size}sp',
-            size_hint_y=None,
-            height=button_height,
-            background_color=(0.6, 0.6, 0.8, 1)
-        )
+        # Разместить армию
+        place_army_button = create_styled_button("Разместить армию", (0.2, 0.6, 0.9, 1), height=dp(40) if is_android else 30)
+        place_army_button.size_hint_x = 1
         place_army_button.bind(on_press=self.place_army)
         button_layout.add_widget(place_army_button)
 
         main_layout.add_widget(button_layout)
 
-        # Кнопка "Закрыть"
-        close_button = Button(
-            text="Закрыть",
-            font_size=f'{font_size}sp',
-            size_hint_y=None,
-            height=button_height,
-            background_color=(0.8, 0.8, 0.8, 1)
-        )
+        # === Кнопка "Закрыть" ===
+        close_button = create_styled_button("Закрыть", (0.9, 0.3, 0.3, 1), height=dp(40) if is_android else 30)
+        close_button.size_hint_x = 1
         close_button.bind(on_press=self.dismiss)
         main_layout.add_widget(close_button)
 
         self.content = main_layout
 
-        # Инициализация данных
+        # === Инициализация данных ===
         self.get_garrison()
         self.load_buildings()
 
