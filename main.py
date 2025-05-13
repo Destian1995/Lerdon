@@ -267,7 +267,7 @@ class MapWidget(Widget):
                     destination_name, destination_coords = cities[j]
                     # Вычисляем расстояние между городами
                     total_diff = self.calculate_manhattan_distance(source_coords, destination_coords)
-                    if total_diff < 224:  # Рисуем дорогу, если расстояние ≤ 220
+                    if total_diff * self.map_scale < 224:
                         # Сдвигаем координаты относительно позиции карты
                         drawn_x1 = source_coords[0] + self.map_pos[0]
                         drawn_y1 = source_coords[1] + self.map_pos[1]
