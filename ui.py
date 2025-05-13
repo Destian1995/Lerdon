@@ -930,7 +930,7 @@ class FortressInfoPopup(Popup):
             screen_width, _ = Window.size
             scale_factor = screen_width / 360
 
-            font_size = min(max(int(12 * scale_factor), 16), 20)
+            font_size = min(max(int(9 * scale_factor), 14), 18)
             image_size = int(80 * scale_factor)
 
             main_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)

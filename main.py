@@ -267,12 +267,12 @@ class MapWidget(Widget):
                     destination_name, destination_coords = cities[j]
                     # Вычисляем расстояние между городами
                     total_diff = self.calculate_manhattan_distance(source_coords, destination_coords)
-                    if total_diff < 224 / self.map_scale:
+                    if total_diff < 224:
                         # Сдвигаем координаты относительно позиции карты
-                        drawn_x1 = source_coords[0] * self.map_scale + self.map_pos[0]
-                        drawn_y1 = source_coords[1] * self.map_scale + self.map_pos[1]
-                        drawn_x2 = destination_coords[0] * self.map_scale + self.map_pos[0]
-                        drawn_y2 = destination_coords[1] * self.map_scale + self.map_pos[1]
+                        drawn_x1 = source_coords[0] + self.map_pos[0]
+                        drawn_y1 = source_coords[1] + self.map_pos[1]
+                        drawn_x2 = destination_coords[0] + self.map_pos[0]
+                        drawn_y2 = destination_coords[1] + self.map_pos[1]
                         # Рисуем прямую линию между точками
                         Line(points=[drawn_x1, drawn_y1, drawn_x2, drawn_y2], width=1)
 
@@ -292,10 +292,8 @@ class MapWidget(Widget):
         base_map_width, base_map_height = screen_width, screen_height
         scaled_map_width = base_map_width * self.map_scale
         scaled_map_height = base_map_height * self.map_scale
-
         self.map_image.pos = self.map_pos
         self.map_image.size = (scaled_map_width, scaled_map_height)
-
         self.canvas.clear()
         self.draw_fortresses()
         self.draw_roads()
@@ -430,6 +428,7 @@ class MapWidget(Widget):
     def update_cities(self):
         self.canvas.clear()
         self.draw_fortresses()
+        self.draw_roads()
 
     def on_touch_up(self, touch):
         # Обрабатываем отпускание касания

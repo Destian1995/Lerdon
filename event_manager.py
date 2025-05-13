@@ -23,11 +23,11 @@ if not os.path.exists(copied_db_path):
         raise FileNotFoundError(f"❌ game_data.db отсутствует в проекте!")
 
 
-def get_adaptive_font_size(min_size=14, max_size=20):
+def get_adaptive_font_size(min_size=14, max_size=18):
     """Адаптирует размер шрифта под ширину экрана"""
     screen_width = Window.width
-    # Базовый коэффициент: 0.05 от ширины экрана (например, 360px → 18sp)
-    dynamic_size = min(max(screen_width * 0.05, min_size), max_size)
+    # Базовый коэффициент: 0.4 от ширины экрана (например, 360px → 18sp)
+    dynamic_size = min(max(screen_width * 0.4, min_size), max_size)
     return dynamic_size
 
 
