@@ -23,11 +23,22 @@ if not os.path.exists(copied_db_path):
         raise FileNotFoundError(f"❌ game_data.db отсутствует в проекте!")
 
 
-def get_adaptive_font_size(min_size=14, max_size=18):
-    """Адаптирует размер шрифта под ширину экрана"""
+def get_adaptive_font_size(min_size=15, max_size=20):
+    """Адаптирует размер шрифта под ширину экрана с учетом Android"""
     screen_width = Window.width
-    # Базовый коэффициент: 0.4 от ширины экрана (например, 360px → 18sp)
-    dynamic_size = min(max(screen_width * 0.4, min_size), max_size)
+
+    # Увеличенный коэффициент для лучшей читаемости
+    dynamic_size = min(max(screen_width * 1.8, min_size), max_size)
+
+    # Учет масштабирования Android (если доступно)
+    if platform == 'android':
+        from jnius import autoclass
+        context = autoclass('org.kivy.android.PythonActivity').mActivity
+        resources = context.getResources()
+        configuration = resources.getConfiguration()
+        scaled_density = resources.getDisplayMetrics().scaledDensity
+        dynamic_size = int(dynamic_size * scaled_density)
+
     return dynamic_size
 
 
@@ -201,7 +212,7 @@ class EventManager:
         # Адаптивный Label с текстом события и переносом слов
         label = Label(
             text=description,
-            font_size=font_size,
+            font_size=font_size*1.1,
             size_hint=(1, None),
             halign="center",
             valign="middle",
@@ -290,7 +301,7 @@ class EventManager:
             background_normal='',
             background_color=(0, 0, 0, 0),
             color=(1, 1, 1, 1),
-            font_size=font_size * 0.9,
+            font_size=font_size,
             size_hint=(1, None),
             height=dp(50),
             padding=(dp(10), dp(5)),

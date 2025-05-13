@@ -237,10 +237,7 @@ class MapWidget(Widget):
         # Загружаем данные о городах из базы данных
         try:
             cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT fortress_name, coordinates 
-                FROM city
-            """)
+            cursor.execute("SELECT fortress_name, coordinates FROM city")
             fortresses_data = cursor.fetchall()
         except sqlite3.Error as e:
             print(f"Ошибка при загрузке данных о городах: {e}")
@@ -265,14 +262,23 @@ class MapWidget(Widget):
                 for j in range(i + 1, len(cities)):
                     source_name, source_coords = cities[i]
                     destination_name, destination_coords = cities[j]
+
                     # Вычисляем расстояние между городами
                     total_diff = self.calculate_manhattan_distance(source_coords, destination_coords)
+
                     if total_diff < 224:
+                        # Применяем масштабирование координат
+                        scaled_x1 = source_coords[0] * self.map_scale
+                        scaled_y1 = source_coords[1] * self.map_scale
+                        scaled_x2 = destination_coords[0] * self.map_scale
+                        scaled_y2 = destination_coords[1] * self.map_scale
+
                         # Сдвигаем координаты относительно позиции карты
-                        drawn_x1 = source_coords[0] + self.map_pos[0]
-                        drawn_y1 = source_coords[1] + self.map_pos[1]
-                        drawn_x2 = destination_coords[0] + self.map_pos[0]
-                        drawn_y2 = destination_coords[1] + self.map_pos[1]
+                        drawn_x1 = scaled_x1 + self.map_pos[0]
+                        drawn_y1 = scaled_y1 + self.map_pos[1]
+                        drawn_x2 = scaled_x2 + self.map_pos[0]
+                        drawn_y2 = scaled_y2 + self.map_pos[1]
+
                         # Рисуем прямую линию между точками
                         Line(points=[drawn_x1, drawn_y1, drawn_x2, drawn_y2], width=1)
 
