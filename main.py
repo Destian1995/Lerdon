@@ -613,28 +613,41 @@ class KingdomSelectionWidget(FloatLayout):
         self.add_widget(self.faction_label)
 
         # === Панель кнопок ===
-        button_height = dp(100) if is_android else 60
-        spacing_val = dp(30) if is_android else 15
-        panel_size_hint = (0.5, 0.5) if is_android else (0.4, 0.5)
+        # Настройки для Android
+        if is_android:
+            button_height = dp(80)  # Увеличиваем высоту кнопок
+            button_font_size = '18sp'  # Крупный шрифт
+            panel_width = 0.7  # Шире панель для удобства
+            spacing_val = dp(15)  # Уменьшаем промежуток
+            padding = [dp(20), dp(20), dp(20), dp(20)]  # Отступы
+        else:
+            button_height = 60
+            button_font_size = '14sp'
+            panel_width = 0.4
+            spacing_val = 15
+            padding = [20, 20, 20, 20]
 
         self.kingdom_buttons = BoxLayout(
             orientation='vertical',
             spacing=spacing_val,
-            size_hint=panel_size_hint,
+            size_hint=(panel_width, None),  # Фиксируем ширину, гибкая высота
             pos_hint={'center_x': 0.4, 'center_y': 0.5},
-            padding=[20, 20, 20, 20]
+            padding=padding,
+            height=self.calculate_panel_height(button_height, spacing_val, padding)
         )
 
         for kingdom in self.kingdom_data.keys():
             btn = Button(
                 text=kingdom,
-                size_hint=(1, None),
+                size_hint_y=None,  # Фиксированная высота кнопок
                 height=button_height,
-                font_size='14sp' if is_android else '14sp',
+                font_size=button_font_size,
                 background_normal='',
                 background_color=(0.1, 0.5, 0.9, 1),
                 color=(1, 1, 1, 1),
-                border=(20, 20, 20, 20)
+                border=(dp(20), dp(20), dp(20), dp(20)),
+                halign='center',
+                valign='middle'
             )
             btn.bind(on_press=self.select_kingdom)
             btn.bind(on_enter=lambda x: Animation(background_color=(0.2, 0.6, 1, 1), duration=0.2).start(x))
@@ -676,6 +689,11 @@ class KingdomSelectionWidget(FloatLayout):
         self.start_game_button.bind(
             on_leave=lambda x: Animation(background_color=(0.1, 0.5, 0.9, 1), duration=0.2).start(x))
         self.add_widget(self.start_game_button)
+
+    def calculate_panel_height(self, btn_height, spacing, padding):
+        """Рассчитывает общую высоту панели кнопок"""
+        num_buttons = len(self.kingdom_data)
+        return (btn_height * num_buttons) + (spacing * (num_buttons - 1)) + (padding[1] + padding[3])
 
     def load_kingdoms_from_db(self):
         """Загружает данные о княжествах из базы данных."""
