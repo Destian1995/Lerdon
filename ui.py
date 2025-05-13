@@ -936,7 +936,7 @@ class FortressInfoPopup(Popup):
             table_layout.bind(minimum_height=table_layout.setter('height'))
 
             # Базовые параметры для масштабирования (еще меньше)
-            base_font_size = 8  # Очень маленький базовый размер шрифта
+            base_font_size = 4  # Очень маленький базовый размер шрифта
             base_image_width, base_image_height = 50, 50  # Меньшие размеры изображений
             screen_width, _ = Window.size
             scale_factor = screen_width / 360  # Масштабный коэффициент
@@ -952,7 +952,7 @@ class FortressInfoPopup(Popup):
                     font_size=f'{font_size}sp',
                     bold=True,
                     size_hint_y=None,
-                    height=80,  # Уменьшаем высоту заголовков
+                    height=50,  # Уменьшаем высоту заголовков
                     color=(1, 1, 1, 1)
                 )
                 table_layout.add_widget(label)
@@ -984,7 +984,7 @@ class FortressInfoPopup(Popup):
 
                 # Изображение юнита
                 image_container = BoxLayout(size_hint_y=None, height=image_height)
-                unit_image_widget = KivyImage(
+                unit_image_widget = Image(
                     source=unit_image,
                     size_hint=(None, None),
                     size=(image_width, image_height)

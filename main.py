@@ -615,9 +615,9 @@ class KingdomSelectionWidget(FloatLayout):
         # === Панель кнопок ===
         # Настройки для Android
         if is_android:
-            button_height = dp(60)  # Увеличиваем высоту кнопок
+            button_height = dp(50)  # Высота кнопок
             button_font_size = '18sp'  # Крупный шрифт
-            panel_width = 0.5  # Шире панель для удобства
+            panel_width = 0.4  # Шире панель для удобства
             spacing_val = dp(15)  # Уменьшаем промежуток
             padding = [dp(20), dp(20), dp(20), dp(20)]  # Отступы
         else:
@@ -657,7 +657,7 @@ class KingdomSelectionWidget(FloatLayout):
         self.add_widget(self.kingdom_buttons)
 
         # === Изображение советника ===
-        advisor_size = (0.45, 0.45) if is_android else (0.3, 0.3)
+        advisor_size = (0.3, 0.3) if is_android else (0.3, 0.3)
         advisor_pos = {'center_x': 0.75, 'center_y': 0.6}
         self.advisor_image = Image(
             source='files/null.png',
@@ -667,8 +667,8 @@ class KingdomSelectionWidget(FloatLayout):
         self.add_widget(self.advisor_image)
 
         # === Кнопка "Начать игру" ===
-        start_btn_size = (0.5, None)
-        start_btn_height = dp(60) if is_android else 60
+        start_btn_size = (0.3, None)
+        start_btn_height = dp(50) if is_android else 60
         start_btn_font = '15sp' if is_android else '14sp'
 
         self.start_game_button = Button(

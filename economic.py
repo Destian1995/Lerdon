@@ -1755,7 +1755,7 @@ def open_trade_popup(game_instance):
     trade_layout.add_widget(button_layout)
 
     # === ПОПАП ===
-    popup = Popup(title="Рынок сырья", content=trade_layout, size_hint=(0.95, 0.8))
+    popup = Popup(title="", content=trade_layout, size_hint=(0.95, 0.8))
 
     def on_press_wrapper(action):
         def handler(instance):
