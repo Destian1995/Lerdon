@@ -929,7 +929,7 @@ class FortressInfoPopup(Popup):
             screen_width, _ = Window.size
             scale_factor = screen_width / 360
 
-            font_size = min(max(int(14 * scale_factor), 14), 18)
+            font_size = min(max(int(9 * scale_factor), 14), 18)
             image_width = int(60 * scale_factor)
             image_height = int(60 * scale_factor)
 
@@ -944,7 +944,7 @@ class FortressInfoPopup(Popup):
                     font_size=sp(font_size),
                     bold=True,
                     size_hint_y=None,
-                    height=int(35 * scale_factor),
+                    height=int(30 * scale_factor),
                     color=(1, 1, 1, 1)
                 )
                 table_layout.add_widget(label)
