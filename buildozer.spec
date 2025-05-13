@@ -28,7 +28,7 @@ p4a.whitelist = python3.11
 
 
 # Application version
-version = 0.28.6
+version = 0.28.7
 
 # Application author
 author = Lerdon Team
