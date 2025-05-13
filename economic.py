@@ -1637,60 +1637,11 @@ def open_trade_popup(game_instance):
     game_instance.load_resources_from_db()
     game_instance.generate_raw_material_price()
 
-    trade_layout = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
-
-    # === КОНТЕЙНЕР ДЛЯ БЕГУЩЕЙ СТРОКИ ===
-    history_container = BoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60), padding=dp(8))
-    history_container.canvas.before.clear()
-    with history_container.canvas.before:
-        Color(0.1, 0.1, 0.1, 1)  # тёмный фон
-        RoundedRectangle(pos=history_container.pos, size=history_container.size, radius=[dp(10)])
-
-        # Привязка размеров и позиции
-        history_container.bind(pos=lambda inst, val: setattr(inst.canvas.before.children[-1], 'pos', val))
-        history_container.bind(size=lambda inst, val: setattr(inst.canvas.before.children[-1], 'size', val))
-
-    # === БЕГУЩАЯ СТРОКА ИСТОРИИ ЦЕН ===
-    price_history_text = ""
-    previous_price = None
-    for i, price in enumerate(game_instance.raw_material_price_history):
-        if previous_price is not None:
-            if price > previous_price:
-                color_tag = "[color=00FF00]"
-            elif price < previous_price:
-                color_tag = "[color=FF0000]"
-            else:
-                color_tag = "[color=AAAAAA]"
-        else:
-            color_tag = "[color=FFFFFF]"
-        price_history_text += f"{color_tag}Ход {i + 1}: {price}[/color]    "
-        previous_price = price
-
-    history_label = Label(
-        text=price_history_text,
-        markup=True,
-        font_size=sp(14),
-        color=(1, 1, 1, 1),
-        size_hint_x=None,
-        size_hint_y=1
+    trade_layout = BoxLayout(
+        orientation='vertical',
+        padding=dp(16),
+        spacing=dp(12)
     )
-
-    # Примерно оценим ширину: 8 px на символ + запас
-    history_label.width = max(len(price_history_text) * dp(8), dp(500))
-
-    scroll_view = ScrollView(size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False, bar_width=0)
-    scroll_view.add_widget(history_label)
-    history_container.add_widget(scroll_view)
-
-    # === Анимация скролла ===
-    def animate_scrolling(*args):
-        history_label.x = scroll_view.width
-        anim = Animation(x=-history_label.width, duration=30, t='linear')
-        anim.start(history_label)
-
-    Clock.schedule_once(lambda dt: animate_scrolling(), 0.1)
-
-    trade_layout.add_widget(history_container)
 
     # === ТЕКУЩАЯ ЦЕНА ===
     current_price = game_instance.current_raw_material_price
@@ -1715,7 +1666,7 @@ def open_trade_popup(game_instance):
     lot_info.bind(size=lot_info.setter('text_size'))
 
     available_label = Label(
-        text=f"Доступно для продажи: {game_instance.get_available_raw_material_lots()} лотов",
+        text=f"Доступно: {game_instance.get_available_raw_material_lots()} лотов",
         font_size=sp(14), color=(1, 1, 1, 1), halign="center"
     )
     available_label.bind(size=available_label.setter('text_size'))
@@ -1735,7 +1686,10 @@ def open_trade_popup(game_instance):
         input_filter='int',
         size_hint=(1, None),
         height=dp(40),
-        padding=[dp(10), dp(8)]
+        padding=[dp(10), dp(8)],
+        background_color=(0.15, 0.15, 0.15, 1),
+        foreground_color=(1, 1, 1, 1),
+        cursor_color=(1, 1, 1, 1)
     )
     input_box.add_widget(quantity_input)
     trade_layout.add_widget(input_box)
@@ -1750,7 +1704,6 @@ def open_trade_popup(game_instance):
         background_color=(0, 0.6, 0.2, 1),
         color=(1, 1, 1, 1),
         size_hint=(0.5, 1),
-        border=(0, 0, 0, 0),
         background_normal='',
         background_down=''
     )
@@ -1762,7 +1715,6 @@ def open_trade_popup(game_instance):
         background_color=(0.7, 0.1, 0.1, 1),
         color=(1, 1, 1, 1),
         size_hint=(0.5, 1),
-        border=(0, 0, 0, 0),
         background_normal='',
         background_down=''
     )

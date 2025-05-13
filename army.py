@@ -372,6 +372,9 @@ def start_army_mode(faction, game_area, class_faction):
     }
 
     bg_color = faction_colors.get(faction, (0.15, 0.15, 0.15, 1))
+    TEXT_COLOR = (1, 1, 1, 1)
+    PRIMARY_COLOR = (0, 0.6, 0.8, 1)
+    INPUT_BACKGROUND = (0.15, 0.15, 0.15, 1)
 
     main_box = BoxLayout(
         orientation='horizontal',
@@ -385,7 +388,7 @@ def start_army_mode(faction, game_area, class_faction):
     right_container = BoxLayout(
         orientation='vertical',
         size_hint=(0.7, 1),
-        padding=[dp(15), dp(25), dp(15), dp(25)]
+        padding=[dp(10), dp(15), dp(10), dp(15)]
     )
 
     carousel = Carousel(
@@ -409,7 +412,7 @@ def start_army_mode(faction, game_area, class_faction):
             orientation='vertical',
             size_hint=(1, 1),
             spacing=dp(8),
-            padding=dp(20)
+            padding=dp(15)
         )
 
         with card.canvas.before:
@@ -426,35 +429,93 @@ def start_army_mode(faction, game_area, class_faction):
 
         card.bind(pos=update_bg, size=update_bg)
 
-        header = BoxLayout(size_hint=(1, 0.12), orientation='horizontal', padding=dp(5))
+        # === ЗАГОЛОВОК С НАЗВАНИЕМ ЮНИТА ===
         title = Label(
             text=unit_name,
-            font_size='20sp',
+            font_size='18sp',
             bold=True,
             color=TEXT_COLOR,
             halign='left',
             valign='middle',
             text_size=(None, None),
             size_hint=(None, None),
-            width=dp(200),
-            height=dp(40)
+            width=dp(1)
         )
-        title.bind(width=lambda *x: setattr(title, 'text_size', (title.width, None)))
-        header.add_widget(title)
 
-        body = BoxLayout(orientation='horizontal', size_hint=(1, 0.6), spacing=dp(15))
+        def update_title_width(instance, texture_size):
+            instance.width = texture_size[0] + dp(10)
+            instance.height = dp(35)
 
-        img_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), padding=[0, dp(10), 0, 0])
+        title.bind(texture_size=update_title_width)
+
+        # === ИЗОБРАЖЕНИЕ ЮНИТА ===
+        img_container = BoxLayout(
+            orientation='vertical',
+            size_hint=(1, 0.2),
+            padding=[0, dp(5), 0, 0]
+        )
         img = Image(
             source=unit_info['image'],
-            size_hint=(1, 1),
-            keep_ratio=True,
+            size_hint=(None, 1),
+            width=dp(150),
             allow_stretch=True,
-            mipmap=True
+            keep_ratio=True
         )
         img_container.add_widget(img)
 
-        stats_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), spacing=dp(5))
+        # === БЛОК СТОИМОСТИ (рядом с изображением) ===
+        cost_container = BoxLayout(
+            orientation='horizontal',
+            size_hint=(1, 0.15),
+            spacing=dp(10),
+            padding=[0, 0, 0, 0]
+        )
+
+        cost_money, cost_time = unit_info['cost']
+
+        money_stat = BoxLayout(orientation='horizontal', size_hint=(0.5, 1), spacing=dp(5))
+        money_icon = Label(
+            text="[color=#FFFFFF]Кроны[/color]",
+            markup=True,
+            font_size='14sp',
+            halign='left',
+            size_hint=(0.4, 1)
+        )
+        money_value = Label(
+            text=f"{cost_money}",
+            font_size='16sp',
+            bold=True,
+            color=TEXT_COLOR,
+            size_hint=(0.6, 1),
+            halign='left'
+        )
+        money_stat.add_widget(money_icon)
+        money_stat.add_widget(money_value)
+
+        time_stat = BoxLayout(orientation='horizontal', size_hint=(0.5, 1), spacing=dp(5))
+        time_icon = Label(
+            text="[color=#FFFFFF]Рабочие[/color]",
+            markup=True,
+            font_size='14sp',
+            halign='left',
+            size_hint=(0.4, 1)
+        )
+        time_value = Label(
+            text=f"{cost_time}",
+            font_size='16sp',
+            bold=True,
+            color=TEXT_COLOR,
+            size_hint=(0.6, 1),
+            halign='left'
+        )
+        time_stat.add_widget(time_icon)
+        time_stat.add_widget(time_value)
+
+        cost_container.add_widget(money_stat)
+        cost_container.add_widget(time_stat)
+
+        # === ХАРАКТЕРИСТИКИ ЮНИТА ===
+        stats_container = BoxLayout(orientation='vertical', size_hint=(1, 0.3), spacing=dp(5))
         main_stats = [
             ('Урон', unit_info['stats']['Урон'], '#FFFFFF'),
             ('Защита', unit_info['stats']['Защита'], '#FFFFFF'),
@@ -485,77 +546,12 @@ def start_army_mode(faction, game_area, class_faction):
             stat_line.add_widget(lbl_value)
             stats_container.add_widget(stat_line)
 
-        body.add_widget(img_container)
-        body.add_widget(stats_container)
-
-        cost_container = BoxLayout(
-            orientation='horizontal',
-            size_hint=(1, 0.2),
-            spacing=dp(10),
-            padding=[dp(15), 0, dp(15), 0]
-        )
-
-        price_label = Label(
-            text="Цена:  ",
-            font_size='16sp',
-            bold=True,
-            color=TEXT_COLOR,
-            halign='right',
-            size_hint=(0.3, 1)
-        )
-
-        cost_values = BoxLayout(orientation='vertical', size_hint=(0.7, 1), spacing=dp(5))
-        cost_money, cost_time = unit_info['cost']
-
-        money_stat = BoxLayout(orientation='horizontal', size_hint=(1, 0.5), spacing=dp(5))
-        money_icon = Label(
-            text="[color=#FFFFFF]Кроны[/color]",
-            markup=True,
-            font_size='14sp',
-            halign='left',
-            size_hint=(0.2, 1)
-        )
-        money_value = Label(
-            text=f"{cost_money}",
-            font_size='16sp',
-            bold=True,
-            color=TEXT_COLOR,
-            size_hint=(0.8, 1),
-            halign='left'
-        )
-        money_stat.add_widget(money_icon)
-        money_stat.add_widget(money_value)
-
-        time_stat = BoxLayout(orientation='horizontal', size_hint=(1, 0.5), spacing=dp(5))
-        time_icon = Label(
-            text="[color=#FFFFFF]Рабочие[/color]",
-            markup=True,
-            font_size='14sp',
-            halign='left',
-            size_hint=(0.2, 1)
-        )
-        time_value = Label(
-            text=f"{cost_time}",
-            font_size='16sp',
-            bold=True,
-            color=TEXT_COLOR,
-            size_hint=(0.8, 1),
-            halign='left'
-        )
-        time_stat.add_widget(time_icon)
-        time_stat.add_widget(time_value)
-
-        cost_values.add_widget(money_stat)
-        cost_values.add_widget(time_stat)
-
-        cost_container.add_widget(price_label)
-        cost_container.add_widget(cost_values)
-
+        # === ПАНЕЛЬ УПРАВЛЕНИЯ ===
         control_panel = BoxLayout(
-            size_hint=(1, 0.18),
+            size_hint=(1, 0.15),
             orientation='horizontal',
             spacing=dp(10),
-            padding=[dp(5), dp(10), dp(5), dp(5)]
+            padding=[dp(5), dp(5), dp(5), dp(5)]
         )
 
         input_qty = TextInput(
@@ -565,7 +561,8 @@ def start_army_mode(faction, game_area, class_faction):
             size_hint=(0.6, 1),
             background_color=INPUT_BACKGROUND,
             halign='center',
-            multiline=False
+            multiline=False,
+            height=dp(40)
         )
 
         btn_hire = Button(
@@ -574,8 +571,11 @@ def start_army_mode(faction, game_area, class_faction):
             bold=True,
             background_color=PRIMARY_COLOR,
             color=TEXT_COLOR,
-            size_hint=(0.4, 1)
+            size_hint=(0.4, 1),
+            background_normal='',
+            background_down=''
         )
+
         btn_hire.bind(on_release=lambda instance, name=unit_name, cost=unit_info['cost'],
                                         input_box=input_qty, stats=unit_info['stats'], image=unit_info["image"]:
         broadcast_units(name, cost, input_box, army_hire, image, stats))
@@ -583,9 +583,11 @@ def start_army_mode(faction, game_area, class_faction):
         control_panel.add_widget(input_qty)
         control_panel.add_widget(btn_hire)
 
-        card.add_widget(header)
-        card.add_widget(body)
+        # === СБОРКА ===
+        card.add_widget(title)
+        card.add_widget(img_container)
         card.add_widget(cost_container)
+        card.add_widget(stats_container)
         card.add_widget(control_panel)
         slide.add_widget(card)
         carousel.add_widget(slide)
