@@ -22,6 +22,15 @@ if not os.path.exists(copied_db_path):
     else:
         raise FileNotFoundError(f"❌ game_data.db отсутствует в проекте!")
 
+
+def get_adaptive_font_size(min_size=14, max_size=20):
+    """Адаптирует размер шрифта под ширину экрана"""
+    screen_width = Window.width
+    # Базовый коэффициент: 0.05 от ширины экрана (например, 360px → 18sp)
+    dynamic_size = min(max(screen_width * 0.05, min_size), max_size)
+    return dynamic_size
+
+
 class EventManager:
     def __init__(self, player_faction, game_screen, class_faction_economic):
         self.player_faction = player_faction
@@ -184,32 +193,49 @@ class EventManager:
 
     def show_event_active_popup(self, description, option_1, option_2, effects):
         """
-        Отображение активного события в виде модального окна с выбором.
+        Отображение активного события в виде модального окне с выбором.
         """
-        content = BoxLayout(orientation="vertical", padding=10, spacing=10)
-        label = Label(text=description, font_size=16, size_hint_y=None, height=100)
-        button_1 = Button(text=option_1, size_hint_y=None, height=50, background_color=(0.2, 0.6, 1, 1))
-        button_2 = Button(text=option_2, size_hint_y=None, height=50, background_color=(1, 0.2, 0.2, 1))
+        content = BoxLayout(orientation="vertical", padding=dp(15), spacing=dp(10))
+        font_size = get_adaptive_font_size()
 
-        popup = Popup(
-            title="Событие",
-            content=content,
-            size_hint=(0.8, 0.5),
-            title_align="center",
-            auto_dismiss=False  # Запрещаем закрытие окна без выбора
+        # Адаптивный Label с текстом события и переносом слов
+        label = Label(
+            text=description,
+            font_size=font_size,
+            size_hint=(1, None),
+            halign="center",
+            valign="middle",
+            markup=True,
+            shorten=False,
+            max_lines=0,
+            line_height=1.2,
         )
 
+        # Обновление размеров label при изменении ширины контента
+        def update_label_size(instance, width):
+            label.text_size = (width - dp(30), None)
+            label.texture_update()
+            if label.texture:
+                label.height = max(dp(150), label.texture_size[1] + dp(20))
+
+        content.bind(width=update_label_size)
+
+        # Кнопки с фиксированной высотой и адаптивной шириной
+        button_1 = self.create_gradient_button(option_1, (0.2, 0.6, 1, 1), (0.1, 0.4, 0.8, 1), font_size)
+        button_2 = self.create_gradient_button(option_2, (1, 0.2, 0.2, 1), (0.8, 0.1, 0.1, 1), font_size)
+
+        # Создаем стилизованное всплывающее окно
+        popup = self.create_styled_popup("Событие", content)
+        popup.bind(on_open=lambda *args: update_label_size(content, content.width))
+
+        # Обработчики нажатий
         def on_button_1(instance):
-            # Применяем эффекты для опции 1
-            self.apply_effects_with_economic_module(effects["option_1"])
-            # Обновляем карму (+2 очка)
+            self.apply_effects_with_economic_module(effects.get("option_1", {}))
             self.update_karma(self.player_faction, 2)
             popup.dismiss()
 
         def on_button_2(instance):
-            # Применяем эффекты для опции 2
-            self.apply_effects_with_economic_module(effects["option_2"])
-            # Обновляем карму (-3 очка)
+            self.apply_effects_with_economic_module(effects.get("option_2", {}))
             self.update_karma(self.player_faction, -3)
             popup.dismiss()
 
@@ -220,6 +246,76 @@ class EventManager:
         content.add_widget(button_1)
         content.add_widget(button_2)
         popup.open()
+
+    def create_styled_popup(self, title, content):
+        """Создает стилизованное всплывающее окно с анимацией и адаптивным размером"""
+        width = min(Window.width * 0.9, dp(400))
+        height = min(Window.height * 0.6, dp(500))
+
+        popup = Popup(
+            title=title,
+            content=content,
+            size_hint=(None, None),
+            size=(width, height),
+            auto_dismiss=False,
+            title_align="center",
+            separator_height=0
+        )
+
+        def update_rects(instance, value):
+            instance.shadow.pos = (instance.x - dp(5), instance.y - dp(5))
+            instance.shadow.size = (instance.width + dp(10), instance.height + dp(10))
+            instance.bg.pos = (instance.x, instance.y)
+            instance.bg.size = (instance.width, instance.height)
+
+        with popup.canvas.before:
+            Color(0.1, 0.1, 0.1, 0.3)
+            popup.shadow = RoundedRectangle(radius=[dp(20)])
+            Color(1, 1, 1, 1)
+            popup.bg = RoundedRectangle(radius=[dp(15)])
+
+        popup.bind(pos=update_rects, size=update_rects)
+        update_rects(popup, None)
+
+        popup.opacity = 0
+        anim = Animation(opacity=1, duration=0.3)
+        anim.start(popup)
+
+        return popup
+
+    def create_gradient_button(self, text, color1, color2, font_size):
+        """Создает кнопку с градиентным фоном и закругленными углами без лишних прямоугольников"""
+        btn = Button(
+            text=text,
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
+            font_size=font_size * 0.9,
+            size_hint=(1, None),
+            height=dp(50),
+            padding=(dp(10), dp(5)),
+            markup=True,
+            halign="center",
+            valign="middle"
+        )
+
+        # Очищаем предыдущие графические инструкции
+        btn.canvas.before.clear()
+
+        with btn.canvas.before:
+            Color(*color1)
+            RoundedRectangle(pos=btn.pos, size=btn.size, radius=[dp(10)])
+
+        def update_graphics(instance, value):
+            btn.canvas.before.clear()
+            with btn.canvas.before:
+                Color(*color1)
+                RoundedRectangle(pos=instance.pos, size=instance.size, radius=[dp(10)])
+
+        btn.bind(pos=update_graphics, size=update_graphics)
+        update_graphics(btn, None)
+
+        return btn
 
     def check_karma_effects(self, faction, current_turn):
         """

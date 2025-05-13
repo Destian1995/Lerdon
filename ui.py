@@ -923,43 +923,30 @@ class FortressInfoPopup(Popup):
                 self.show_warning_popup()
                 return
 
+            # Создаем всплывающее окно
             popup = Popup(title="Разместить армию", size_hint=(0.95, 0.95))
             self.current_popup = popup
 
             screen_width, _ = Window.size
             scale_factor = screen_width / 360
 
-            font_size = min(max(int(9 * scale_factor), 14), 18)
-            image_width = int(60 * scale_factor)
-            image_height = int(60 * scale_factor)
+            font_size = min(max(int(12 * scale_factor), 16), 20)
+            image_size = int(80 * scale_factor)
 
-            main_layout = BoxLayout(orientation='vertical', padding=10, spacing=8)
-            table_layout = GridLayout(cols=5, spacing=4, size_hint_y=None)
-            table_layout.bind(minimum_height=table_layout.setter('height'))
+            main_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
-            headers = ["Изображение", "Название", "Количество", "Статистика", "Действие"]
-            for header in headers:
-                label = Label(
-                    text=header,
-                    font_size=sp(font_size),
-                    bold=True,
-                    size_hint_y=None,
-                    height=int(30 * scale_factor),
-                    color=(1, 1, 1, 1)
-                )
-                table_layout.add_widget(label)
+            # ScrollView с карточками
+            scroll_view = ScrollView(size_hint=(1, 1))
+            card_layout = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None)
+            card_layout.bind(minimum_height=card_layout.setter('height'))
 
-            bg_color = (0.2, 0.2, 0.2, 1)
+            # Цвет фона карточек
+            card_bg_color = (0.15, 0.15, 0.15, 1)
 
-            def update_rect(instance, value):
-                if hasattr(instance, 'bg_rect'):
-                    instance.bg_rect.pos = instance.pos
-                    instance.bg_rect.size = instance.size
-
-            self.added_units = set()
-
-            for unit in army_data:
+            def create_card(unit):
                 unit_type, quantity, attack, defense, durability, unit_class, unit_image = unit
+
+                # Создаем unit_data в виде словаря, как в оригинальном коде
                 unit_data = {
                     "unit_type": unit_type,
                     "quantity": quantity,
@@ -972,88 +959,94 @@ class FortressInfoPopup(Popup):
                     "unit_image": unit_image
                 }
 
-                image_container = BoxLayout(size_hint_y=None, height=image_height)
-                unit_image_widget = Image(
+                card = BoxLayout(
+                    orientation='horizontal',
+                    spacing=10,
+                    size_hint_y=None,
+                    height=int(120 * scale_factor),
+                    padding=10
+                )
+
+                # Изображение
+                image = Image(
                     source=unit_image,
                     size_hint=(None, None),
-                    size=(image_width, image_height)
+                    size=(image_size, image_size)
                 )
-                image_container.add_widget(unit_image_widget)
-                table_layout.add_widget(image_container)
 
+                # Информация
+                info_layout = BoxLayout(orientation='vertical', spacing=5)
                 name_label = Label(
                     text=unit_type,
-                    font_size=sp(font_size),
+                    font_size=sp(font_size + 2),
+                    bold=True,
+                    color=(1, 1, 1, 1),
                     size_hint_y=None,
-                    height=int(50 * scale_factor),
-                    color=(1, 1, 1, 1)
+                    height=int(30 * scale_factor)
                 )
-                with name_label.canvas.before:
-                    Color(*bg_color)
-                    name_label.bg_rect = Rectangle(pos=name_label.pos, size=name_label.size)
-                name_label.bind(pos=update_rect, size=update_rect)
-                table_layout.add_widget(name_label)
 
-                count_label = Label(
-                    text=str(format_number(quantity)),
-                    font_size=sp(font_size),
-                    size_hint_y=None,
-                    height=int(45 * scale_factor),
-                    color=(1, 1, 1, 1)
-                )
-                with count_label.canvas.before:
-                    Color(*bg_color)
-                    count_label.bg_rect = Rectangle(pos=count_label.pos, size=count_label.size)
-                count_label.bind(pos=update_rect, size=update_rect)
-                table_layout.add_widget(count_label)
-
-                stats_text = "\n".join([
-                    f"Атака: {format_number(attack)}",
-                    f"Защита: {format_number(defense)}",
-                    f"Живучесть: {format_number(durability)}",
-                    f"Класс: {unit_class}"
-                ])
                 stats_label = Label(
-                    text=stats_text,
-                    font_size=sp(font_size),
+                    text=f"Атака: {attack}\nЗащита: {defense}\nЖивучесть: {durability}\nКласс: {unit_class}",
+                    font_size=sp(font_size - 1),
+                    color=(0.9, 0.9, 0.9, 1),
                     size_hint_y=None,
-                    halign='left',
-                    valign='middle',
-                    height=int(120 * scale_factor),
-                    color=(1, 1, 1, 1)
+                    height=int(60 * scale_factor),
+                    valign='middle'
                 )
-                stats_label.bind(size=stats_label.setter('text_size'))
-                with stats_label.canvas.before:
-                    Color(*bg_color)
-                    stats_label.bg_rect = Rectangle(pos=stats_label.pos, size=stats_label.size)
-                stats_label.bind(pos=update_rect, size=update_rect)
-                table_layout.add_widget(stats_label)
+                stats_label.bind(size=lambda instance, value: setattr(instance, 'text_size', value))
 
-                action_button = Button(
+                quantity_label = Label(
+                    text=f"Доступно: {quantity}",
+                    font_size=sp(font_size - 1),
+                    color=(0.7, 0.7, 0.7, 1)
+                )
+
+                info_layout.add_widget(name_label)
+                info_layout.add_widget(stats_label)
+                info_layout.add_widget(quantity_label)
+
+                # Кнопка
+                btn = Button(
                     text="Добавить",
                     font_size=sp(font_size),
-                    size_hint_y=None,
-                    height=int(50 * scale_factor),
-                    background_color=(0.6, 0.8, 0.6, 1)
+                    size_hint=(None, None),
+                    size=(int(100 * scale_factor), int(50 * scale_factor)),
+                    background_color=(0.2, 0.6, 0.2, 1),
+                    background_normal=''
                 )
-                action_button.bind(
-                    on_press=lambda btn, data=unit_data, lbl=name_label: self.add_to_garrison_with_slider(data, lbl)
-                )
-                table_layout.add_widget(action_button)
+                btn.bind(on_press=lambda btn, data=unit_data: self.add_to_garrison_with_slider(data, btn))
 
-            scroll_view = ScrollView(size_hint=(1, 1))
-            scroll_view.add_widget(table_layout)
+                card.add_widget(image)
+                card.add_widget(info_layout)
+                card.add_widget(btn)
+
+                # Фон карточки
+                with card.canvas.before:
+                    Color(*card_bg_color)
+                    card.rect = Rectangle(pos=card.pos, size=card.size)
+                card.bind(pos=lambda inst, val: setattr(inst.rect, 'pos', val))
+                card.bind(size=lambda inst, val: setattr(inst.rect, 'size', val))
+
+                return card
+
+            # Добавляем карточки
+            for unit in army_data:
+                card_layout.add_widget(create_card(unit))
+
+            scroll_view.add_widget(card_layout)
             main_layout.add_widget(scroll_view)
 
-            close_button = Button(
+            # Кнопка закрытия
+            close_btn = Button(
                 text="Закрыть",
-                font_size=sp(font_size),
-                size_hint_y=None,
-                height=int(40 * scale_factor),
-                background_color=(0.8, 0.8, 0.8, 1)
+                font_size=sp(font_size + 2),
+                size_hint=(1, None),
+                height=int(60 * scale_factor),
+                background_color=(0.2, 0.2, 0.2, 1),
+                background_normal=''
             )
-            close_button.bind(on_press=popup.dismiss)
-            main_layout.add_widget(close_button)
+            close_btn.bind(on_press=popup.dismiss)
+            main_layout.add_widget(close_btn)
 
             popup.content = main_layout
             popup.open()

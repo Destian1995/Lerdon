@@ -447,8 +447,8 @@ class GameScreen(Screen):
 
         # Добавление ResourceBox в верхний правый угол
         self.resource_box = ResourceBox(resource_manager=self.faction)
-        self.resource_box.size_hint = (0.25, 0.7)  # Растягиваем почти на всю высоту
-        self.resource_box.pos_hint = {'x': 0, 'y': 0.34}  # Слева по всей высоте
+        self.resource_box.size_hint = (0.2, 0.7)  # Растягиваем почти на всю высоту
+        self.resource_box.pos_hint = {'x': 0, 'y': 0.27}  # Слева по всей высоте
 
         # Добавляем обработчик изменения ориентации
         Window.bind(on_resize=self.on_window_resize)

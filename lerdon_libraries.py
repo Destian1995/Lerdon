@@ -12,7 +12,7 @@ import threading
 # kivy libraries
 from kivy.animation import Animation
 from kivy.app import App
-from kivy.graphics import Line, Color, Rectangle, RoundedRectangle
+from kivy.graphics import Line, Color, Rectangle, RoundedRectangle, InstructionGroup
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
 from kivy.core.text import Label as CoreLabel
@@ -38,3 +38,13 @@ from kivy.properties import partial, StringProperty, NumericProperty, ObjectProp
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen
+from kivymd.uix.card import MDCard
+from kivymd.uix.list import (
+    OneLineAvatarIconListItem, ImageLeftWidget, IconRightWidget
+)
+from kivymd.uix.dialog import MDDialog
+from kivy.uix.recycleview import RecycleView
+from kivymd.uix.button import MDFlatButton, MDRaisedButton
+from kivymd.uix.list import MDList, OneLineAvatarListItem, ImageLeftWidget
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.selectioncontrol import MDCheckbox
