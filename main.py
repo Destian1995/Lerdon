@@ -269,10 +269,10 @@ class MapWidget(Widget):
                     total_diff = self.calculate_manhattan_distance(source_coords, destination_coords)
                     if total_diff < 224 / self.map_scale:
                         # Сдвигаем координаты относительно позиции карты
-                        drawn_x1 = source_coords[0] + self.map_pos[0]
-                        drawn_y1 = source_coords[1] + self.map_pos[1]
-                        drawn_x2 = destination_coords[0] + self.map_pos[0]
-                        drawn_y2 = destination_coords[1] + self.map_pos[1]
+                        drawn_x1 = source_coords[0] * self.map_scale + self.map_pos[0]
+                        drawn_y1 = source_coords[1] * self.map_scale + self.map_pos[1]
+                        drawn_x2 = destination_coords[0] * self.map_scale + self.map_pos[0]
+                        drawn_y2 = destination_coords[1] * self.map_scale + self.map_pos[1]
                         # Рисуем прямую линию между точками
                         Line(points=[drawn_x1, drawn_y1, drawn_x2, drawn_y2], width=1)
 
