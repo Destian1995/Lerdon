@@ -159,7 +159,6 @@ class ResourceBox(BoxLayout):
         self.spacing = dp(5)
         self.padding = [dp(15), dp(25), dp(15), dp(25)]
         # дефолтные size/pos — будут переопределены ниже
-        self.size_hint = (0.25, 0.35)
         self.pos_hint = {'x': 0, 'top': 1}
 
         # узнаём, мобильная ли платформа
@@ -240,8 +239,8 @@ class ResourceBox(BoxLayout):
     def calculate_font_size(self):
         # Увеличиваем базовый размер для Android
         if platform == 'android':
-            base_font_size = sp(18)
-            min_size = sp(12)
+            base_font_size = sp(14)
+            min_size = sp(9)
         else:
             base_font_size = sp(20)
             min_size = sp(12)
