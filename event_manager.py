@@ -227,7 +227,7 @@ class EventManager:
             label.text_size = (width - dp(30), None)
             label.texture_update()
             if label.texture:
-                label.height = max(dp(150), label.texture_size[1] + dp(20))
+                label.height = max(dp(100), label.texture_size[1] + dp(10))
 
         content.bind(width=update_label_size)
 
@@ -236,7 +236,7 @@ class EventManager:
         button_2 = self.create_gradient_button(option_2, (1, 0.2, 0.2, 1), (0.8, 0.1, 0.1, 1), font_size)
 
         # Создаем стилизованное всплывающее окно
-        popup = self.create_styled_popup("Событие", content)
+        popup = self.create_styled_popup("", content)
         popup.bind(on_open=lambda *args: update_label_size(content, content.width))
 
         # Обработчики нажатий
@@ -260,8 +260,8 @@ class EventManager:
 
     def create_styled_popup(self, title, content):
         """Создает стилизованное всплывающее окно с анимацией и адаптивным размером"""
-        width = min(Window.width * 0.9, dp(400))
-        height = min(Window.height * 0.6, dp(500))
+        width = min(Window.width * 0.95, dp(500))
+        height = min(Window.height * 0.75, dp(600))
 
         popup = Popup(
             title=title,
