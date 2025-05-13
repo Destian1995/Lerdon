@@ -293,42 +293,73 @@ class ArmyCash:
 
     def show_message(self, title, message):
         """
-        Отображает всплывающее сообщение поверх всех окон.
+        Отображает всплывающее сообщение поверх всех окон с адаптивным дизайном для Android.
         :param title: Заголовок сообщения.
         :param message: Текст сообщения.
         """
+
+        # Расчет масштабного коэффициента на основе ширины экрана
+        screen_width, _ = Window.size
+        scale_factor = screen_width / 360  # База 360dp для нормализации
+
+        # Адаптивный шрифт от 15sp до 20sp
+        font_size = min(max(int(15 * scale_factor), 15), 20)
+
+        # Адаптивные отступы и высоты
+        padding = int(15 * scale_factor)
+        spacing = int(10 * scale_factor)
+        label_height = int(100 * scale_factor)
+        button_height = int(50 * scale_factor)
+
         # Создаем контент для всплывающего окна
-        content_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content_layout = BoxLayout(
+            orientation='vertical',
+            padding=padding,
+            spacing=spacing
+        )
+
+        # Сообщение
         message_label = Label(
             text=message,
             color=(1, 1, 1, 1),  # Белый текст
-            font_size=16,
+            font_size=sp(font_size),
             size_hint_y=None,
-            height=100
+            height=label_height,
+            halign='center',
+            valign='middle'
         )
+        message_label.bind(size=message_label.setter('text_size'))  # Центрирование текста
+
+        # Кнопка "Закрыть"
         close_button = Button(
             text="Закрыть",
+            font_size=sp(font_size),
             size_hint_y=None,
-            height=50,
-            background_color=(0.2, 0.6, 1, 1)  # Синий фон кнопки
+            height=button_height,
+            background_color=(0.2, 0.6, 1, 1),  # Синий фон
+            background_normal=''
         )
 
-        # Добавляем виджеты в контент
+        # Добавляем виджеты
         content_layout.add_widget(message_label)
         content_layout.add_widget(close_button)
 
-        # Создаем Popup
+        # Настройки всплывающего окна
         popup = Popup(
             title=title,
             content=content_layout,
-            size_hint=(0.6, 0.4),  # Размер окна (60% ширины, 40% высоты)
-            auto_dismiss=False  # Окно не закрывается автоматически при клике вне его
+            size_hint=(0.85, None),  # Ширина — 85% экрана
+            height=int(200 * scale_factor),  # Высота зависит от масштаба
+            auto_dismiss=False,  # Не закрывается при клике вне
+            title_size=sp(font_size + 2),  # Заголовок чуть больше
+            title_align='center',
+            separator_color=(0.2, 0.6, 1, 1)  # Цвет разделителя
         )
 
-        # Привязываем кнопку "Закрыть" к закрытию Popup
+        # Привязка кнопки к закрытию окна
         close_button.bind(on_release=popup.dismiss)
 
-        # Открываем Popup
+        # Открываем окно
         popup.open()
 
 

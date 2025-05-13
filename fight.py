@@ -178,7 +178,7 @@ def show_battle_report(report_data):
                 markup=True,
                 size_hint_y=None,
                 height=40,
-                font_size=18,
+                font_size='20sp',
                 color=(1, 1, 1, 1)
             )
             main_layout.add_widget(header_label)
@@ -212,7 +212,6 @@ def show_battle_report(report_data):
     attacking_color = "#FF5733"  # Красный
     defending_color = "#33FF57"  # Зеленый
 
-    # Определяем заголовки таблиц в зависимости от результата игрока
     # Определяем заголовки таблиц в зависимости от результата игрока
     attacking_title = None
     defending_title = None

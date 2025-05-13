@@ -986,7 +986,7 @@ class FortressInfoPopup(Popup):
                 )
 
                 stats_label = Label(
-                    text=f"Атака: {attack}\nЗащита: {defense}\nЖивучесть: {durability}\nКласс: {unit_class}",
+                    text=f"Атака: {str(format_number(attack))}\nЗащита: {str(format_number(defense))}\nЖивучесть: {str(format_number(durability))}\nКласс: {unit_class}",
                     font_size=sp(font_size - 1),
                     color=(0.9, 0.9, 0.9, 1),
                     size_hint_y=None,
@@ -996,7 +996,7 @@ class FortressInfoPopup(Popup):
                 stats_label.bind(size=lambda instance, value: setattr(instance, 'text_size', value))
 
                 quantity_label = Label(
-                    text=f"Доступно: {quantity}",
+                    text=f"Доступно: {str(format_number(quantity))}",
                     font_size=sp(font_size - 1),
                     color=(0.7, 0.7, 0.7, 1)
                 )
