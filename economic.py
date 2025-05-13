@@ -1639,6 +1639,17 @@ def open_trade_popup(game_instance):
 
     trade_layout = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
 
+    # === КОНТЕЙНЕР ДЛЯ БЕГУЩЕЙ СТРОКИ ===
+    history_container = BoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60), padding=dp(8))
+    history_container.canvas.before.clear()
+    with history_container.canvas.before:
+        Color(0.1, 0.1, 0.1, 1)  # тёмный фон
+        RoundedRectangle(pos=history_container.pos, size=history_container.size, radius=[dp(10)])
+
+        # Привязка размеров и позиции
+        history_container.bind(pos=lambda inst, val: setattr(inst.canvas.before.children[-1], 'pos', val))
+        history_container.bind(size=lambda inst, val: setattr(inst.canvas.before.children[-1], 'size', val))
+
     # === БЕГУЩАЯ СТРОКА ИСТОРИИ ЦЕН ===
     price_history_text = ""
     previous_price = None
@@ -1661,19 +1672,25 @@ def open_trade_popup(game_instance):
         font_size=sp(14),
         color=(1, 1, 1, 1),
         size_hint_x=None,
-        width=len(price_history_text) * 10  # Примерная ширина текста
+        size_hint_y=1
     )
 
-    scroll_view = ScrollView(size_hint=(1, None), height=dp(40), do_scroll_x=True, do_scroll_y=False)
-    scroll_view.add_widget(history_label)
+    # Примерно оценим ширину: 8 px на символ + запас
+    history_label.width = max(len(price_history_text) * dp(8), dp(500))
 
+    scroll_view = ScrollView(size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False, bar_width=0)
+    scroll_view.add_widget(history_label)
+    history_container.add_widget(scroll_view)
+
+    # === Анимация скролла ===
     def animate_scrolling(*args):
         history_label.x = scroll_view.width
         anim = Animation(x=-history_label.width, duration=30, t='linear')
         anim.start(history_label)
 
     Clock.schedule_once(lambda dt: animate_scrolling(), 0.1)
-    trade_layout.add_widget(scroll_view)
+
+    trade_layout.add_widget(history_container)
 
     # === ТЕКУЩАЯ ЦЕНА ===
     current_price = game_instance.current_raw_material_price
@@ -1755,7 +1772,7 @@ def open_trade_popup(game_instance):
     trade_layout.add_widget(button_layout)
 
     # === ПОПАП ===
-    popup = Popup(title="", content=trade_layout, size_hint=(0.95, 0.8))
+    popup = Popup(title="Рынок сырья", content=trade_layout, size_hint=(0.95, 0.8))
 
     def on_press_wrapper(action):
         def handler(instance):

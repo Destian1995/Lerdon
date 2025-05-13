@@ -363,7 +363,6 @@ def load_unit_data(faction):
 def start_army_mode(faction, game_area, class_faction):
     army_hire = ArmyCash(faction, class_faction)
 
-    # Определяем цвет фона в зависимости от фракции
     faction_colors = {
         "Аркадия": (0.2, 0.4, 0.9, 0.8),
         "Селестия": (0.2, 0.7, 0.3, 0.8),
@@ -372,9 +371,8 @@ def start_army_mode(faction, game_area, class_faction):
         "Халидон": (0.6, 0.5, 0.1, 0.8),
     }
 
-    bg_color = faction_colors.get(faction, (0.15, 0.15, 0.15, 1))  # По умолчанию серый
+    bg_color = faction_colors.get(faction, (0.15, 0.15, 0.15, 1))
 
-    # Главный контейнер с разделением на левую и правую части
     main_box = BoxLayout(
         orientation='horizontal',
         size_hint=(1, 1),
@@ -382,17 +380,14 @@ def start_army_mode(faction, game_area, class_faction):
         spacing=dp(5)
     )
 
-    # Пустой левый контейнер (30% ширины) НЕ ТРОГАТЬ
     left_space = BoxLayout(size_hint=(0.3, 1))
 
-    # Правый контейнер для карусели (70% ширины)
     right_container = BoxLayout(
         orientation='vertical',
         size_hint=(0.7, 1),
         padding=[dp(15), dp(25), dp(15), dp(25)]
     )
 
-    # Настройка карусели с направлением вправо
     carousel = Carousel(
         direction='right',
         size_hint=(1, 0.9),
@@ -401,23 +396,15 @@ def start_army_mode(faction, game_area, class_faction):
     )
 
     unit_data = load_unit_data(faction)
+    sorted_units = sorted(unit_data.items(), key=lambda x: int(x[1]['stats']['Класс юнита'].split()[0]))
 
-    # Сортируем юнитов по классу (от 1 до N)
-    sorted_units = sorted(
-        unit_data.items(),
-        key=lambda x: int(x[1]['stats']['Класс юнита'].split()[0])
-    )
-
-    # Добавляем юнитов в отсортированном порядке (от слабых к сильным)
     for unit_name, unit_info in sorted_units:
-        # Слайд карусели
         slide = BoxLayout(
             orientation='vertical',
             size_hint=(0.85, 0.9),
             spacing=dp(10)
         )
 
-        # Карточка юнита
         card = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -425,21 +412,11 @@ def start_army_mode(faction, game_area, class_faction):
             padding=dp(20)
         )
 
-        # Графические элементы для фона
         with card.canvas.before:
-            # Тень
             Color(rgba=bg_color)
-            shadow_rect = RoundedRectangle(
-                size=card.size,
-                radius=[dp(25)]
-            )
-
-            # Основной фон
+            shadow_rect = RoundedRectangle(size=card.size, radius=[dp(25)])
             Color(rgba=(0.05, 0.05, 0.05, 0))
-            rect = RoundedRectangle(
-                size=card.size,
-                radius=[dp(20)]
-            )
+            rect = RoundedRectangle(size=card.size, radius=[dp(20)])
 
         def update_bg(instance, rect=rect, shadow_rect=shadow_rect):
             rect.pos = instance.pos
@@ -449,13 +426,7 @@ def start_army_mode(faction, game_area, class_faction):
 
         card.bind(pos=update_bg, size=update_bg)
 
-        # Заголовок
-        header = BoxLayout(
-            size_hint=(1, 0.12),
-            orientation='horizontal',
-            padding=dp(5)
-        )
-
+        header = BoxLayout(size_hint=(1, 0.12), orientation='horizontal', padding=dp(5))
         title = Label(
             text=unit_name,
             font_size='20sp',
@@ -470,20 +441,10 @@ def start_army_mode(faction, game_area, class_faction):
         )
         title.bind(width=lambda *x: setattr(title, 'text_size', (title.width, None)))
         header.add_widget(title)
-        # Основное тело карточки
-        body = BoxLayout(
-            orientation='horizontal',
-            size_hint=(1, 0.6),  # Уменьшили высоту для места под стоимость
-            spacing=dp(15)
-        )
 
-        # Контейнер для изображения
-        img_container = BoxLayout(
-            orientation='vertical',
-            size_hint=(0.5, 1),
-            padding=[0, dp(10), 0, 0]
-        )
+        body = BoxLayout(orientation='horizontal', size_hint=(1, 0.6), spacing=dp(15))
 
+        img_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), padding=[0, dp(10), 0, 0])
         img = Image(
             source=unit_info['image'],
             size_hint=(1, 1),
@@ -493,13 +454,7 @@ def start_army_mode(faction, game_area, class_faction):
         )
         img_container.add_widget(img)
 
-        # Контейнер для характеристик
-        stats_container = BoxLayout(
-            orientation='vertical',
-            size_hint=(0.5, 1),
-            spacing=dp(5)
-        )
-
+        stats_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), spacing=dp(5))
         main_stats = [
             ('Урон', unit_info['stats']['Урон'], '#FFFFFF'),
             ('Защита', unit_info['stats']['Защита'], '#FFFFFF'),
@@ -509,22 +464,18 @@ def start_army_mode(faction, game_area, class_faction):
         ]
 
         for name, value, color in main_stats:
-            stat_line = BoxLayout(
-                orientation='horizontal',
-                size_hint=(1, None),
-                height='30sp'
-            )
+            stat_line = BoxLayout(orientation='horizontal', size_hint=(1, None), height='30sp')
             lbl_name = Label(
                 text=f"[color={color}]{name}[/color]",
                 markup=True,
-                font_size='14sp',  # Автоматический размер
+                font_size='14sp',
                 halign='left',
                 size_hint=(0.6, 1),
                 text_size=(None, None)
             )
             lbl_value = Label(
                 text=str(value),
-                font_size=set_font_size(0.022),
+                font_size='16sp',
                 bold=True,
                 color=TEXT_COLOR,
                 size_hint=(0.4, 1),
@@ -537,15 +488,13 @@ def start_army_mode(faction, game_area, class_faction):
         body.add_widget(img_container)
         body.add_widget(stats_container)
 
-        # Контейнер для стоимости (новый блок)
         cost_container = BoxLayout(
             orientation='horizontal',
-            size_hint=(1, 0.2),  # 20% высоты карточки
+            size_hint=(1, 0.2),
             spacing=dp(10),
             padding=[dp(15), 0, dp(15), 0]
         )
 
-        # Лейбл "Цена" справа
         price_label = Label(
             text="Цена:  ",
             font_size='16sp',
@@ -555,23 +504,12 @@ def start_army_mode(faction, game_area, class_faction):
             size_hint=(0.3, 1)
         )
 
-        # Контейнер для значений стоимости
-        cost_values = BoxLayout(
-            orientation='vertical',
-            size_hint=(0.7, 1),
-            spacing=dp(5)
-        )
-
+        cost_values = BoxLayout(orientation='vertical', size_hint=(0.7, 1), spacing=dp(5))
         cost_money, cost_time = unit_info['cost']
 
-        # Строка стоимости денег
-        money_stat = BoxLayout(
-            orientation='horizontal',
-            size_hint=(1, 0.5),
-            spacing=dp(5)
-        )
+        money_stat = BoxLayout(orientation='horizontal', size_hint=(1, 0.5), spacing=dp(5))
         money_icon = Label(
-            text="[color=#FFFFFF]Кроны[/color]",  # Символ валюты
+            text="[color=#FFFFFF]Кроны[/color]",
             markup=True,
             font_size='14sp',
             halign='left',
@@ -588,14 +526,9 @@ def start_army_mode(faction, game_area, class_faction):
         money_stat.add_widget(money_icon)
         money_stat.add_widget(money_value)
 
-        # Строка времени найма
-        time_stat = BoxLayout(
-            orientation='horizontal',
-            size_hint=(1, 0.5),
-            spacing=dp(5)
-        )
+        time_stat = BoxLayout(orientation='horizontal', size_hint=(1, 0.5), spacing=dp(5))
         time_icon = Label(
-            text="[color=#FFFFFF]Рабочие[/color]",  # Символ времени
+            text="[color=#FFFFFF]Рабочие[/color]",
             markup=True,
             font_size='14sp',
             halign='left',
@@ -618,7 +551,6 @@ def start_army_mode(faction, game_area, class_faction):
         cost_container.add_widget(price_label)
         cost_container.add_widget(cost_values)
 
-        # Панель управления
         control_panel = BoxLayout(
             size_hint=(1, 0.18),
             orientation='horizontal',
@@ -644,7 +576,6 @@ def start_army_mode(faction, game_area, class_faction):
             color=TEXT_COLOR,
             size_hint=(0.4, 1)
         )
-
         btn_hire.bind(on_release=lambda instance, name=unit_name, cost=unit_info['cost'],
                                         input_box=input_qty, stats=unit_info['stats'], image=unit_info["image"]:
         broadcast_units(name, cost, input_box, army_hire, image, stats))
@@ -652,7 +583,6 @@ def start_army_mode(faction, game_area, class_faction):
         control_panel.add_widget(input_qty)
         control_panel.add_widget(btn_hire)
 
-        # Сборка карточки
         card.add_widget(header)
         card.add_widget(body)
         card.add_widget(cost_container)
@@ -664,25 +594,24 @@ def start_army_mode(faction, game_area, class_faction):
     main_box.add_widget(left_space)
     main_box.add_widget(right_container)
 
-    # Добавляем FloatLayout для кнопки закрытия
     float_layout = FloatLayout(size_hint=(1, 1))
     float_layout.add_widget(main_box)
 
-    # Кнопка закрытия
     close_button = Button(
         text="X",
         size_hint=(None, None),
         size=(dp(40), dp(40)),
-        pos_hint={'top': 0.85, 'right': 0.86},
-        background_color=(1, 0, 0, 1),  # Красный цвет
-        color=(1, 1, 1, 1),  # Белый текст
-        font_size='21sp',
+        pos_hint={'top': 0.85, 'right': 0.92},
+        background_color=(1, 0, 0, 1),
+        color=(1, 1, 1, 1),
+        font_size='20sp',
         bold=True
     )
-    close_button.bind(on_release=lambda instance: game_area.clear_widgets())  # Закрытие вкладки
+    close_button.bind(on_release=lambda instance: game_area.clear_widgets())
     float_layout.add_widget(close_button)
 
     game_area.add_widget(float_layout)
+
 
 def set_font_size(relative_size):
     """Вычисляет размер шрифта относительно размера окна"""

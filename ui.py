@@ -900,26 +900,22 @@ class FortressInfoPopup(Popup):
 
     def place_army(self, instance):
         try:
-            # Закрываем предыдущее всплывающее окно, если оно существует
             if self.current_popup:
                 self.current_popup.dismiss()
-                self.current_popup = None  # Очищаем ссылку
+                self.current_popup = None
 
             cursor = self.cursor
-
-            # Проверяем, принадлежит ли текущий город текущему игроку
-            current_city_owner = self.get_city_owner(self.city_name)  # Получаем владельца текущего города
-            current_player_kingdom = self.player_fraction  # Текущая фракция игрока
+            current_city_owner = self.get_city_owner(self.city_name)
+            current_player_kingdom = self.player_fraction
 
             if current_city_owner != current_player_kingdom:
                 show_popup_message("Ошибка", "Вы не можете размещать войска в чужом городе.")
                 return
 
-            # Запрос для получения данных из таблицы armies
             cursor.execute("""
-                  SELECT unit_type, quantity, total_attack, total_defense, total_durability, unit_class, unit_image 
-                  FROM armies
-              """)
+                SELECT unit_type, quantity, total_attack, total_defense, total_durability, unit_class, unit_image 
+                FROM armies
+            """)
             army_data = cursor.fetchall()
 
             if not army_data:
@@ -927,49 +923,43 @@ class FortressInfoPopup(Popup):
                 self.show_warning_popup()
                 return
 
-            # Создаем новое всплывающее окно
-            popup = Popup(title="Разместить армию", size_hint=(0.9, 0.9))
-            self.current_popup = popup  # Сохраняем ссылку на текущее окно
+            popup = Popup(title="Разместить армию", size_hint=(0.95, 0.95))
+            self.current_popup = popup
 
-            main_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
-            table_layout = GridLayout(cols=5, spacing=5, size_hint_y=None)  # Уменьшаем отступы между элементами
-            table_layout.bind(minimum_height=table_layout.setter('height'))
-
-            # Базовые параметры для масштабирования (еще меньше)
-            base_font_size = 4  # Очень маленький базовый размер шрифта
-            base_image_width, base_image_height = 50, 50  # Меньшие размеры изображений
             screen_width, _ = Window.size
-            scale_factor = screen_width / 360  # Масштабный коэффициент
+            scale_factor = screen_width / 360
 
-            font_size = int(base_font_size * scale_factor)
-            image_width = int(base_image_width * scale_factor)
-            image_height = int(base_image_height * scale_factor)
+            font_size = min(max(int(14 * scale_factor), 14), 18)
+            image_width = int(60 * scale_factor)
+            image_height = int(60 * scale_factor)
+
+            main_layout = BoxLayout(orientation='vertical', padding=10, spacing=8)
+            table_layout = GridLayout(cols=5, spacing=4, size_hint_y=None)
+            table_layout.bind(minimum_height=table_layout.setter('height'))
 
             headers = ["Изображение", "Название", "Количество", "Статистика", "Действие"]
             for header in headers:
                 label = Label(
                     text=header,
-                    font_size=f'{font_size}sp',
+                    font_size=sp(font_size),
                     bold=True,
                     size_hint_y=None,
-                    height=50,  # Уменьшаем высоту заголовков
+                    height=int(35 * scale_factor),
                     color=(1, 1, 1, 1)
                 )
                 table_layout.add_widget(label)
 
-            bg_color = (0.2, 0.2, 0.2, 1)  # Цвет окна интерфейса
+            bg_color = (0.2, 0.2, 0.2, 1)
 
             def update_rect(instance, value):
                 if hasattr(instance, 'bg_rect'):
                     instance.bg_rect.pos = instance.pos
                     instance.bg_rect.size = instance.size
 
-            # Список для отслеживания добавленных юнитов
             self.added_units = set()
 
             for unit in army_data:
                 unit_type, quantity, attack, defense, durability, unit_class, unit_image = unit
-                # Формируем данные о юните
                 unit_data = {
                     "unit_type": unit_type,
                     "quantity": quantity,
@@ -982,7 +972,6 @@ class FortressInfoPopup(Popup):
                     "unit_image": unit_image
                 }
 
-                # Изображение юнита
                 image_container = BoxLayout(size_hint_y=None, height=image_height)
                 unit_image_widget = Image(
                     source=unit_image,
@@ -992,12 +981,11 @@ class FortressInfoPopup(Popup):
                 image_container.add_widget(unit_image_widget)
                 table_layout.add_widget(image_container)
 
-                # Название юнита
                 name_label = Label(
                     text=unit_type,
-                    font_size=f'{font_size}sp',
+                    font_size=sp(font_size),
                     size_hint_y=None,
-                    height=70,  # Уменьшаем высоту
+                    height=int(50 * scale_factor),
                     color=(1, 1, 1, 1)
                 )
                 with name_label.canvas.before:
@@ -1006,12 +994,11 @@ class FortressInfoPopup(Popup):
                 name_label.bind(pos=update_rect, size=update_rect)
                 table_layout.add_widget(name_label)
 
-                # Количество юнитов
                 count_label = Label(
                     text=str(format_number(quantity)),
-                    font_size=f'{font_size}sp',
+                    font_size=sp(font_size),
                     size_hint_y=None,
-                    height=60,  # Уменьшаем высоту
+                    height=int(45 * scale_factor),
                     color=(1, 1, 1, 1)
                 )
                 with count_label.canvas.before:
@@ -1020,39 +1007,38 @@ class FortressInfoPopup(Popup):
                 count_label.bind(pos=update_rect, size=update_rect)
                 table_layout.add_widget(count_label)
 
-                # Статистика юнита
                 stats_text = "\n".join([
-                    f"Атака: \n"
-                    f"{format_number(attack)}",
-                    f"Защита: \n"
-                    f"{format_number(defense)}",
-                    f"Живучесть: \n"
-                    f"{format_number(durability)}",
+                    f"Атака: {format_number(attack)}",
+                    f"Защита: {format_number(defense)}",
+                    f"Живучесть: {format_number(durability)}",
                     f"Класс: {unit_class}"
                 ])
                 stats_label = Label(
                     text=stats_text,
-                    font_size=f'{font_size}sp',
+                    font_size=sp(font_size),
                     size_hint_y=None,
-                    height=150,  # Уменьшаем высоту
+                    halign='left',
+                    valign='middle',
+                    height=int(120 * scale_factor),
                     color=(1, 1, 1, 1)
                 )
+                stats_label.bind(size=stats_label.setter('text_size'))
                 with stats_label.canvas.before:
                     Color(*bg_color)
                     stats_label.bg_rect = Rectangle(pos=stats_label.pos, size=stats_label.size)
                 stats_label.bind(pos=update_rect, size=update_rect)
                 table_layout.add_widget(stats_label)
 
-                # Кнопка действия
                 action_button = Button(
                     text="Добавить",
-                    font_size=f'{font_size}sp',
+                    font_size=sp(font_size),
                     size_hint_y=None,
-                    height=70,  # Уменьшаем высоту кнопки
+                    height=int(50 * scale_factor),
                     background_color=(0.6, 0.8, 0.6, 1)
                 )
                 action_button.bind(
-                    on_press=lambda btn, data=unit_data, lbl=name_label: self.add_to_garrison_with_slider(data, lbl))
+                    on_press=lambda btn, data=unit_data, lbl=name_label: self.add_to_garrison_with_slider(data, lbl)
+                )
                 table_layout.add_widget(action_button)
 
             scroll_view = ScrollView(size_hint=(1, 1))
@@ -1061,9 +1047,9 @@ class FortressInfoPopup(Popup):
 
             close_button = Button(
                 text="Закрыть",
-                font_size=f'{font_size}sp',
+                font_size=sp(font_size),
                 size_hint_y=None,
-                height=30,  # Уменьшаем высоту кнопки "Закрыть"
+                height=int(40 * scale_factor),
                 background_color=(0.8, 0.8, 0.8, 1)
             )
             close_button.bind(on_press=popup.dismiss)
@@ -1073,7 +1059,7 @@ class FortressInfoPopup(Popup):
             popup.open()
 
         except sqlite3.Error as e:
-            show_popup_message("Ошибка", f"Произошла ошибка при работе с базой данных(place_army): {e}")
+            show_popup_message("Ошибка", f"Произошла ошибка при работе с базой данных (place_army): {e}")
         except Exception as e:
             show_popup_message("Ошибка", f"Произошла ошибка: {e}")
 
