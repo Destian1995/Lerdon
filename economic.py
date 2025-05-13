@@ -1637,7 +1637,7 @@ def open_trade_popup(game_instance):
     game_instance.load_resources_from_db()
     game_instance.generate_raw_material_price()
 
-    trade_layout = BoxLayout(orientation='vertical', padding=30, spacing=20)
+    trade_layout = BoxLayout(orientation='vertical', padding=dp(30), spacing=dp(20))
 
     # === БЕГУЩАЯ СТРОКА ===
     price_history_text = ""
@@ -1658,13 +1658,13 @@ def open_trade_popup(game_instance):
     history_label = Label(
         text=price_history_text,
         markup=True,
-        font_size=18,
+        font_size=sp(16),
         color=(1, 1, 1, 1),
         size_hint=(None, None),
-        size=(len(price_history_text) * 9, 40)
+        height=dp(44)
     )
 
-    scroll_view = ScrollView(size_hint=(1, None), height=50, do_scroll_x=True, do_scroll_y=False)
+    scroll_view = ScrollView(size_hint=(1, None), height=dp(50), do_scroll_x=True, do_scroll_y=False)
     scroll_view.add_widget(history_label)
 
     def animate_history(dt):
@@ -1687,7 +1687,7 @@ def open_trade_popup(game_instance):
     current_price_label = Label(
         text=f"[b]Текущая цена:[/b] {current_price}",
         markup=True,
-        font_size=36,
+        font_size=sp(24),
         color=arrow_color,
         halign="center",
         valign="middle"
@@ -1696,12 +1696,12 @@ def open_trade_popup(game_instance):
     trade_layout.add_widget(current_price_label)
 
     # === ЛОТЫ И ДОСТУПНОЕ СЫРЬЁ ===
-    info_box = BoxLayout(orientation='vertical', spacing=5, size_hint=(1, None), height=70)
-    lot_info = Label(text="1 лот = 10,000 единиц сырья", font_size=18, color=(1, 1, 1, 1), halign="center", valign="middle")
+    info_box = BoxLayout(orientation='vertical', spacing=dp(5), size_hint=(1, None), height=dp(70))
+    lot_info = Label(text="1 лот = 10,000 единиц сырья", font_size=sp(16), color=(1, 1, 1, 1), halign="center", valign="middle")
     lot_info.bind(size=lot_info.setter('text_size'))
     available_label = Label(
         text=f"Доступно для продажи: {game_instance.get_available_raw_material_lots()} лотов",
-        font_size=18, color=(1, 1, 1, 1), halign="center", valign="middle"
+        font_size=sp(16), color=(1, 1, 1, 1), halign="center", valign="middle"
     )
     available_label.bind(size=available_label.setter('text_size'))
     info_box.add_widget(lot_info)
@@ -1709,19 +1709,20 @@ def open_trade_popup(game_instance):
     trade_layout.add_widget(info_box)
 
     # === ПОЛЕ ВВОДА ===
-    input_box = BoxLayout(orientation='vertical', spacing=10, size_hint=(1, None), height=80)
-    input_box.add_widget(Label(text="Введите количество лотов:", font_size=18, color=(1, 1, 1, 1), halign="center"))
-    quantity_input = TextInput(hint_text="Например: 3", font_size=18, multiline=False, input_filter='int', size_hint=(1, None), height=40)
+    input_box = BoxLayout(orientation='vertical', spacing=dp(10), size_hint=(1, None), height=dp(80))
+    input_box.add_widget(Label(text="Введите количество лотов:", font_size=sp(16), color=(1, 1, 1, 1), halign="center"))
+    quantity_input = TextInput(hint_text="Например: 3", font_size=sp(18), multiline=False, input_filter='int',
+                               size_hint=(1, None), height=dp(40))
     input_box.add_widget(quantity_input)
     trade_layout.add_widget(input_box)
 
     # === КНОПКИ СТИЛЬНЫЕ ===
-    button_layout = BoxLayout(size_hint=(1, None), height=70, spacing=30, padding=(0, 10))
+    button_layout = BoxLayout(size_hint=(1, None), height=dp(70), spacing=dp(30), padding=(0, dp(10)))
 
     def create_styled_button(text, bg_color):
         btn = Button(
             text=text,
-            font_size=22,
+            font_size=sp(20),
             bold=True,
             color=(1, 1, 1, 1),
             background_color=(0, 0, 0, 0),
@@ -1730,7 +1731,7 @@ def open_trade_popup(game_instance):
         )
         with btn.canvas.before:
             Color(*bg_color)
-            btn.rect = RoundedRectangle(size=btn.size, pos=btn.pos, radius=[20])
+            btn.rect = RoundedRectangle(size=btn.size, pos=btn.pos, radius=[dp(20)])
         btn.bind(pos=lambda inst, val: setattr(inst.rect, 'pos', inst.pos))
         btn.bind(size=lambda inst, val: setattr(inst.rect, 'size', inst.size))
         return btn
@@ -1743,7 +1744,7 @@ def open_trade_popup(game_instance):
     trade_layout.add_widget(button_layout)
 
     # === ПОПАП ===
-    popup = Popup(title="Рынок сырья", content=trade_layout, size_hint=(0.9, 0.9))
+    popup = Popup(title="Рынок сырья", content=trade_layout, size_hint=(0.9, 0.8))
     buy_btn.bind(on_press=lambda x: handle_trade(game_instance, 'buy', quantity_input.text, popup))
     sell_btn.bind(on_press=lambda x: handle_trade(game_instance, 'sell', quantity_input.text, popup))
 

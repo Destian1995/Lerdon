@@ -462,12 +462,14 @@ def start_army_mode(faction, game_area, class_faction):
             bold=True,
             color=TEXT_COLOR,
             halign='left',
+            valign='middle',
             text_size=(None, None),
-            size_hint_y=None,
-            height='40sp'
+            size_hint=(None, None),
+            width=dp(200),
+            height=dp(40)
         )
+        title.bind(width=lambda *x: setattr(title, 'text_size', (title.width, None)))
         header.add_widget(title)
-
         # Основное тело карточки
         body = BoxLayout(
             orientation='horizontal',
@@ -577,7 +579,7 @@ def start_army_mode(faction, game_area, class_faction):
         )
         money_value = Label(
             text=f"{cost_money}",
-            font_size=set_font_size(0.025),
+            font_size='16sp',
             bold=True,
             color=TEXT_COLOR,
             size_hint=(0.8, 1),
@@ -601,7 +603,7 @@ def start_army_mode(faction, game_area, class_faction):
         )
         time_value = Label(
             text=f"{cost_time}",
-            font_size='14sp',
+            font_size='16sp',
             bold=True,
             color=TEXT_COLOR,
             size_hint=(0.8, 1),

@@ -296,7 +296,7 @@ class MapWidget(Widget):
         self.map_image.pos = self.map_pos
         self.map_image.size = (scaled_map_width, scaled_map_height)
 
-        self.canvas.after.clear()
+        self.canvas.clear()
         self.draw_fortresses()
         self.draw_roads()
 
@@ -585,7 +585,7 @@ class KingdomSelectionWidget(FloatLayout):
             text="Выберите сторону",
             font_size=label_size,
             size_hint=(None, None),
-            size=(300, 60) if is_android else (200, 50),
+            size=(300, 60) if is_android else (500, 350),
             pos_hint={'center_x': 0.75, 'center_y': 0.85},
             color=(1, 1, 1, 1),
             outline_color=(0, 0, 0, 1),
@@ -600,7 +600,7 @@ class KingdomSelectionWidget(FloatLayout):
             text="",
             font_size=faction_label_size,
             size_hint=(None, None),
-            size=(400, 120) if is_android else (300, 100),
+            size=(250, 100) if is_android else (300, 100),
             pos_hint={'center_x': 0.75, 'center_y': 0.30},
             color=(1, 1, 1, 1),
             outline_color=(0, 0, 0, 1),

@@ -343,9 +343,9 @@ class GameScreen(Screen):
         mode_panel_width = dp(80)
         mode_panel_container = BoxLayout(
             orientation='vertical',
-            size_hint=(None, 0.5),  # Высота — 50% от высоты экрана
+            size_hint=(None, 0.6),  # Высота — 50% от высоты экрана
             width=mode_panel_width,
-            pos_hint={'right': 1, 'top': 0.75},  # Позиционируем верх контейнера на 75% от высоты экрана
+            pos_hint={'right': 1, 'top': 0.6},  # Позиционируем верх контейнера на 75% от высоты экрана
             padding=dp(10),
             spacing=dp(10)
         )
@@ -448,7 +448,7 @@ class GameScreen(Screen):
 
         # Добавление ResourceBox в верхний правый угол
         self.resource_box = ResourceBox(resource_manager=self.faction)
-        self.resource_box.size_hint = (0.2, 0.4)  # Растягиваем почти на всю высоту
+        self.resource_box.size_hint = (0.2, 0.55)  # Растягиваем почти на всю высоту
         self.resource_box.pos_hint = {'x': 0, 'y': 0.3}  # Слева по всей высоте
 
         # Добавляем обработчик изменения ориентации
