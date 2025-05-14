@@ -787,6 +787,25 @@ class FortressInfoPopup(Popup):
             return
 
         try:
+            current_player_kingdom = self.player_fraction
+            cursor = self.cursor
+
+            # Проверка возможности перемещения (один раз на группу)
+            cursor.execute("SELECT can_move FROM turn_check_move WHERE faction = ?",
+                           (current_player_kingdom,))
+            move_data = cursor.fetchone()
+
+            if not move_data:
+                cursor.execute("""
+                    INSERT INTO turn_check_move (faction, can_move)
+                    VALUES (?, ?)
+                """, (current_player_kingdom, True))
+                self.conn.commit()
+                move_data = (True,)
+            elif not move_data[0]:
+                show_popup_message("Ошибка", "Вы уже использовали своё перемещение на этом ходу.")
+                return
+
             for unit in self.selected_group:
                 city_id = unit["city_id"]
                 unit_name = unit["unit_name"]
@@ -799,7 +818,12 @@ class FortressInfoPopup(Popup):
                     unit_name=unit_name,
                     taken_count=unit_count
                 )
-
+            cursor.execute("""
+                        UPDATE turn_check_move 
+                        SET can_move = ? 
+                        WHERE faction = ?
+                    """, (False, current_player_kingdom))
+            self.conn.commit()
             # Очищаем группу после перемещения
             self.selected_group.clear()
             self.update_garrison()  # Обновляем интерфейс гарнизона
@@ -1259,20 +1283,10 @@ class FortressInfoPopup(Popup):
             if destination_owner == current_player_kingdom:
                 # Свой город — перемещение разрешено
                 self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
-
-                # Устанавливаем can_move = False после успешного перемещения
-                cursor.execute("UPDATE turn_check_move SET can_move = ? WHERE faction = ?",
-                               (False, current_player_kingdom))
-                self.conn.commit()
-
             elif self.is_ally(current_player_kingdom, destination_owner):
                 if total_diff < 300:
                     self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
 
-                    # Устанавливаем can_move = False после успешного перемещения
-                    cursor.execute("UPDATE turn_check_move SET can_move = ? WHERE faction = ?",
-                                   (False, current_player_kingdom))
-                    self.conn.commit()
                 else:
                     show_popup_message("Логистика не выдержит", "Слишком далеко. Найдите ближайший населенный пункт")
 
@@ -1300,11 +1314,6 @@ class FortressInfoPopup(Popup):
                         destination_fortress_name=destination_fortress_name,
                         attacking_units=self.selected_group
                     )
-
-                    # Устанавливаем can_move = False после начала атаки
-                    cursor.execute("UPDATE turn_check_move SET can_move = ? WHERE faction = ?",
-                                   (False, current_player_kingdom))
-                    self.conn.commit()
 
                 else:
                     show_popup_message("Логистика не выдержит", "Слишком далеко. Найдите ближайший населенный пункт")
