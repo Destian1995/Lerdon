@@ -1010,7 +1010,7 @@ class FortressInfoPopup(Popup):
                     text="Добавить",
                     font_size=sp(font_size),
                     size_hint=(None, None),
-                    size=(int(100 * scale_factor), int(50 * scale_factor)),
+                    size=(int(50 * scale_factor), int(50 * scale_factor)),
                     background_color=(0.2, 0.6, 0.2, 1),
                     background_normal=''
                 )
@@ -1039,9 +1039,9 @@ class FortressInfoPopup(Popup):
             # Кнопка закрытия
             close_btn = Button(
                 text="Закрыть",
-                font_size=sp(font_size + 2),
+                font_size=sp(font_size+1),
                 size_hint=(1, None),
-                height=int(60 * scale_factor),
+                height=int(30 * scale_factor),
                 background_color=(0.2, 0.2, 0.2, 1),
                 background_normal=''
             )

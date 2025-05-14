@@ -1666,7 +1666,7 @@ def open_trade_popup(game_instance):
     lot_info.bind(size=lot_info.setter('text_size'))
 
     available_label = Label(
-        text=f"Доступно: {game_instance.get_available_raw_material_lots()} лотов",
+        text=f"Доступно для продажи: {game_instance.get_available_raw_material_lots()} лотов",
         font_size=sp(14), color=(1, 1, 1, 1), halign="center"
     )
     available_label.bind(size=available_label.setter('text_size'))

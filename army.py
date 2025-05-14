@@ -292,74 +292,57 @@ class ArmyCash:
             print(f"Ошибка при обновлении таблицы weapons: {e}")
 
     def show_message(self, title, message):
-        """
-        Отображает всплывающее сообщение поверх всех окон с адаптивным дизайном для Android.
-        :param title: Заголовок сообщения.
-        :param message: Текст сообщения.
-        """
-
-        # Расчет масштабного коэффициента на основе ширины экрана
         screen_width, _ = Window.size
-        scale_factor = screen_width / 360  # База 360dp для нормализации
+        scale_factor = screen_width / 360
 
-        # Адаптивный шрифт от 15sp до 20sp
-        font_size = min(max(int(15 * scale_factor), 15), 20)
-
-        # Адаптивные отступы и высоты
+        font_size = min(max(int(15 * scale_factor), 12), 18)
         padding = int(15 * scale_factor)
-        spacing = int(10 * scale_factor)
-        label_height = int(100 * scale_factor)
-        button_height = int(50 * scale_factor)
+        spacing = int(5 * scale_factor)  # ← Уменьшен
+        label_height = int(80 * scale_factor)  # ← Уменьшен
+        button_height = int(30 * scale_factor)
 
-        # Создаем контент для всплывающего окна
         content_layout = BoxLayout(
             orientation='vertical',
-            padding=padding,
+            padding=[padding, padding / 2, padding, padding / 2],  # ← Скорректированы
             spacing=spacing
         )
 
-        # Сообщение
         message_label = Label(
             text=message,
-            color=(1, 1, 1, 1),  # Белый текст
+            color=(1, 1, 1, 1),
             font_size=sp(font_size),
             size_hint_y=None,
             height=label_height,
             halign='center',
             valign='middle'
         )
-        message_label.bind(size=message_label.setter('text_size'))  # Центрирование текста
+        message_label.bind(size=message_label.setter('text_size'))
 
-        # Кнопка "Закрыть"
         close_button = Button(
             text="Закрыть",
             font_size=sp(font_size),
             size_hint_y=None,
             height=button_height,
-            background_color=(0.2, 0.6, 1, 1),  # Синий фон
+            background_color=(0.2, 0.6, 1, 1),
             background_normal=''
         )
 
-        # Добавляем виджеты
         content_layout.add_widget(message_label)
         content_layout.add_widget(close_button)
 
-        # Настройки всплывающего окна
+        total_height = label_height + button_height + spacing + padding  # ← Новый расчет
         popup = Popup(
             title=title,
             content=content_layout,
-            size_hint=(0.85, None),  # Ширина — 85% экрана
-            height=int(200 * scale_factor),  # Высота зависит от масштаба
-            auto_dismiss=False,  # Не закрывается при клике вне
-            title_size=sp(font_size + 2),  # Заголовок чуть больше
+            size_hint=(0.75, None),
+            height=total_height,  # ← Динамическая высота
+            auto_dismiss=False,
+            title_size=sp(font_size + 1),
             title_align='center',
-            separator_color=(0.2, 0.6, 1, 1)  # Цвет разделителя
+            separator_color=(0.2, 0.6, 1, 1)
         )
 
-        # Привязка кнопки к закрытию окна
         close_button.bind(on_release=popup.dismiss)
-
-        # Открываем окно
         popup.open()
 
 

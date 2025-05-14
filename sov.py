@@ -24,6 +24,17 @@ if not os.path.exists(copied_db_path):
     else:
         raise FileNotFoundError(f"❌ game_data.db отсутствует в проекте!")
 
+def calculate_font_size():
+    base_height = 360
+    default_font_size = 14
+    scale_factor = Window.height / base_height
+
+    # Увеличиваем шрифт на Android
+    if platform == 'android':
+        scale_factor *= 1.5  # или 2 для более крупного текста
+
+    return max(14, int(default_font_size * scale_factor))
+
 # Словарь для перевода названий
 translation_dict = {
     "Аркадия": "arkadia",
@@ -46,13 +57,6 @@ def transform_filename(file_path):
 
 reverse_translation_dict = {v: k for k, v in translation_dict.items()}
 
-
-def calculate_font_size():
-    """Рассчитывает базовый размер шрифта на основе высоты окна."""
-    base_height = 720  # Базовая высота окна для нормального размера шрифта
-    default_font_size = 16  # Базовый размер шрифта
-    scale_factor = Window.height / base_height  # Коэффициент масштабирования
-    return max(8, int(default_font_size * scale_factor))  # Минимальный размер шрифта — 8
 
 
 class AdvisorView(FloatLayout):
@@ -134,7 +138,7 @@ class AdvisorView(FloatLayout):
             background_normal='',
             background_color=(0.227, 0.525, 0.835, 1),
             color=(1, 1, 1, 1),
-            font_size=Window.height * 0.02,  # Размер шрифта зависит от высоты окна
+            font_size=calculate_font_size(),  # Размер шрифта зависит от высоты окна
             bold=True,
             border=(0, 0, 0, 0)
         )
@@ -146,7 +150,7 @@ class AdvisorView(FloatLayout):
             background_normal='',
             background_color=(0.118, 0.255, 0.455, 1),
             color=(1, 1, 1, 1),
-            font_size=Window.height * 0.02,  # Размер шрифта зависит от высоты окна
+            font_size=calculate_font_size(),  # Размер шрифта зависит от высоты окна
             bold=True,
             border=(0, 0, 0, 0)
         )
@@ -158,7 +162,7 @@ class AdvisorView(FloatLayout):
             background_normal='',
             background_color=(0.5, 0.2, 0.8, 1),
             color=(1, 1, 1, 1),
-            font_size=Window.height * 0.02,
+            font_size=calculate_font_size(),
             bold=True,
             border=(0, 0, 0, 0)
         )
@@ -201,7 +205,7 @@ class AdvisorView(FloatLayout):
 
         header = Label(
             text=f"Политические системы ({self.faction})",
-            font_size=Window.height * 0.03,
+            font_size=calculate_font_size() * 0.75,
             bold=True,
             size_hint_y=None,
             height=Window.height * 0.06,
@@ -219,7 +223,7 @@ class AdvisorView(FloatLayout):
 
         table.add_widget(self.create_header("Фракция"))
         table.add_widget(self.create_header("Полит. строй"))
-        table.add_widget(self.create_header("Влияние на отношения"))
+        table.add_widget(self.create_header("Отношения"))
 
         print("Загруженные политические системы:", political_systems)  # Отладочный вывод
 
@@ -231,9 +235,9 @@ class AdvisorView(FloatLayout):
 
             # Определяем, какая стрелочка будет отображена
             if system == self.load_political_system():
-                influence_widget = self.create_arrow_icon("up", color=(0, 0.75, 0, 1))  # Зеленая стрелка вверх
+                influence_widget = self.create_arrow_icon("up")  # Зеленая стрелка вверх
             else:
-                influence_widget = self.create_arrow_icon("down", color=(0.8, 0, 0, 1))  # Красная стрелка вниз
+                influence_widget = self.create_arrow_icon("down")  # Красная стрелка вниз
 
             # Создаем ячейки с возможным выделением
             faction_widget = self._create_cell(faction, highlight=highlight)
@@ -290,45 +294,41 @@ class AdvisorView(FloatLayout):
 
     # Дополнительный метод для создания ячеек с поддержкой выделения
     def _create_cell(self, text, highlight=False):
-        """
-        Создает ячейку таблицы с возможностью выделения.
-        :param text: Текст ячейки
-        :param highlight: Флаг выделения (True/False)
-        :return: Виджет Label
-        """
-        # Определяем цвет текста
-        text_color = self.colors['accent'] if highlight else (1, 1, 1, 1)  # Акцентный или белый цвет
-
+        text_color = self.colors['accent'] if highlight else (1, 1, 1, 1)
         return Label(
-            text=f"[b]{text}[/b]" if highlight else text,  # Жирный текст при выделении
-            markup=True,  # Поддержка разметки для жирного текста
-            font_size=Window.height * 0.022,  # Адаптивный размер шрифта
-            bold=True,  # Жирный шрифт
-            color=text_color,  # Цвет текста
-            halign='left',  # Выравнивание по левому краю
-            valign='middle',  # Вертикальное выравнивание по центру
-            padding_x=dp(15),  # Отступ слева
-            size_hint_y=None,  # Фиксированная высота
-            height=Window.height * 0.06,  # Адаптивная высота
+            text=f"[b]{text}[/b]" if highlight else text,
+            markup=True,
+            font_size=calculate_font_size(),
+            bold=True,
+            color=text_color,
+            halign='center',  # Горизонтальное центрирование
+            valign='middle',  # Вертикальное центрирование
+            size_hint_y=None,
+            height=Window.height * 0.06,
+            padding_x=dp(15)
         )
 
-    def create_arrow_icon(self, direction, color):
+    def create_arrow_icon(self, direction):
         """
         Создает виджет с изображением стрелки.
         :param direction: "up" или "down" (направление стрелки)
-        :param color: кортеж (r, g, b, a) для цвета стрелки
-        :return: виджет с изображением стрелки
+        :return: виджет с изображением
         """
-        arrow_text = "^" if direction == "up" else "v"  # Символы стрелок
-        return Label(
-            text=arrow_text,
-            font_size=Window.height * 0.025,
-            bold=True,
-            color=color,
+        # Определяем путь к изображению
+        if direction == "up":
+            source = 'files/pict/up.png'
+        else:
+            source = 'files/pict/down.png'
+
+        # Создаем и возвращаем виджет с изображением
+        return Image(
+            source=source,
             size_hint_y=None,
-            height=Window.height * 0.06,
-            halign="center",
-            valign="middle"
+            height=Window.height * 0.04,  # Адаптивная высота
+            size_hint_x=None,
+            width=Window.height * 0.04,  # Ширина равна высоте
+            allow_stretch=True,  # Растягиваем изображение
+            keep_ratio=False  # Не сохраняем пропорции
         )
 
     def load_political_system(self):
@@ -551,7 +551,7 @@ class AdvisorView(FloatLayout):
         # Заголовок
         header = Label(
             text=f"Отношения {self.faction}",
-            font_size=Window.height * 0.03,
+            font_size=calculate_font_size(),
             bold=True,
             size_hint_y=None,
             height=Window.height * 0.06,
@@ -714,19 +714,17 @@ class AdvisorView(FloatLayout):
             print(f"Ошибка при сохранении отношений в базе данных: {e}")
 
     def create_status_cell(self, status):
-        """Создает ячейку со статусом отношений и цветовой маркировкой."""
         color = self.get_status_color(status)
-        lbl = Label(
+        return Label(
             text=status.capitalize(),
-            font_size=Window.height * 0.022,
+            font_size=calculate_font_size(),
             bold=True,
             color=color,
-            halign='center',
+            halign='center',  # Центрирование
             valign='middle',
             size_hint_y=None,
             height=Window.height * 0.06
         )
-        return lbl
 
     def get_status_color(self, status):
         """Определяет цвет на основе статуса отношений."""
@@ -740,27 +738,29 @@ class AdvisorView(FloatLayout):
             return (0.5, 0.5, 0.5, 1)  # Серый (для неизвестного статуса)
 
     def create_header(self, text):
-        """Создает ячейку заголовка таблицы"""
         lbl = Label(
             text=text,
             bold=True,
-            font_size=Window.height * 0.025,  # Адаптивный размер шрифта
+            font_size=calculate_font_size(),
             color=(1, 1, 1, 1),
             size_hint_y=None,
-            height=Window.height * 0.06  # Адаптивная высота
+            height=Window.height * 0.06,
+            halign="center",  # Горизонтальное центрирование
+            valign="middle"  # Вертикальное центрирование
         )
+        lbl.bind(size=lambda instance, value: setattr(lbl, 'text_size', value))  # Автоматический перенос текста
         with lbl.canvas.before:
-            Color(0.15, 0.24, 0.35, 1)  # Темно-синий фон
+            Color(0.15, 0.24, 0.35, 1)
             rect = Rectangle(size=lbl.size, pos=lbl.pos)
-        lbl.bind(pos=lambda instance, value: setattr(rect, 'pos', instance.pos))
-        lbl.bind(size=lambda instance, value: setattr(rect, 'size', instance.size))
+        lbl.bind(pos=lambda instance, value: setattr(rect, 'pos', value))
+        lbl.bind(size=lambda instance, value: setattr(rect, 'size', value))
         return lbl
 
     def create_cell(self, text):
         """Создает ячейку с названием фракции (белый цвет и жирный шрифт)"""
         lbl = Label(
             text=text,
-            font_size=Window.height * 0.022,  # Адаптивный размер шрифта
+            font_size=calculate_font_size(),  # Адаптивный размер шрифта
             bold=True,
             color=(1, 1, 1, 1),  # Белый цвет текста
             halign='left',
@@ -778,7 +778,7 @@ class AdvisorView(FloatLayout):
         """
         lbl = Label(
             text=text,
-            font_size=Window.height * 0.022,  # Адаптивный размер шрифта
+            font_size=calculate_font_size(),  # Адаптивный размер шрифта
             bold=True,
             color=(0, 0, 0, 1),  # Черный цвет текста
             halign='center',
@@ -789,34 +789,30 @@ class AdvisorView(FloatLayout):
         return lbl
 
     def create_value_cell(self, value):
-        """Создает ячейку со значением отношений"""
         color = self.get_relation_color(value)
-        lbl = Label(
+        return Label(
             text=f"{value}%",
-            font_size=Window.height * 0.022,  # Адаптивный размер шрифта
+            font_size=calculate_font_size(),
             bold=True,
             color=color,
-            halign='center',
+            halign='center',  # Центрирование
             valign='middle',
             size_hint_y=None,
-            height=Window.height * 0.06  # Адаптивная высота
+            height=Window.height * 0.06
         )
-        return lbl
 
     def create_value_trade_cell(self, value):
-        """Создает ячейку с коэффициентом"""
         color = self.get_relation_trade_color(value)
-        lbl = Label(
+        return Label(
             text=f"{value:.2f}",
-            font_size=Window.height * 0.022,  # Адаптивный размер шрифта
+            font_size=calculate_font_size(),
             bold=True,
             color=color,
-            halign='center',
+            halign='center',  # Центрирование
             valign='middle',
             size_hint_y=None,
-            height=Window.height * 0.06  # Адаптивная высота
+            height=Window.height * 0.06
         )
-        return lbl
 
     def get_relation_trade_color(self, value):
         """Возвращает цвет в зависимости от значения коэффициента"""
@@ -916,9 +912,9 @@ class AdvisorView(FloatLayout):
 
         # Надпись об очках
         self.battle_score_label = Label(
-            text=f"[b]Начисленные очки:[/b] {self.get_battle_score()}",
+            text=f"[b]Начисленные очки:  [/b] {self.get_battle_score()}",
             markup=True,
-            font_size=Window.height * 0.028,
+            font_size=calculate_font_size()*1.35,
             color=(1, 1, 1, 1),
             halign="left",
             valign="middle"
@@ -930,7 +926,7 @@ class AdvisorView(FloatLayout):
         max_hint = Label(
             text="[i]Максимум 10 баллов[/i]",
             markup=True,
-            font_size=Window.height * 0.024,
+            font_size=calculate_font_size()*1.15,
             color=(1, 1, 1, 0.8),
             halign="left",
             valign="middle"
