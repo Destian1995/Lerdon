@@ -29,7 +29,7 @@ PRIMARY_COLOR = get_color_from_hex('#2E7D32')
 SECONDARY_COLOR = get_color_from_hex('#388E3C')
 BACKGROUND_COLOR = get_color_from_hex('#212121')
 TEXT_COLOR = get_color_from_hex('#FFFFFF')
-INPUT_BACKGROUND = get_color_from_hex('#424242')
+INPUT_BACKGROUND = get_color_from_hex('#FFFFFF')
 
 class ArmyButton(Button):
     def __init__(self, **kwargs):
@@ -477,7 +477,7 @@ def start_army_mode(faction, game_area, class_faction):
         img_container.add_widget(img)
 
         # Статы
-        stats_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), spacing=dp(5))
+        stats_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), spacing=dp(1))
         main_stats = [
             ('Урон', unit_info['stats']['Урон'], '#FFFFFF'),
             ('Защита', unit_info['stats']['Защита'], '#FFFFFF'),
@@ -621,7 +621,7 @@ def start_army_mode(faction, game_area, class_faction):
     arrow_right = Image(
         source='files/pict/right.png',
         size_hint=(None, None),
-        size=(dp(90), dp(90)),
+        size=(dp(60), dp(60)),
         pos_hint={'center_y': 0.5, 'center_x': 1.18},
         opacity=0.8
     )
@@ -637,7 +637,7 @@ def start_army_mode(faction, game_area, class_faction):
     # Анимация нажатия на стрелки
     def animate_arrow_click(arrow):
         anim = Animation(size=(dp(35), dp(35)), duration=0.1, t='in_out_elastic') + Animation(
-            size=(dp(90), dp(90)), duration=0.2, t='in_out_elastic'
+            size=(dp(60), dp(60)), duration=0.2, t='in_out_elastic'
         )
         anim.start(arrow)
 

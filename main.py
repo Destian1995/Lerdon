@@ -203,37 +203,175 @@ def clear_tables(conn):
 class MapWidget(Widget):
     def __init__(self, selected_kingdom=None, player_kingdom=None, **kwargs):
         super(MapWidget, self).__init__(**kwargs)
-        self.touch_start = None  # Стартовая позиция касания
+        self.touch_start = None
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
-        self.fortress_rectangles = []  # Список для хранения крепостей
-        self.current_player_kingdom = player_kingdom  # Текущее королевство игрока
-        self.map_pos = self.map_positions_start()  # Позиция карты
-        self.map_scale = 1.0  # Базовый масштаб
-        self.min_scale = 0.5   # Минимальный масштаб
-        self.max_scale = 3.0   # Максимальный масштаб
-        self.prev_distance = None  # Расстояние между пальцами для масштабирования
-        self.touch_points = {}     # Хранение точек касания
+        self.fortress_rectangles = []
+        self.current_player_kingdom = player_kingdom
+        self.map_pos = self.map_positions_start()
+        self.map_scale = 1.0
+        self.min_scale = 0.5
+        self.max_scale = 3.0
+        self.prev_distance = None
+        self.mouse_dragging = False
+        self.touch_points = {}
+        self.scale_speed_factor = 0.05  # Умеренная скорость масштабирования
+
+        # Подстройка под платформу
         if platform == 'android':
             self.min_scale = 0.3
             self.max_scale = 4.0
         else:
             self.min_scale = 0.5
             self.max_scale = 3.0
-        # Размеры базовой карты (исходный размер)
-        base_map_width, base_map_height = screen_width, screen_height
-        scaled_map_width = base_map_width * self.map_scale
-        scaled_map_height = base_map_height * self.map_scale
-        # Отрисовка карты
+
+        base_width, base_height = screen_width, screen_height
+        scaled_width = base_width * self.map_scale
+        scaled_height = base_height * self.map_scale
+
         with self.canvas:
             self.map_image = Rectangle(
                 source='files/map/map.png',
                 pos=self.map_pos,
-                size=(scaled_map_width, scaled_map_height)
+                size=(scaled_width, scaled_height)
             )
-        # Отрисовка всех крепостей и дорог
+
         self.draw_fortresses()
-        self.draw_roads()  # Новый метод для рисования дорог
+        self.draw_roads()
         Clock.schedule_interval(lambda dt: self.update_cities(), 1)
+
+    def update_map_position(self):
+        base_width, base_height = screen_width, screen_height
+        scaled_width = base_width * self.map_scale
+        scaled_height = base_height * self.map_scale
+
+        self.map_image.size = (scaled_width, scaled_height)
+        self.map_image.pos = self.map_pos
+
+        self.clamp_position()  # Применяем ограничения
+
+        self.canvas.clear()
+        self.draw_fortresses()
+        self.draw_roads()
+
+    def clamp_position(self):
+        base_width, base_height = screen_width, screen_height
+        scaled_width = base_width * self.map_scale
+        scaled_height = base_height * self.map_scale
+
+        # Горизонтальные ограничения
+        if scaled_width > base_width:
+            min_x = base_width - scaled_width
+            max_x = 0
+            self.map_pos[0] = max(min_x, min(self.map_pos[0], max_x))
+        else:
+            self.map_pos[0] = 0  # Центрируем карту
+
+        # Вертикальные ограничения
+        if scaled_height > base_height:
+            min_y = base_height - scaled_height
+            max_y = 0
+            self.map_pos[1] = max(min_y, min(self.map_pos[1], max_y))
+        else:
+            self.map_pos[1] = 0  # Центрируем карту
+
+    def on_touch_down(self, touch):
+        if touch.is_mouse_scrolling:
+            return False
+
+        # === Обработка мыши ===
+        if touch.device == 'mouse':
+            if touch.button == 'left':
+                self.mouse_dragging = True
+                self.touch_start = touch.pos
+            return True  # Захватываем событие
+
+        # === Обработка сенсора ===
+        self.touch_points[touch.uid] = touch.pos
+        if len(self.touch_points) == 2:
+            points = list(self.touch_points.values())
+            self.prev_distance = self.calculate_distance(points[0], points[1])
+        self.touch_start = touch.pos
+        return super().on_touch_down(touch)
+
+    def on_touch_move(self, touch):
+        # === Обработка мыши ===
+        if touch.device == 'mouse':
+            if touch.button == 'left' and self.mouse_dragging and self.touch_start:
+                dx = touch.x - self.touch_start[0]
+                dy = touch.y - self.touch_start[1]
+                self.touch_start = touch.pos
+
+                self.map_pos[0] += dx
+                self.map_pos[1] += dy
+                self.update_map_position()
+                return True  # Захватываем событие
+
+        # === Обработка сенсора ===
+        if touch.uid in self.touch_points:
+            self.touch_points[touch.uid] = touch.pos
+
+        if len(self.touch_points) >= 2:
+            points = list(self.touch_points.values())
+            current_distance = self.calculate_distance(points[0], points[1])
+
+            if self.prev_distance and abs(current_distance - self.prev_distance) > 5:
+                scale_factor = current_distance / self.prev_distance
+                delta_scale = scale_factor - 1.0
+                new_scale = self.map_scale + delta_scale * self.scale_speed_factor
+                new_scale = max(self.min_scale, min(self.max_scale, new_scale))
+
+                center_x = (points[0][0] + points[1][0]) / 2
+                center_y = (points[0][1] + points[1][1]) / 2
+
+                # Обновляем позицию карты относительно центра
+                self.map_pos[0] = center_x - (new_scale / self.map_scale) * (center_x - self.map_pos[0])
+                self.map_pos[1] = center_y - (new_scale / self.map_scale) * (center_y - self.map_pos[1])
+
+                self.map_scale = new_scale
+                self.prev_distance = current_distance
+                self.update_map_position()
+            return True  # Захватываем событие
+
+        elif len(self.touch_points) == 1 and self.touch_start:
+            dx = touch.x - self.touch_start[0]
+            dy = touch.y - self.touch_start[1]
+            self.touch_start = touch.pos
+
+            self.map_pos[0] += dx
+            self.map_pos[1] += dy
+            self.update_map_position()
+            return True  # Захватываем событие
+
+        return super().on_touch_move(touch)
+
+    def on_touch_up(self, touch):
+        if touch.device == 'mouse':
+            if touch.button == 'left':
+                self.mouse_dragging = False
+            return True
+
+        if touch.uid in self.touch_points:
+            del self.touch_points[touch.uid]
+        self.prev_distance = None
+        self.touch_start = None
+        self.check_fortress_click(touch)
+        return super().on_touch_up(touch)
+
+    def on_mouse_down(self, window, x, y, button, modifiers):
+        if button == 'scrolldown':
+            self.map_scale = max(self.min_scale, self.map_scale - 0.1)
+            self.map_pos[0] = x - (x - self.map_pos[0]) * (self.map_scale / (self.map_scale + 0.1))
+            self.map_pos[1] = y - (y - self.map_pos[1]) * (self.map_scale / (self.map_scale + 0.1))
+            self.update_map_position()
+        elif button == 'scrollup':
+            self.map_scale = min(self.max_scale, self.map_scale + 0.1)
+            self.map_pos[0] = x - (x - self.map_pos[0]) * (self.map_scale / (self.map_scale - 0.1))
+            self.map_pos[1] = y - (y - self.map_pos[1]) * (self.map_scale / (self.map_scale - 0.1))
+            self.update_map_position()
+        return super().on_mouse_down(window, x, y, button, modifiers)
+
+    def calculate_distance(self, point1, point2):
+        return ((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2) ** 0.5
 
     def draw_roads(self):
         """
@@ -302,20 +440,6 @@ class MapWidget(Widget):
         y_diff = abs(source_coords[1] - destination_coords[1])
         total_diff = x_diff + y_diff
         return total_diff
-
-    def update_map_position(self):
-        base_width, base_height = screen_width, screen_height
-        scaled_width = base_width * self.map_scale
-        scaled_height = base_height * self.map_scale
-
-        # Обновляем параметры карты
-        self.map_image.pos = self.map_pos
-        self.map_image.size = (scaled_width, scaled_height)
-
-        # Перерисовываем элементы
-        self.canvas.clear()
-        self.draw_fortresses()
-        self.draw_roads()
 
     def map_positions_start(self):
         if self.current_player_kingdom == 'Хиперион':
@@ -427,85 +551,10 @@ class MapWidget(Widget):
                 )
                 break
 
-    def on_touch_down(self, touch):
-        # Запоминаем начальную точку касания
-        if touch.is_mouse_scrolling:
-            return
-
-        # Сохраняем точки касания для масштабирования
-        self.touch_points[touch.uid] = touch.pos
-
-        # Если 2 пальца - начинаем масштабирование
-        if len(self.touch_points) == 2:
-            # Сохраняем текущее расстояние между пальцами
-            points = list(self.touch_points.values())
-            self.prev_distance = self.calculate_distance(points[0], points[1])
-
-        # Обычное касание
-        self.touch_start = touch.pos
-
-    def calculate_distance(self, point1, point2):
-        """Вычисляет расстояние между двумя точками"""
-        return ((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2) ** 0.5
-
-    def on_touch_move(self, touch):
-        # Обновляем точку касания
-        if touch.uid in self.touch_points:
-            self.touch_points[touch.uid] = touch.pos
-
-        # Масштабирование
-        if len(self.touch_points) >= 2:
-            points = list(self.touch_points.values())
-            current_distance = self.calculate_distance(points[0], points[1])
-
-            if self.prev_distance and current_distance != self.prev_distance:
-                # Вычисляем коэффициент масштабирования
-                scale_factor = current_distance / self.prev_distance
-                self.prev_distance = current_distance
-
-                # Центр масштабирования (средняя точка между пальцами)
-                center_x = (points[0][0] + points[1][0]) / 2
-                center_y = (points[0][1] + points[1][1]) / 2
-
-                # Обновляем масштаб с ограничениями
-                new_scale = max(self.min_scale, min(self.max_scale, self.map_scale * scale_factor))
-                scale_diff = new_scale - self.map_scale
-                self.map_scale = new_scale
-
-                # Центрируем карту относительно точки масштабирования
-                base_width, base_height = screen_width, screen_height
-                scaled_width = base_width * self.map_scale
-                scaled_height = base_height * self.map_scale
-
-                # Корректируем позицию карты
-                self.map_pos[0] = center_x - (scaled_width / base_width) * (center_x - self.map_pos[0])
-                self.map_pos[1] = center_y - (scaled_height / base_height) * (center_y - self.map_pos[1])
-
-                self.update_map_position()
-                return
-
-        # Перемещение карты (если не масштабируем)
-        if self.touch_start:
-            dx = touch.x - self.touch_start[0]
-            dy = touch.y - self.touch_start[1]
-            self.touch_start = touch.pos
-
-            self.map_pos[0] += dx
-            self.map_pos[1] += dy
-            self.update_map_position()
-
     def update_cities(self):
         self.canvas.clear()
         self.draw_fortresses()
         self.draw_roads()
-
-    def on_touch_up(self, touch):
-        # Удаляем точку касания
-        if touch.uid in self.touch_points:
-            del self.touch_points[touch.uid]
-
-        # Обычная обработка клика
-        self.check_fortress_click(touch)
 
 class MenuWidget(FloatLayout):
     def __init__(self, **kwargs):

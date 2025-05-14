@@ -1693,9 +1693,6 @@ def open_trade_popup(game_instance):
 
     # === ЛОТЫ И ДОСТУПНОЕ СЫРЬЁ ===
     info_box = BoxLayout(orientation='vertical', spacing=dp(5), size_hint=(1, None), height=dp(60))
-    lot_info = Label(text="1 лот = 10,000 единиц сырья", font_size=sp(14), color=(1, 1, 1, 1), halign="center")
-    lot_info.bind(size=lot_info.setter('text_size'))
-
     available_label = Label(
         text=f"Доступно для продажи: {game_instance.get_available_raw_material_lots()} лотов",
         font_size=sp(14), color=(1, 1, 1, 1), halign="center"
@@ -1703,7 +1700,6 @@ def open_trade_popup(game_instance):
     available_label.bind(size=available_label.setter('text_size'))
 
     info_box.add_widget(available_label)
-    info_box.add_widget(lot_info)
     trade_layout.add_widget(info_box)
 
     # === ТЕКУЩАЯ ЦЕНА (увеличенная и внизу) ===

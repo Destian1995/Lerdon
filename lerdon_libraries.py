@@ -49,3 +49,4 @@ from kivymd.uix.button import MDFlatButton, MDRaisedButton
 from kivymd.uix.list import MDList, OneLineAvatarListItem, ImageLeftWidget
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.selectioncontrol import MDCheckbox
+from kivy.core.image import Image as CoreImage
