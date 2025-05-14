@@ -394,35 +394,37 @@ def start_army_mode(faction, game_area, class_faction):
         spacing=dp(5)
     )
 
-    left_space = BoxLayout(size_hint=(0.3, 1))
+    # Левое пространство (увеличен для сдвига вправо)
+    left_space = BoxLayout(size_hint=(0, 0))  # Было 0.3 → стало 0.4
 
-    right_container = BoxLayout(
-        orientation='vertical',
-        size_hint=(0.7, 1),
-        padding=[dp(15), dp(25), dp(15), dp(25)]
-    )
+    # Контейнер для карусели (используем FloatLayout для стрелок)
+    right_container = FloatLayout(size_hint=(1, 1))  # Было BoxLayout → FloatLayout
 
+    # Карусель
     carousel = Carousel(
         direction='right',
-        size_hint=(1, 0.9),
+        size_hint=(1, 1),
         loop=True,
-        scroll_distance=100
+        scroll_distance=100,
+        pos_hint={'top': 1.1, 'right': 1.06}
     )
 
     unit_data = load_unit_data(faction)
     sorted_units = sorted(unit_data.items(), key=lambda x: int(x[1]['stats']['Класс юнита'].split()[0]))
 
     for unit_name, unit_info in sorted_units:
+        # Уменьшен размер карточки
         slide = BoxLayout(
             orientation='vertical',
-            size_hint=(0.85, 0.9),
-            spacing=dp(10)
+            size_hint=(0.8, 0.8),
+            spacing=dp(1),
+            padding=dp(1)
         )
 
         card = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            spacing=dp(8),
+            spacing=dp(1),
             padding=dp(20)
         )
 
@@ -440,6 +442,7 @@ def start_army_mode(faction, game_area, class_faction):
 
         card.bind(pos=update_bg, size=update_bg)
 
+        # Заголовок
         header = BoxLayout(size_hint=(1, 0.12), orientation='horizontal', padding=dp(5))
         title = Label(
             text=unit_name,
@@ -450,7 +453,7 @@ def start_army_mode(faction, game_area, class_faction):
             valign='middle',
             text_size=(None, None),
             size_hint=(None, None),
-            width=dp(1)  # Автоматически подстроится под текст
+            width=dp(1)
         )
 
         def update_title_width(instance, texture_size):
@@ -459,8 +462,10 @@ def start_army_mode(faction, game_area, class_faction):
         title.bind(texture_size=update_title_width)
         header.add_widget(title)
 
-        body = BoxLayout(orientation='horizontal', size_hint=(1, 0.6), spacing=dp(15))
+        # Тело карточки
+        body = BoxLayout(orientation='horizontal', size_hint=(1, 0.6), spacing=dp(60))
 
+        # Картинка
         img_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), padding=[0, dp(10), 0, 0])
         img = Image(
             source=unit_info['image'],
@@ -471,6 +476,7 @@ def start_army_mode(faction, game_area, class_faction):
         )
         img_container.add_widget(img)
 
+        # Статы
         stats_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), spacing=dp(5))
         main_stats = [
             ('Урон', unit_info['stats']['Урон'], '#FFFFFF'),
@@ -505,6 +511,7 @@ def start_army_mode(faction, game_area, class_faction):
         body.add_widget(img_container)
         body.add_widget(stats_container)
 
+        # Стоимость
         cost_container = BoxLayout(
             orientation='horizontal',
             size_hint=(1, 0.2),
@@ -568,6 +575,7 @@ def start_army_mode(faction, game_area, class_faction):
         cost_container.add_widget(price_label)
         cost_container.add_widget(cost_values)
 
+        # Контроллеры
         control_panel = BoxLayout(
             size_hint=(1, 0.18),
             orientation='horizontal',
@@ -593,6 +601,7 @@ def start_army_mode(faction, game_area, class_faction):
             color=TEXT_COLOR,
             size_hint=(0.4, 1)
         )
+
         btn_hire.bind(on_release=lambda instance, name=unit_name, cost=unit_info['cost'],
                                         input_box=input_qty, stats=unit_info['stats'], image=unit_info["image"]:
         broadcast_units(name, cost, input_box, army_hire, image, stats))
@@ -600,40 +609,107 @@ def start_army_mode(faction, game_area, class_faction):
         control_panel.add_widget(input_qty)
         control_panel.add_widget(btn_hire)
 
-        card.add_widget(header)
-        card.add_widget(body)
-        card.add_widget(cost_container)
         card.add_widget(control_panel)
+        card.add_widget(body)
+        card.add_widget(header)
+        card.add_widget(cost_container)
         slide.add_widget(card)
         carousel.add_widget(slide)
 
+
+    # Добавляем стрелки прокрутки (опционально)
+    arrow_right = Image(
+        source='files/pict/right.png',
+        size_hint=(None, None),
+        size=(dp(40), dp(40)),
+        pos_hint={'center_y': 0.5, 'center_x': 1.07},
+        opacity=0.8
+    )
+
+    def on_arrow_right(instance, touch):
+        if instance.collide_point(*touch.pos):
+            carousel.load_next()
+            animate_arrow_click(arrow_right)
+
     right_container.add_widget(carousel)
+    right_container.add_widget(arrow_right)
+    arrow_right.bind(on_touch_down=on_arrow_right)
+    # Анимация нажатия на стрелки
+    def animate_arrow_click(arrow):
+        anim = Animation(size=(dp(35), dp(35)), duration=0.1, t='in_out_elastic') + Animation(
+            size=(dp(40), dp(40)), duration=0.2, t='in_out_elastic'
+        )
+        anim.start(arrow)
+
+    # --- Анимация отскока для стрелок ---
+    def create_bounce_animation(direction):
+        move_x = -dp(8) if direction == 'left' else dp(8)
+        move_anim = Animation(
+            x=arrow_left.x + move_x if direction == 'left' else arrow_right.x + move_x,
+            duration=0.3,
+            t='in_out_elastic'
+        )
+        return_anim = Animation(
+            x=arrow_left.x if direction == 'left' else arrow_right.x,
+            duration=0.4,
+            t='in_out_elastic'
+        )
+        return move_anim + return_anim
+
+    def animate_arrows(dt):
+        right_anim = create_bounce_animation('right')
+        right_anim.start(arrow_right)
+
+    Clock.schedule_interval(animate_arrows, 2.5)
+
+    # --- Сборка интерфейса ---
     main_box.add_widget(left_space)
     main_box.add_widget(right_container)
 
     float_layout = FloatLayout(size_hint=(1, 1))
     float_layout.add_widget(main_box)
 
-    close_button = Button(
-        text="X",
+    close_icon = Image(
+        source='files/pict/close.png',
         size_hint=(None, None),
         size=(dp(40), dp(40)),
-        pos_hint={'top': 0.85, 'right': 0.94},
-        background_color=(1, 0, 0, 1),
-        color=(1, 1, 1, 1),
-        font_size='20sp',
-        bold=True
+        pos_hint={'top': 0.85, 'right': 1.25},
+        allow_stretch=True,
+        keep_ratio=True,
+        mipmap=True,
+        color=(1, 1, 1, 0.9)
     )
-    close_button.bind(on_release=lambda instance: game_area.clear_widgets())
-    float_layout.add_widget(close_button)
 
+    # Функция для обработки нажатия
+    def on_close_press(instance, touch):
+        if instance.collide_point(*touch.pos):
+            game_area.clear_widgets()
+            animate_arrow_click(instance)
+
+    # Анимация при наведении
+    def on_enter_close(instance, touch):
+        if instance.collide_point(*touch.pos):
+            Animation(size=(dp(38), dp(38)), duration=0.1).start(instance)
+
+    def on_leave_close(instance, touch):
+        Animation(size=(dp(40), dp(40)), duration=0.2).start(instance)
+
+    # Привязываем обработчики
+    close_icon.bind(on_touch_down=on_close_press)
+    close_icon.bind(on_touch_down=on_enter_close)
+    close_icon.bind(on_touch_up=on_leave_close)
+
+    # Добавляем иконку в интерфейс
+    float_layout.add_widget(close_icon)
     game_area.add_widget(float_layout)
+
 
 
 def set_font_size(relative_size):
     """Вычисляет размер шрифта относительно размера окна"""
     from kivy.core.window import Window
     return Window.width * relative_size
+
 
 def broadcast_units(unit_name, unit_cost, quantity_input, army_hire, image, unit_stats):
     try:

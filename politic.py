@@ -1728,7 +1728,7 @@ def start_politic_mode(faction, game_area, class_faction):
         btn.bind(on_release=callback)
         return btn
 
-    btn_new = styled_btn("Договора", lambda btn: show_new_agreement_window(faction, game_area, class_faction))
+    btn_new = styled_btn("Дипломатия", lambda btn: show_new_agreement_window(faction, game_area, class_faction))
     btn_allies = styled_btn("Союзник", lambda btn: manage_friend_popup.open_popup())
     btn_army = styled_btn("Сила армий", lambda btn: show_ratings_popup())
 

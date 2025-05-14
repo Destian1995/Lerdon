@@ -1643,38 +1643,6 @@ def open_trade_popup(game_instance):
         spacing=dp(12)
     )
 
-    # === ТЕКУЩАЯ ЦЕНА ===
-    current_price = game_instance.current_raw_material_price
-    prev_price = game_instance.raw_material_price_history[-2] if len(game_instance.raw_material_price_history) > 1 else current_price
-    arrow_color = (0, 1, 0, 1) if current_price > prev_price else \
-        (1, 0, 0, 1) if current_price < prev_price else (0.8, 0.8, 0.8, 1)
-
-    current_price_label = Label(
-        text=f"[b]Текущая цена:[/b] {current_price}",
-        markup=True,
-        font_size=sp(18),
-        color=arrow_color,
-        halign="center",
-        valign="middle"
-    )
-    current_price_label.bind(size=current_price_label.setter('text_size'))
-    trade_layout.add_widget(current_price_label)
-
-    # === ЛОТЫ И ДОСТУПНОЕ СЫРЬЁ ===
-    info_box = BoxLayout(orientation='vertical', spacing=dp(5), size_hint=(1, None), height=dp(60))
-    lot_info = Label(text="1 лот = 10,000 единиц сырья", font_size=sp(14), color=(1, 1, 1, 1), halign="center")
-    lot_info.bind(size=lot_info.setter('text_size'))
-
-    available_label = Label(
-        text=f"Доступно для продажи: {game_instance.get_available_raw_material_lots()} лотов",
-        font_size=sp(14), color=(1, 1, 1, 1), halign="center"
-    )
-    available_label.bind(size=available_label.setter('text_size'))
-
-    info_box.add_widget(lot_info)
-    info_box.add_widget(available_label)
-    trade_layout.add_widget(info_box)
-
     # === ПОЛЕ ВВОДА ===
     input_box = BoxLayout(orientation='vertical', spacing=dp(5), size_hint=(1, None), height=dp(80))
     input_box.add_widget(Label(text="Количество лотов:", font_size=sp(14), color=(1, 1, 1, 1), halign="center"))
@@ -1687,9 +1655,9 @@ def open_trade_popup(game_instance):
         size_hint=(1, None),
         height=dp(40),
         padding=[dp(10), dp(8)],
-        background_color=(0.15, 0.15, 0.15, 1),
-        foreground_color=(1, 1, 1, 1),
-        cursor_color=(1, 1, 1, 1)
+        background_color=(0.9, 0.9, 0.9, 1),
+        foreground_color=(0, 0, 0, 1),
+        cursor_color=(0, 0, 0, 1)
     )
     input_box.add_widget(quantity_input)
     trade_layout.add_widget(input_box)
@@ -1723,6 +1691,38 @@ def open_trade_popup(game_instance):
     button_layout.add_widget(sell_btn)
     trade_layout.add_widget(button_layout)
 
+    # === ЛОТЫ И ДОСТУПНОЕ СЫРЬЁ ===
+    info_box = BoxLayout(orientation='vertical', spacing=dp(5), size_hint=(1, None), height=dp(60))
+    lot_info = Label(text="1 лот = 10,000 единиц сырья", font_size=sp(14), color=(1, 1, 1, 1), halign="center")
+    lot_info.bind(size=lot_info.setter('text_size'))
+
+    available_label = Label(
+        text=f"Доступно для продажи: {game_instance.get_available_raw_material_lots()} лотов",
+        font_size=sp(14), color=(1, 1, 1, 1), halign="center"
+    )
+    available_label.bind(size=available_label.setter('text_size'))
+
+    info_box.add_widget(available_label)
+    info_box.add_widget(lot_info)
+    trade_layout.add_widget(info_box)
+
+    # === ТЕКУЩАЯ ЦЕНА (увеличенная и внизу) ===
+    current_price = game_instance.current_raw_material_price
+    prev_price = game_instance.raw_material_price_history[-2] if len(game_instance.raw_material_price_history) > 1 else current_price
+    arrow_color = (0, 1, 0, 1) if current_price > prev_price else \
+        (1, 0, 0, 1) if current_price < prev_price else (0.8, 0.8, 0.8, 1)
+
+    current_price_label = Label(
+        text=f"[b]Текущая цена:[/b] {current_price}",
+        markup=True,
+        font_size=sp(24),  # Увеличенный размер шрифта
+        color=arrow_color,
+        halign="center",
+        valign="middle"
+    )
+    current_price_label.bind(size=current_price_label.setter('text_size'))
+    trade_layout.add_widget(current_price_label)
+
     # === ПОПАП ===
     popup = Popup(title="Рынок сырья", content=trade_layout, size_hint=(0.95, 0.8))
 
@@ -1733,6 +1733,19 @@ def open_trade_popup(game_instance):
 
     buy_btn.bind(on_press=on_press_wrapper('buy'))
     sell_btn.bind(on_press=on_press_wrapper('sell'))
+
+    # === АНИМАЦИЯ МИГАНИЯ ===
+    def start_blinking(*args):
+        anim = Animation(background_color=(0.7, 0.7, 0.7, 1), duration=0.5) + \
+               Animation(background_color=(0.9, 0.9, 0.9, 1), duration=0.5)
+        anim.repeat = True
+        anim.start(quantity_input)
+
+    def stop_blinking(*args):
+        Animation.stop_all(quantity_input)
+
+    popup.bind(on_open=start_blinking)
+    popup.bind(on_dismiss=stop_blinking)
 
     popup.open()
 
