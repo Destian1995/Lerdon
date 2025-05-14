@@ -830,8 +830,8 @@ class Faction:
                 raw_material_bonus = int(self.food_info * 3.65)
                 self.raw_material += raw_material_bonus
 
-            # Изменяем отношения с другими фракциями каждые 4 хода
-            if self.turn % 4 == 0:
+            # Изменяем отношения с другими фракциями каждые 3 хода
+            if self.turn % 3 == 0:
                 print("Выполняем обновление отношений...")
                 self.update_relations_based_on_political_system()
 
@@ -863,11 +863,11 @@ class Faction:
 
             if current_system == other_system:
                 # Улучшаем отношения на +2%
-                new_relation = min(relation_level + 2, 100)
+                new_relation = min(relation_level + 3, 100)
                 print(f"Улучшение отношений с {faction}: {relation_level} -> {new_relation}")
             else:
                 # Ухудшаем отношения на -2%
-                new_relation = max(relation_level - 2, 0)
+                new_relation = max(relation_level - 7, 0)
                 print(f"Ухудшение отношений с {faction}: {relation_level} -> {new_relation}")
 
             # Обновляем уровень отношений в базе данных

@@ -2094,9 +2094,9 @@ class AIController:
             relation_level = int(relation_level)
 
             if current_system == other_system:
-                new_relation = min(relation_level + 2, 100)
+                new_relation = min(relation_level + 3, 100)
             else:
-                new_relation = max(relation_level - 2, 0)
+                new_relation = max(relation_level - 7, 0)
 
             self.update_relation_in_db(faction, new_relation)
 

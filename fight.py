@@ -150,11 +150,11 @@ def show_battle_report(report_data):
     :param report_data: Данные отчета о бое.
     """
     # Основной контейнер
-    content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+    content = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
 
     # Фон с градиентом
     with content.canvas.before:
-        Color(0.1, 0.1, 0.1, 1)  # Темный фон
+        Color(0.1, 0.1, 0.1, 1)
         content.rect = Rectangle(size=content.size, pos=content.pos)
         content.bind(pos=lambda inst, value: setattr(inst.rect, 'pos', value),
                      size=lambda inst, value: setattr(inst.rect, 'size', value))
@@ -163,22 +163,27 @@ def show_battle_report(report_data):
     scroll_view = ScrollView()
 
     # Основной макет для таблиц
-    main_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=10)
+    main_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(20 if platform == 'android' else 10))
     main_layout.bind(minimum_height=main_layout.setter('height'))
 
     # Функция для создания таблицы с данными
     def create_battle_table(side_data, title, side_color):
-        table_layout = GridLayout(cols=4, size_hint_y=None, spacing=5, padding=5)
+        table_layout = GridLayout(
+            cols=4,
+            size_hint_y=None,
+            spacing=dp(20 if platform == 'android' else 10),
+            padding=dp(10)
+        )
         table_layout.bind(minimum_height=table_layout.setter('height'))
 
-        # Заголовок таблицы (добавляем только если title не пустой)
+        # Заголовок таблицы
         if title:
             header_label = Label(
                 text=f"[b][color={side_color}]{title}[/color][/b]",
                 markup=True,
                 size_hint_y=None,
-                height=40,
-                font_size='20sp',
+                height=dp(50 if platform == 'android' else 40),
+                font_size=sp(24 if platform == 'android' else 20),
                 color=(1, 1, 1, 1)
             )
             main_layout.add_widget(header_label)
@@ -190,17 +195,38 @@ def show_battle_report(report_data):
                 text=f"[b]{header}[/b]",
                 markup=True,
                 size_hint_y=None,
-                height=30,
+                height=dp(50 if platform == 'android' else 30),
+                font_size=sp(18 if platform == 'android' else 14),
                 color=(0.8, 0.8, 0.8, 1)
             )
             table_layout.add_widget(label)
 
         # Заполнение данных
         for unit_data in side_data:
-            table_layout.add_widget(Label(text=unit_data['unit_name'], size_hint_y=None, height=30))
-            table_layout.add_widget(Label(text=str(unit_data["initial_count"]), size_hint_y=None, height=30))
-            table_layout.add_widget(Label(text=str(unit_data["losses"]), size_hint_y=None, height=30))
-            table_layout.add_widget(Label(text=str(unit_data["final_count"]), size_hint_y=None, height=30))
+            table_layout.add_widget(Label(
+                text=unit_data['unit_name'],
+                size_hint_y=None,
+                height=dp(50 if platform == 'android' else 30),
+                font_size=sp(16 if platform == 'android' else 14)
+            ))
+            table_layout.add_widget(Label(
+                text=str(unit_data["initial_count"]),
+                size_hint_y=None,
+                height=dp(50 if platform == 'android' else 30),
+                font_size=sp(16 if platform == 'android' else 14)
+            ))
+            table_layout.add_widget(Label(
+                text=str(unit_data["losses"]),
+                size_hint_y=None,
+                height=dp(50 if platform == 'android' else 30),
+                font_size=sp(16 if platform == 'android' else 14)
+            ))
+            table_layout.add_widget(Label(
+                text=str(unit_data["final_count"]),
+                size_hint_y=None,
+                height=dp(50 if platform == 'android' else 30),
+                font_size=sp(16 if platform == 'android' else 14)
+            ))
 
         return table_layout
 
@@ -212,29 +238,25 @@ def show_battle_report(report_data):
     attacking_color = "#FF5733"  # Красный
     defending_color = "#33FF57"  # Зеленый
 
-    # Определяем заголовки таблиц в зависимости от результата игрока
+    # Определение заголовков таблиц
     attacking_title = None
     defending_title = None
 
     if attacking_data and attacking_data[0]['result']:
-        # Определяем цвет заголовка на основе результата
         result_color = "#33FF57" if attacking_data[0]['result'] == "Победа" else "#FF5733"
         attacking_title = f"[color={result_color}]{attacking_data[0]['result']}[/color]"
 
     if defending_data and defending_data[0]['result']:
-        # Определяем цвет заголовка на основе результата
         result_color = "#33FF57" if defending_data[0]['result'] == "Победа" else "#FF5733"
         defending_title = f"[color={result_color}]{defending_data[0]['result']}[/color]"
 
-    # Создаем таблицы для атакующих и обороняющихся
+    # Создаем таблицы
     attacking_table = create_battle_table(attacking_data, attacking_title, attacking_color)
     defending_table = create_battle_table(defending_data, defending_title, defending_color)
 
-    # Добавляем таблицы в основной макет
     main_layout.add_widget(attacking_table)
     main_layout.add_widget(defending_table)
 
-    # Добавляем основной макет в ScrollView
     scroll_view.add_widget(main_layout)
     content.add_widget(scroll_view)
 
@@ -243,13 +265,13 @@ def show_battle_report(report_data):
     total_defending_losses = sum(item['losses'] for item in defending_data)
 
     # Блок с итоговыми потерями
-    totals_layout = BoxLayout(orientation='vertical', size_hint_y=None, height=120, spacing=5)
+    totals_layout = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(150 if platform == 'android' else 120), spacing=dp(10))
     totals_label = Label(
         text="[b]Общие потери:[/b]",
         markup=True,
         size_hint_y=None,
-        height=30,
-        font_size=16,
+        height=dp(50 if platform == 'android' else 30),
+        font_size=sp(20 if platform == 'android' else 16),
         color=(1, 1, 1, 1)
     )
     totals_layout.add_widget(totals_label)
@@ -258,13 +280,15 @@ def show_battle_report(report_data):
         text=f"Атакующая сторона: [color={attacking_color}]{total_attacking_losses}[/color]",
         markup=True,
         size_hint_y=None,
-        height=30
+        height=dp(50 if platform == 'android' else 30),
+        font_size=sp(18 if platform == 'android' else 14)
     ))
     totals_layout.add_widget(Label(
         text=f"Обороняющаяся сторона: [color={defending_color}]{total_defending_losses}[/color]",
         markup=True,
         size_hint_y=None,
-        height=30
+        height=dp(50 if platform == 'android' else 30),
+        font_size=sp(18 if platform == 'android' else 14)
     ))
 
     content.add_widget(totals_layout)
@@ -273,22 +297,22 @@ def show_battle_report(report_data):
     close_button = Button(
         text="Закрыть",
         size_hint_y=None,
-        height=50,
-        background_color=(0.2, 0.6, 1, 1),  # Синий цвет
+        height=dp(60 if platform == 'android' else 50),
+        background_color=(0.2, 0.6, 1, 1),
+        font_size=sp(20 if platform == 'android' else 16),
         color=(1, 1, 1, 1)
     )
     close_button.bind(on_release=lambda instance: popup.dismiss())
     content.add_widget(close_button)
 
-    # Создаем всплывающее окно
+    # Всплывающее окно
     popup = Popup(
         title="Итоги боя",
         content=content,
-        size_hint=(0.8, 0.8),
-        background_color=(0.1, 0.1, 0.1, 1)  # Темный фон окна
+        size_hint=(0.9, 0.85 if platform == 'android' else 0.8),
+        background_color=(0.1, 0.1, 0.1, 1)
     )
     popup.open()
-
 
 
 def fight(attacking_city, defending_city, defending_army, attacking_army,

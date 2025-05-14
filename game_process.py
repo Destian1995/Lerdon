@@ -293,7 +293,7 @@ class GameScreen(Screen):
         Clock.schedule_interval(self.update_cash, 1)
 
     def init_ui(self):
-        # Контейнер для кнопки выхода
+        # === Контейнер для кнопки выхода ===
         exit_container = BoxLayout(
             orientation='vertical',
             size_hint=(None, None),
@@ -303,101 +303,99 @@ class GameScreen(Screen):
             spacing=dp(5)
         )
         with exit_container.canvas.before:
-            Color(0.9, 0.2, 0.2, 0.9)  # Красный фон
+            Color(0.9, 0.2, 0.2, 0.9)
             RoundedRectangle(pos=exit_container.pos, size=exit_container.size, radius=[15])
 
-        def update_exit_container_rect(instance, value):
+        def update_exit_rect(instance, value):
             instance.canvas.before.clear()
             with instance.canvas.before:
                 Color(0.9, 0.2, 0.2, 0.9)
                 RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
 
-        exit_container.bind(pos=update_exit_container_rect, size=update_exit_container_rect)
-
-        # Кнопка выхода внутри контейнера
+        exit_container.bind(pos=update_exit_rect, size=update_exit_rect)
         self.exit_button = Button(
             text="Выход",
-            size_hint=(1, 1),  # Занимает всё пространство контейнера
-            background_color=(0, 0, 0, 0),  # Прозрачный фон кнопки
+            size_hint=(1, 1),
+            background_color=(0, 0, 0, 0),
             font_size='16sp',
             bold=True,
-            color=(1, 1, 1, 1)  # Белый текст
+            color=(1, 1, 1, 1)
         )
         self.exit_button.bind(on_press=lambda x: self.confirm_exit())
         exit_container.add_widget(self.exit_button)
         self.add_widget(exit_container)
 
-        # Название фракции - размещаем ПОД кнопкой выхода
+        # === Контейнер для названия фракции ===
+        fraction_container = BoxLayout(
+            orientation='vertical',
+            size_hint=(None, None),
+            size=(dp(130) if self.is_android else 150, dp(40) if self.is_android else 40),
+            pos_hint={'x': 0.21, 'top': 1},  # Левее кнопки выхода и ближе к потолку
+            padding=dp(10)
+        )
+        with fraction_container.canvas.before:
+            Color(0.15, 0.2, 0.3, 0.95)
+            self.fraction_rect = RoundedRectangle(radius=[15])
+
+        def update_fraction_rect(instance, value):
+            instance.canvas.before.clear()
+            with instance.canvas.before:
+                Color(0.15, 0.2, 0.3, 0.95)
+                self.fraction_rect = RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
+
+        fraction_container.bind(pos=update_fraction_rect, size=update_fraction_rect)
         self.faction_label = Label(
             text=f"{self.selected_faction}",
-            font_size=sp(24) if self.is_android else '30sp',
-            size_hint=(1, None),
-            height=dp(50) if self.is_android else 50,
-            pos_hint={'center_x': 0.5, 'top': 0.90},
-            color=(0, 0, 0, 1)
+            font_size=sp(20) if self.is_android else '24sp',
+            bold=True,
+            color=(1, 1, 1, 1),
+            halign='center',
+            valign='middle'
         )
-        self.add_widget(self.faction_label)
+        self.faction_label.bind(size=self.faction_label.setter('text_size'))
+        fraction_container.add_widget(self.faction_label)
+        self.add_widget(fraction_container)
 
-        # Контейнер для боковой панели с кнопками режимов
+        # === Боковая панель с кнопками режимов ===
         mode_panel_width = dp(80)
         mode_panel_container = BoxLayout(
             orientation='vertical',
-            size_hint=(None, 0.7),  # Высота — 50% от высоты экрана
+            size_hint=(None, 0.7),
             width=mode_panel_width,
-            pos_hint={'right': 1, 'top': 0.7},  # Позиционируем верх контейнера на 75% от высоты экрана
+            pos_hint={'right': 1, 'top': 0.7},
             padding=dp(10),
             spacing=dp(10)
         )
         with mode_panel_container.canvas.before:
-            Color(0.15, 0.2, 0.3, 0.9)  # Темно-синий фон
+            Color(0.15, 0.2, 0.3, 0.9)
             RoundedRectangle(pos=mode_panel_container.pos, size=mode_panel_container.size, radius=[15])
 
-        def update_mode_panel_rect(instance, value):
+        def update_mode_rect(instance, value):
             instance.canvas.before.clear()
             with instance.canvas.before:
                 Color(0.15, 0.2, 0.3, 0.9)
                 RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
 
-        mode_panel_container.bind(pos=update_mode_panel_rect, size=update_mode_panel_rect)
-
-        # Кнопки режимов (одинаковый размер)
-        btn_advisor = ImageButton(
-            source=transform_filename(f'files/sov/sov_{self.selected_faction}.jpg'),
-            size_hint=(1, None),
-            height=dp(60),
-            on_press=self.show_advisor
-        )
-        btn_economy = ImageButton(
-            source='files/status/economy.png',
-            size_hint=(1, None),
-            height=dp(60),
-            on_press=self.switch_to_economy
-        )
-        btn_army = ImageButton(
-            source='files/status/army.png',
-            size_hint=(1, None),
-            height=dp(60),
-            on_press=self.switch_to_army
-        )
-        btn_politics = ImageButton(
-            source='files/status/politic.png',
-            size_hint=(1, None),
-            height=dp(60),
-            on_press=self.switch_to_politics
-        )
-
-        # Добавляем кнопки в контейнер
+        mode_panel_container.bind(pos=update_mode_rect, size=update_mode_rect)
+        btn_advisor = ImageButton(source=transform_filename(f'files/sov/sov_{self.selected_faction}.jpg'),
+                                  size_hint=(1, None), height=dp(60), on_press=self.show_advisor)
+        btn_economy = ImageButton(source='files/status/economy.png', size_hint=(1, None), height=dp(60),
+                                  on_press=self.switch_to_economy)
+        btn_army = ImageButton(source='files/status/army.png', size_hint=(1, None), height=dp(60),
+                               on_press=self.switch_to_army)
+        btn_politics = ImageButton(source='files/status/politic.png', size_hint=(1, None), height=dp(60),
+                                   on_press=self.switch_to_politics)
         mode_panel_container.add_widget(btn_advisor)
         mode_panel_container.add_widget(btn_economy)
         mode_panel_container.add_widget(btn_army)
         mode_panel_container.add_widget(btn_politics)
         self.add_widget(mode_panel_container)
 
-        # Центральная часть для отображения карты и игрового процесса
+        # === Центральная область ===
         self.game_area = FloatLayout(size_hint=(0.7, 1), pos_hint={'x': 0.25, 'y': 0})
         self.add_widget(self.game_area)
 
-        # Контейнер для счетчика ходов
+        # === Счётчик ходов ===
         turn_counter_size = (dp(200), dp(50))
         turn_counter_container = BoxLayout(
             orientation='vertical',
@@ -408,29 +406,22 @@ class GameScreen(Screen):
             spacing=dp(5)
         )
         with turn_counter_container.canvas.before:
-            Color(0.15, 0.2, 0.3, 0.9)  # Темно-синий фон
+            Color(0.15, 0.2, 0.3, 0.9)
             RoundedRectangle(pos=turn_counter_container.pos, size=turn_counter_container.size, radius=[15])
 
-        def update_turn_counter_rect(instance, value):
+        def update_turn_rect(instance, value):
             instance.canvas.before.clear()
             with instance.canvas.before:
                 Color(0.15, 0.2, 0.3, 0.9)
                 RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
 
-        turn_counter_container.bind(pos=update_turn_counter_rect, size=update_turn_counter_rect)
-
-        # Метка для отображения текущего хода
-        self.turn_label = Label(
-            text=f"Текущий ход: {self.turn_counter}",
-            font_size='18sp',
-            color=(1, 1, 1, 1),
-            bold=True,
-            halign='center'
-        )
+        turn_counter_container.bind(pos=update_turn_rect, size=update_turn_rect)
+        self.turn_label = Label(text=f"Текущий ход: {self.turn_counter}", font_size='18sp', color=(1, 1, 1, 1),
+                                bold=True, halign='center')
         turn_counter_container.add_widget(self.turn_label)
         self.add_widget(turn_counter_container)
 
-        # Кнопка "Завершить ход"
+        # === Кнопка "Завершить ход" ===
         end_turn_size = (dp(200), dp(50))
         self.end_turn_button = Button(
             text="Завершить ход",
@@ -445,16 +436,14 @@ class GameScreen(Screen):
         self.end_turn_button.bind(on_press=self.process_turn)
         self.add_widget(self.end_turn_button)
 
-        # Добавление ResourceBox в верхний правый угол
+        # === ResourceBox ===
         self.resource_box = ResourceBox(resource_manager=self.faction)
-        self.resource_box.size_hint = (0.2, 0.7)  # Растягиваем почти на всю высоту
-        self.resource_box.pos_hint = {'x': 0, 'y': 0.4}  # Слева по всей высоте
-
-        # Добавляем обработчик изменения ориентации
+        self.resource_box.size_hint = (0.2, 0.7)
+        self.resource_box.pos_hint = {'x': 0, 'y': 0.4}
         Window.bind(on_resize=self.on_window_resize)
         self.add_widget(self.resource_box)
 
-        # Инициализация ИИ для остальных фракций
+        # === Инициализация ИИ ===
         self.init_ai_controllers()
 
     def on_window_resize(self, instance, width, height):

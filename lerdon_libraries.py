@@ -24,6 +24,7 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.image import Image
 from kivy.metrics import dp, sp
+from kivy.utils import platform
 from kivy.utils import get_color_from_hex, platform
 from kivy.clock import Clock
 from kivy.uix.gridlayout import GridLayout
