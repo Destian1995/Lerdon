@@ -202,28 +202,41 @@ class ResourceBox(BoxLayout):
 
     def update_resources(self):
         resources = self.resource_manager.get_resources()
+
+        # Парсим все значения заранее для удобства сравнения
+        parsed_values = {}
+        for name, value in resources.items():
+            parsed_values[name] = parse_formatted_number(value)
+
         self.clear_widgets()
         self.labels.clear()
 
         for resource_name, formatted_value in resources.items():
             try:
-                # Парсим значение из отформатированной строки
-                numeric_value = parse_formatted_number(formatted_value)
+                numeric_value = parsed_values[resource_name]
 
-                # Определяем цвет текста
-                if numeric_value < 0:
-                    text_color = (1, 0, 0, 1)  # Красный для отрицательных
+                # Проверяем для "Потребление" и "Лимит армии"
+                if resource_name == "Потребление":
+                    limit_army = parsed_values.get("Лимит армии", 0)
+                    if numeric_value > limit_army:
+                        text_color = (1, 0, 0, 1)  # Красный
+                    else:
+                        text_color = (1, 1, 1, 1)  # Белый
                 else:
-                    text_color = (1, 1, 1, 1)  # Белый для остальных
+                    # Стандартная проверка на отрицательные значения
+                    if numeric_value < 0:
+                        text_color = (1, 0, 0, 1)  # Красный
+                    else:
+                        text_color = (1, 1, 1, 1)  # Белый
 
-                # Сохраняем оригинальный формат
                 display_value = formatted_value
 
-            except (TypeError, ValueError):
-                # Если значение не числовое
+            except (TypeError, ValueError, KeyError):
+                # Обработка ошибок парсинга или отсутствия ключа
                 text_color = (1, 1, 1, 1)
                 display_value = formatted_value
 
+            # Создаем и настраиваем Label
             label = Label(
                 text=f"{resource_name}: {display_value}",
                 size_hint_y=None,
