@@ -1588,82 +1588,94 @@ def calculate_army_strength():
 
 
 def create_army_rating_table():
-    """Создает таблицу рейтинга армий на основе силы войск."""
-    # Получаем числовые и отформатированные значения силы армий
+    """Создает таблицу рейтинга армий с улучшенным дизайном."""
     army_strength, formatted_army_strength = calculate_army_strength()
-
     if not army_strength:
         return GridLayout()
 
     max_strength = max(army_strength.values(), default=1)
 
-    layout = GridLayout(cols=3, size_hint_y=None, spacing=5, padding=10)
+    # Макет таблицы
+    layout = GridLayout(
+        cols=3,
+        size_hint_y=None,
+        spacing=dp(10),
+        padding=[dp(10), dp(5), dp(10), dp(5)],
+        row_default_height=dp(50),
+        row_force_default=True
+    )
     layout.bind(minimum_height=layout.setter('height'))
 
-    def add_header_with_background(text):
-        header = Label(
+    # Цвета
+    header_color = (0.1, 0.5, 0.9, 1)  # Темно-синий
+    row_colors = [
+        (1, 1, 1, 1),       # Белый
+        (0.8, 0.9, 1, 1),   # Светло-голубой
+        (0.6, 0.8, 1, 1),   # Голубой
+        (0.4, 0.7, 1, 1),   # Сине-зеленый
+        (0.2, 0.6, 1, 1)    # Темно-синий
+    ]
+
+    def create_label(text, color, halign="left", valign="middle", bold=False):
+        lbl = Label(
             text=text,
-            bold=True,
-            color=(1, 1, 1, 1),
+            color=(0, 0, 0, 1),
+            font_size=sp(14),
             size_hint_y=None,
-            height=40
+            height=dp(50),
+            halign=halign,
+            valign=valign,
+            bold=bold
         )
-        with header.canvas.before:
-            Color(0.2, 0.6, 1, 1)  # Синий фон
-            header.rect = Rectangle(pos=header.pos, size=header.size)
-        header.bind(
-            pos=lambda _, value: setattr(header.rect, 'pos', value),
-            size=lambda _, value: setattr(header.rect, 'size', value)
+        lbl.bind(size=lbl.setter('text_size'))
+        with lbl.canvas.before:
+            Color(*color)
+            lbl.rect = RoundedRectangle(pos=lbl.pos, size=lbl.size, radius=[dp(8)])
+        lbl.bind(
+            pos=lambda _, value: setattr(lbl.rect, 'pos', value),
+            size=lambda _, value: setattr(lbl.rect, 'size', value)
         )
-        return header
+        return lbl
 
-    layout.add_widget(add_header_with_background("Страна"))
-    layout.add_widget(add_header_with_background("Рейтинг"))
-    layout.add_widget(add_header_with_background("Мощь"))
+    # Заголовки
+    layout.add_widget(create_label("Страна", header_color, halign="center", valign="middle", bold=True))
+    layout.add_widget(create_label("Рейтинг", header_color, halign="center", valign="middle", bold=True))
+    layout.add_widget(create_label("Мощь", header_color, halign="center", valign="middle", bold=True))
 
-    rank_colors = {
-        0: (1, 1, 1, 1),       # Белый (1-й)
-        1: (0, 0.8, 0.8, 1),   # Бирюзовый (2-й)
-        2: (0, 1, 0, 1),       # Зеленый (3-й)
-        3: (1, 1, 0, 1),       # Желтый (4-й)
-        4: (1, 0, 0, 1)        # Красный (5-й)
-    }
+    sorted_factions = sorted(army_strength.items(), key=lambda x: x[1], reverse=True)
 
-    sorted_factions = sorted(
-        army_strength.items(),
-        key=lambda x: x[1],  # Сортируем по числовым значениям
-        reverse=True
-    )
     for rank, (faction, strength) in enumerate(sorted_factions):
-        rating = (strength / max_strength) * 100 if max_strength > 0 else 0
-        russian_name = faction_names.get(faction, faction)
-        row_color = rank_colors.get(rank, (0.5, 0.5, 0.5, 1))
+        rating = (strength / max_strength) * 100
+        faction_name = faction_names.get(faction, faction)
+        color = row_colors[rank % len(row_colors)]
 
-        # Отображаем отформатированное значение силы армии
-        formatted_strength = formatted_army_strength[faction]
-
-        layout.add_widget(Label(text=russian_name, color=row_color, size_hint_y=None, height=40))
-        layout.add_widget(Label(text=f"{rating:.2f}%", color=row_color, size_hint_y=None, height=40))
-        layout.add_widget(Label(text=formatted_strength, color=row_color, size_hint_y=None, height=40))
+        # Добавляем ячейки
+        layout.add_widget(create_label(f"  {faction_name}", color, halign="left", valign="middle"))
+        layout.add_widget(create_label(f"{rating:.1f}%", color, halign="center", valign="middle"))
+        layout.add_widget(create_label(formatted_army_strength[faction], color, halign="right", valign="middle"))
 
     return layout
 
-
 def show_ratings_popup():
     """Открывает всплывающее окно с рейтингом армий."""
-    # Создаем таблицу рейтинга армий
     table_layout = create_army_rating_table()
 
-    # Оборачиваем таблицу в ScrollView
-    scroll_view = ScrollView(size_hint=(1, 1))
+    scroll_view = ScrollView(
+        size_hint=(1, 1),
+        bar_width=dp(6),
+        scroll_type=['bars', 'content']
+    )
     scroll_view.add_widget(table_layout)
 
-    # Создаем всплывающее окно
     popup = Popup(
         title="Рейтинг армий",
         content=scroll_view,
-        size_hint=(0.8, 0.8),
-        auto_dismiss=True
+        size_hint=(0.9, 0.8),
+        pos_hint={'center_x': 0.5, 'center_y': 0.5},
+        background_color=(0.1, 0.1, 0.1, 0.95),
+        separator_color=(0.2, 0.6, 1, 1),
+        title_color=(1, 1, 1, 1),
+        title_size=sp(20)
     )
     popup.open()
 

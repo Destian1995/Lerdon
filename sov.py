@@ -899,14 +899,17 @@ class AdvisorView(FloatLayout):
             spacing=dp(4),
             padding=dp(6),
             size_hint=(None, None),
-            size=(Window.width * 0.4, Window.height * 0.12),
-            pos_hint={'x': 0.02, 'top': 0.98}
+            # Увеличили ширину до 45% экрана, высоту до 20% экрана
+            size=(Window.width * 0.4, Window.height * 0.23),
+            # Сдвинули чуть правее (x=0.05) и опустили вниз (top=0.95)
+            pos_hint={'x': 0.05, 'top': 0.95}
         )
 
         with top_left_box.canvas.before:
             Color(*color)
             self.top_left_rect = Rectangle(size=top_left_box.size, pos=top_left_box.pos)
 
+        # Привязка размеров и позиции к фоновому прямоугольнику
         top_left_box.bind(size=lambda inst, val: setattr(self.top_left_rect, 'size', val))
         top_left_box.bind(pos=lambda inst, val: setattr(self.top_left_rect, 'pos', val))
 

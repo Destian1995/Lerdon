@@ -618,7 +618,7 @@ def start_army_mode(faction, game_area, class_faction):
         text="X",
         size_hint=(None, None),
         size=(dp(40), dp(40)),
-        pos_hint={'top': 0.85, 'right': 0.92},
+        pos_hint={'top': 0.85, 'right': 0.94},
         background_color=(1, 0, 0, 1),
         color=(1, 1, 1, 1),
         font_size='20sp',
