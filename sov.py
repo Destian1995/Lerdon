@@ -1219,7 +1219,7 @@ class AdvisorView(FloatLayout):
     def update_progress_display(self):
         """Обновляет отображение прогресса и счетчиков баллов."""
         # Обновляем счетчики баллов
-        self.battle_score_label.text = f"[b]Доступно:[/b] {self._battle_score}"
+        self.battle_score_label.text = f"{self._battle_score}"
 
         # Обновляем цвета прогресс-баров для Атаки
         attack_bars_layout = self.attack_upgrade_button.parent.children[1]
