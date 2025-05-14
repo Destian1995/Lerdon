@@ -244,35 +244,15 @@ class MapWidget(Widget):
         scaled_width = base_width * self.map_scale
         scaled_height = base_height * self.map_scale
 
+        # Обновление размера и позиции карты
         self.map_image.size = (scaled_width, scaled_height)
         self.map_image.pos = self.map_pos
-
-        self.clamp_position()  # Применяем ограничения
 
         self.canvas.clear()
         self.draw_fortresses()
         self.draw_roads()
 
-    def clamp_position(self):
-        base_width, base_height = screen_width, screen_height
-        scaled_width = base_width * self.map_scale
-        scaled_height = base_height * self.map_scale
 
-        # Горизонтальные ограничения
-        if scaled_width > base_width:
-            min_x = base_width - scaled_width
-            max_x = 0
-            self.map_pos[0] = max(min_x, min(self.map_pos[0], max_x))
-        else:
-            self.map_pos[0] = 0  # Центрируем карту
-
-        # Вертикальные ограничения
-        if scaled_height > base_height:
-            min_y = base_height - scaled_height
-            max_y = 0
-            self.map_pos[1] = max(min_y, min(self.map_pos[1], max_y))
-        else:
-            self.map_pos[1] = 0  # Центрируем карту
 
     def on_touch_down(self, touch):
         if touch.is_mouse_scrolling:
@@ -550,6 +530,8 @@ class MapWidget(Widget):
                     f"принадлежит {'вашему' if owner == self.current_player_kingdom else 'чужому'} королевству!"
                 )
                 break
+
+
 
     def update_cities(self):
         self.canvas.clear()
