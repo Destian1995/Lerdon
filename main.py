@@ -526,7 +526,6 @@ class MenuWidget(FloatLayout):
         new_image_source = random.choice(list(self.menu_images.keys()))
         while new_image_source == self.next_image.source:  # Избегаем повторения текущего изображения
             new_image_source = random.choice(list(self.menu_images.keys()))
-
         self.next_image.source = new_image_source
         self.next_image.opacity = 0  # Начинаем с прозрачности 0
 
@@ -580,7 +579,9 @@ class KingdomSelectionWidget(FloatLayout):
         # Подключение к базе данных
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.kingdom_data = self.load_kingdoms_from_db()
-
+        # === Новые атрибуты для подсветки фракции ===
+        self.selected_button = None  # Хранит ссылку на последнюю выбранную кнопку
+        self.default_button_color = (0.1, 0.5, 0.9, 1)  # Цвет кнопок по умолчанию
         # Фон выбора княжества
         self.add_widget(Image(source='files/choice.jpg', allow_stretch=True, keep_ratio=False))
 
@@ -727,7 +728,25 @@ class KingdomSelectionWidget(FloatLayout):
         return kingdoms
 
     def select_kingdom(self, instance):
-        """Метод для обработки выбора княжества"""
+        """Метод для обработки выбора княжества с подсветкой кнопки"""
+        kingdom_name = instance.text
+        kingdom_info = self.kingdom_data[kingdom_name]
+
+        # === Сохраняем текущий цвет кнопки, если он ещё не сохранен ===
+        if not hasattr(instance, "original_color"):
+            instance.original_color = instance.background_color
+
+        # === Если есть предыдущая выбранная кнопка, восстанавливаем её цвет ===
+        if self.selected_button:
+            self.selected_button.background_color = self.default_button_color
+
+        # === Устанавливаем цвет кнопки в соответствии с фракцией ===
+        faction_color = kingdom_info["color"]  # Цвет фракции из БД (например, "#0000FF")
+        rgba_color = self.hex_to_rgba(faction_color)  # Преобразуем в RGBA
+        instance.background_color = rgba_color
+        self.selected_button = instance  # Обновляем ссылку на выбранную кнопку
+
+        # === Остальной код метода без изменений ===
         kingdom_rename = {
             "Аркадия": "arkadia",
             "Селестия": "celestia",
@@ -735,21 +754,18 @@ class KingdomSelectionWidget(FloatLayout):
             "Хиперион": "giperion",
             "Халидон": "halidon"
         }
-        kingdom_name = instance.text
-        kingdom_info = self.kingdom_data[kingdom_name]
-
-        # Устанавливаем выбранное княжество в атрибут приложения
         app = App.get_running_app()
         app.selected_kingdom = kingdom_name
-
         english_name = kingdom_rename.get(kingdom_name, kingdom_name).lower()
         advisor_image_path = f'files/sov/sov_{english_name}.jpg'
         self.advisor_image.source = advisor_image_path
         self.advisor_image.reload()
 
-        # Обновляем текст для надписи с названием фракции
         faction_info_text = self.get_kingdom_info(kingdom_name)
-        self.faction_label.text = f"[b]{kingdom_name}[/b]\n\n{faction_info_text}"
+        self.faction_label.text = f"[b]{kingdom_name}[/b]\n{faction_info_text}"
+
+    def hex_to_rgba(self, hex_color):
+        return (0, 0.3, 0.4, 1)  # Красный (fallback)
 
     def get_kingdom_info(self, kingdom):
         info = {

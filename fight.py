@@ -171,7 +171,7 @@ def show_battle_report(report_data):
         table_layout = GridLayout(
             cols=4,
             size_hint_y=None,
-            spacing=dp(20 if platform == 'android' else 10),
+            spacing=dp(5 if platform == 'android' else 5),
             padding=dp(10)
         )
         table_layout.bind(minimum_height=table_layout.setter('height'))
@@ -182,8 +182,8 @@ def show_battle_report(report_data):
                 text=f"[b][color={side_color}]{title}[/color][/b]",
                 markup=True,
                 size_hint_y=None,
-                height=dp(50 if platform == 'android' else 40),
-                font_size=sp(24 if platform == 'android' else 20),
+                height=dp(30 if platform == 'android' else 20),
+                font_size=sp(15 if platform == 'android' else 20),
                 color=(1, 1, 1, 1)
             )
             main_layout.add_widget(header_label)
@@ -195,8 +195,8 @@ def show_battle_report(report_data):
                 text=f"[b]{header}[/b]",
                 markup=True,
                 size_hint_y=None,
-                height=dp(50 if platform == 'android' else 30),
-                font_size=sp(18 if platform == 'android' else 14),
+                height=dp(30 if platform == 'android' else 20),
+                font_size=sp(14 if platform == 'android' else 14),
                 color=(0.8, 0.8, 0.8, 1)
             )
             table_layout.add_widget(label)
@@ -206,26 +206,26 @@ def show_battle_report(report_data):
             table_layout.add_widget(Label(
                 text=unit_data['unit_name'],
                 size_hint_y=None,
-                height=dp(50 if platform == 'android' else 30),
-                font_size=sp(16 if platform == 'android' else 14)
+                height=dp(30 if platform == 'android' else 30),
+                font_size=sp(14 if platform == 'android' else 14)
             ))
             table_layout.add_widget(Label(
                 text=str(unit_data["initial_count"]),
                 size_hint_y=None,
-                height=dp(50 if platform == 'android' else 30),
-                font_size=sp(16 if platform == 'android' else 14)
+                height=dp(30 if platform == 'android' else 30),
+                font_size=sp(14 if platform == 'android' else 14)
             ))
             table_layout.add_widget(Label(
                 text=str(unit_data["losses"]),
                 size_hint_y=None,
-                height=dp(50 if platform == 'android' else 30),
-                font_size=sp(16 if platform == 'android' else 14)
+                height=dp(30 if platform == 'android' else 30),
+                font_size=sp(14 if platform == 'android' else 14)
             ))
             table_layout.add_widget(Label(
                 text=str(unit_data["final_count"]),
                 size_hint_y=None,
-                height=dp(50 if platform == 'android' else 30),
-                font_size=sp(16 if platform == 'android' else 14)
+                height=dp(30 if platform == 'android' else 30),
+                font_size=sp(14 if platform == 'android' else 14)
             ))
 
         return table_layout
@@ -264,9 +264,9 @@ def show_battle_report(report_data):
     close_button = Button(
         text="Закрыть",
         size_hint_y=None,
-        height=dp(60 if platform == 'android' else 50),
+        height=dp(30 if platform == 'android' else 50),
         background_color=(0.2, 0.6, 1, 1),
-        font_size=sp(20 if platform == 'android' else 16),
+        font_size=sp(16 if platform == 'android' else 16),
         color=(1, 1, 1, 1)
     )
     close_button.bind(on_release=lambda instance: popup.dismiss())
