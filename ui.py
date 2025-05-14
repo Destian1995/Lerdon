@@ -1082,73 +1082,109 @@ class FortressInfoPopup(Popup):
 
     def add_to_garrison_with_slider(self, unit_data, name_label):
         """
-        Открывает окно с ползунком для выбора количества войск и добавляет их в гарнизон.
-        :param unit_data: Данные о юните.
-        :param name_label: Метка с названием юнита для изменения цвета.
+        Открывает адаптивное всплывающее окно с ползунком для выбора количества войск.
         """
         unit_type = unit_data["unit_type"]
         available_count = unit_data["quantity"]
 
-        # Создаем всплывающее окно
-        popup = Popup(title=f"Добавление {unit_type}", size_hint=(0.6, 0.4))
-        layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
-
-        # Информация о юните
-        info_label = Label(
-            text=f"{unit_type}\nДоступно: {format_number(available_count)}",
-            font_size='14sp',
-            size_hint_y=None,
-            height=60,
-            color=(1, 1, 1, 1)
+        # Адаптивный размер окна под экран
+        window_width = Window.width * 0.9 if Window.width < 600 else 500  # Максимум 500px на больших экранах
+        popup = Popup(
+            title=f"Добавление {unit_type}",
+            size_hint=(None, None),
+            width=window_width,
+            height=Window.height * 0.4,
+            title_size='18sp',
+            background_color=(0.1, 0.1, 0.1, 0.95)  # Темный фон для контраста
         )
-        layout.add_widget(info_label)
 
-        # Ползунок для выбора количества
-        slider_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=50, spacing=10)
+        # Основной контейнер с отступами
+        layout = BoxLayout(orientation='vertical', padding=[20, 10], spacing=15)
+
+
+
+        # Ползунок с динамическим обновлением
+        slider_container = BoxLayout(orientation='horizontal', size_hint_y=None, height=60, spacing=10)
+
         slider_label = Label(
             text="Количество: 0",
-            font_size='14sp',
-            size_hint_x=None,
-            width=100,
-            color=(1, 1, 1, 1)
+            font_size='16sp',
+            size_hint_x=0.4,
+            color=(1, 1, 1, 1),
+            halign='right',
+            valign='middle'
         )
-        slider = Slider(min=0, max=available_count, value=0, step=1)
-        slider.bind(value=lambda instance, value: setattr(slider_label, 'text', f"Количество: {int(value)}"))
-        slider_layout.add_widget(slider_label)
-        slider_layout.add_widget(slider)
-        layout.add_widget(slider_layout)
+        slider_label.bind(size=slider_label.setter('text_size'))
 
-        # Кнопки подтверждения и отмены
-        button_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=50, spacing=10)
-        confirm_button = Button(text="Подтвердить", background_color=(0.6, 0.8, 0.6, 1))
-        cancel_button = Button(text="Отмена", background_color=(0.8, 0.6, 0.6, 1))
+        slider = Slider(
+            min=0,
+            max=available_count,
+            value=0,
+            step=1,
+            size_hint_x=0.6,
+            background_width=30  # Утолщенный ползунок
+        )
 
+        # Обновление метки при движении ползунка
+        def update_slider_label(instance, value):
+            slider_label.text = f"Количество: {int(value)}"
+
+        slider.bind(value=update_slider_label)
+
+        slider_container.add_widget(slider_label)
+        slider_container.add_widget(slider)
+        layout.add_widget(slider_container)
+
+        # Кнопки с улучшенной стилизацией
+        button_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=70, spacing=20)
+
+        confirm_button = Button(
+            text="Подтвердить",
+            font_size='16sp',
+            background_color=(0.4, 0.7, 0.4, 1),
+            background_normal='',  # Отключение стандартного фона
+            border=[10, 10, 10, 10],
+            size_hint_x=0.5
+        )
+
+        cancel_button = Button(
+            text="Отмена",
+            font_size='16sp',
+            background_color=(0.7, 0.4, 0.4, 1),
+            background_normal='',
+            border=[10, 10, 10, 10],
+            size_hint_x=0.5
+        )
+
+        # Логика подтверждения
         def confirm_action(btn):
             try:
                 selected_count = int(slider.value)
                 if 0 < selected_count <= available_count:
-                    # Добавляем юнит в гарнизон
                     self.transfer_army_to_garrison(unit_data, selected_count)
-
-                    # Закрываем текущее всплывающее окно
                     popup.dismiss()
-
-                    # Обновляем интерфейс гарнизона
                     self.update_garrison()
-
-                    # Изменяем цвет метки юнита на зеленый
-                    name_label.color = (0, 1, 0, 1)  # Зеленый цвет
-                    name_label.canvas.ask_update()  # Принудительно обновляем интерфейс
+                    name_label.color = (0, 1, 0, 1)
+                    name_label.canvas.ask_update()
                 else:
-                    show_popup_message("Ошибка", "Некорректное количество.")
+                    show_popup_message("Ошибка", "Выберите количество от 1 до " + str(available_count))
             except ValueError:
-                show_popup_message("Ошибка", "Введите корректное число.")
+                show_popup_message("Ошибка", "Введите корректное число")
 
+        # Обработка нажатий
         confirm_button.bind(on_press=confirm_action)
-        cancel_button.bind(on_press=popup.dismiss)
+        cancel_button.bind(on_press=lambda btn: popup.dismiss())
         button_layout.add_widget(confirm_button)
         button_layout.add_widget(cancel_button)
         layout.add_widget(button_layout)
+
+        # Адаптация при изменении размера окна
+        def adapt_popup_size(*args):
+            popup.width = Window.width * 0.9 if Window.width < 600 else 500
+            popup.height = Window.height * 0.4
+
+        Window.bind(on_resize=adapt_popup_size)
+        popup.bind(on_dismiss=lambda _: Window.unbind(on_resize=adapt_popup_size))
 
         popup.content = layout
         popup.open()
