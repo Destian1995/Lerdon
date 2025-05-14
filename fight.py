@@ -260,39 +260,6 @@ def show_battle_report(report_data):
     scroll_view.add_widget(main_layout)
     content.add_widget(scroll_view)
 
-    # Вычисление общих потерь
-    total_attacking_losses = sum(item['losses'] for item in attacking_data)
-    total_defending_losses = sum(item['losses'] for item in defending_data)
-
-    # Блок с итоговыми потерями
-    totals_layout = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(150 if platform == 'android' else 120), spacing=dp(10))
-    totals_label = Label(
-        text="[b]Общие потери:[/b]",
-        markup=True,
-        size_hint_y=None,
-        height=dp(50 if platform == 'android' else 30),
-        font_size=sp(20 if platform == 'android' else 16),
-        color=(1, 1, 1, 1)
-    )
-    totals_layout.add_widget(totals_label)
-
-    totals_layout.add_widget(Label(
-        text=f"Атакующая сторона: [color={attacking_color}]{total_attacking_losses}[/color]",
-        markup=True,
-        size_hint_y=None,
-        height=dp(50 if platform == 'android' else 30),
-        font_size=sp(18 if platform == 'android' else 14)
-    ))
-    totals_layout.add_widget(Label(
-        text=f"Обороняющаяся сторона: [color={defending_color}]{total_defending_losses}[/color]",
-        markup=True,
-        size_hint_y=None,
-        height=dp(50 if platform == 'android' else 30),
-        font_size=sp(18 if platform == 'android' else 14)
-    ))
-
-    content.add_widget(totals_layout)
-
     # Кнопка закрытия окна
     close_button = Button(
         text="Закрыть",
