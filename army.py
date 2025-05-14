@@ -395,7 +395,7 @@ def start_army_mode(faction, game_area, class_faction):
     )
 
     # Левое пространство (увеличен для сдвига вправо)
-    left_space = BoxLayout(size_hint=(0, 0))  # Было 0.3 → стало 0.4
+    left_space = BoxLayout(size_hint=(0.3, 1))  # Было 0.3 → стало 0.4
 
     # Контейнер для карусели (используем FloatLayout для стрелок)
     right_container = FloatLayout(size_hint=(1, 1))  # Было BoxLayout → FloatLayout
@@ -621,8 +621,8 @@ def start_army_mode(faction, game_area, class_faction):
     arrow_right = Image(
         source='files/pict/right.png',
         size_hint=(None, None),
-        size=(dp(40), dp(40)),
-        pos_hint={'center_y': 0.5, 'center_x': 1.07},
+        size=(dp(90), dp(90)),
+        pos_hint={'center_y': 0.5, 'center_x': 1.18},
         opacity=0.8
     )
 
@@ -637,7 +637,7 @@ def start_army_mode(faction, game_area, class_faction):
     # Анимация нажатия на стрелки
     def animate_arrow_click(arrow):
         anim = Animation(size=(dp(35), dp(35)), duration=0.1, t='in_out_elastic') + Animation(
-            size=(dp(40), dp(40)), duration=0.2, t='in_out_elastic'
+            size=(dp(90), dp(90)), duration=0.2, t='in_out_elastic'
         )
         anim.start(arrow)
 
@@ -672,8 +672,8 @@ def start_army_mode(faction, game_area, class_faction):
     close_icon = Image(
         source='files/pict/close.png',
         size_hint=(None, None),
-        size=(dp(40), dp(40)),
-        pos_hint={'top': 0.85, 'right': 1.25},
+        size=(dp(60), dp(60)),
+        pos_hint={'top': 0.85, 'right': 1.18},
         allow_stretch=True,
         keep_ratio=True,
         mipmap=True,
@@ -692,7 +692,7 @@ def start_army_mode(faction, game_area, class_faction):
             Animation(size=(dp(38), dp(38)), duration=0.1).start(instance)
 
     def on_leave_close(instance, touch):
-        Animation(size=(dp(40), dp(40)), duration=0.2).start(instance)
+        Animation(size=(dp(60), dp(60)), duration=0.2).start(instance)
 
     # Привязываем обработчики
     close_icon.bind(on_touch_down=on_close_press)
