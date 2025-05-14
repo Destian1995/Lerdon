@@ -149,19 +149,11 @@ class EventManager:
         """
         cursor = self.db_connection.cursor()
         # Фильтруем события по коэффициенту kf
-        if event_type == "positive":
+        if event_type == "sequences":
             cursor.execute("""
                 SELECT id, description, effects
                 FROM events
-                WHERE event_type = 'sequences' AND effects LIKE '%kf%' AND CAST(json_extract(effects, '$.kf') AS REAL) > 2
-                ORDER BY RANDOM()
-                LIMIT 1
-            """)
-        elif event_type == "negative":
-            cursor.execute("""
-                SELECT id, description, effects
-                FROM events
-                WHERE event_type = 'sequences' AND effects LIKE '%kf%' AND CAST(json_extract(effects, '$.kf') AS REAL) <= 2
+                WHERE event_type = 'sequences'
                 ORDER BY RANDOM()
                 LIMIT 1
             """)
@@ -177,30 +169,25 @@ class EventManager:
         event_id, description, effects = event
         effects = json.loads(effects)
 
-        # Определяем, является ли событие положительным
-        is_positive = event_type == "positive"
+        # Передаем только один раз с event_type="sequences"
+        self.handle_passive_event(description, effects, event_type="sequences")
 
-        # Обрабатываем событие как пассивное
-        self.handle_passive_event(description, effects, is_positive)
-
-    def handle_passive_event(self, description, effects, is_positive=False):
+    def handle_passive_event(self, description, effects, event_type=None):
         """
-        Обрабатывает пассивное событие: применяет эффекты и отображает временную стройку.
-        :param description: Описание события.
-        :param effects: Словарь с эффектами события.
-        :param is_positive: True, если событие положительное.
+        Обрабатывает пассивное событие: применяет эффекты (если они есть)
+        и отображает бегущую строку для всех событий с event_type='passive' или 'sequences'.
         """
-        # Применяем эффекты
+        # Применяем эффекты, если они есть
         if "resource" in effects and "kf" in effects:
             resource = effects["resource"]
             kf = effects["kf"]
             current_value = self.get_resource_amount(resource)
-            change = int(current_value * (kf - 1))  # Рассчитываем изменение
+            change = int(current_value * kf)
             self.update_resource(resource, change)
-            print(f"Событие последствия: {description}. {resource} изменился на {change}.")
+            print(f"Событие {event_type}: {description}. {resource} изменен на {change}.")
 
-        # Отображаем временную стройку
-        self.show_temporary_build(description, is_positive)
+        # Всегда отображаем бегущую строку
+        self.show_temporary_build(description, event_type or "passive")
 
     def show_event_active_popup(self, description, option_1, option_2, effects):
         """
@@ -381,19 +368,33 @@ class EventManager:
 
     def apply_penalty(self, faction, minor=True):
         """
-        Применяет штраф игроку.
+        Применяет штраф игроку в процентах от текущих Крон.
         :param faction: Название фракции.
-        :param minor: True для небольшого штрафа, False для серьезного.
+        :param minor: True для небольшого штрафа (10%), False для серьезного (30%).
         """
-        penalty_amount = -5000 if minor else -20000
+        # Получаем текущее количество Крон
+        current_krons = self.get_resource_amount("Кроны")
+
+        # Определяем процент штрафа
+        penalty_percent = 0.10 if minor else 0.30  # 10% или 30%
+
+        # Рассчитываем штраф
+        penalty_amount = int(current_krons * penalty_percent)
+
+        # Минимальный штраф - 100 Крон (если текущие ресурсы слишком малы)
+        penalty_amount = max(penalty_amount, 100 if minor else 500)
+
+        # Обновляем ресурсы в базе данных
         cursor = self.db_connection.cursor()
         cursor.execute("""
             UPDATE resources
-            SET amount = amount + ?
+            SET amount = amount - ?
             WHERE faction = ? AND resource_type = 'Кроны'
         """, (penalty_amount, faction))
         self.db_connection.commit()
-        print(f"Фракции {faction} списано {-penalty_amount} Крон.")
+
+        # Логируем результат
+        print(f"Фракции {faction} списано {penalty_amount} Крон ({penalty_percent * 100:.0f}% от текущих ресурсов).")
 
     def apply_effects_with_economic_module(self, effects):
         """
@@ -449,47 +450,60 @@ class EventManager:
 
         print(f"[DEBUG] Карма для фракции '{faction}' обновлена: {new_karma}")
 
-    def show_temporary_build(self, description, is_positive):
+    def show_temporary_build(self, description, event_type):
         """
-        Отображает временную стройку справа на экране с адаптивным размером и черной рамкой.
+        Отображает бегущую строку слева с цветом в зависимости от типа события.
         :param description: Описание события.
-        :param is_positive: True для положительных событий, False для негативных.
+        :param event_type: Тип события ('passive' или 'sequences').
         """
-        # Определяем цвет текста
-        text_color = (0, 1, 1, 1) if is_positive else (1, 0.8, 0, 1)  # Бирюзовый или желтый
+        # Определяем цвет текста и коэффициент скорости анимации
+        if event_type == "passive":
+            text_color = (1, 1, 1, 1)  # Белый
+        elif event_type == "sequences":
+            text_color = (0.5, 0.8, 1, 1)  # Светло-синий
+        else:
+            text_color = (1, 1, 1, 1)  # По умолчанию белый
 
-        # Создаем Label с адаптивным размером
+        # Адаптивный размер шрифта
+        font_size = get_adaptive_font_size(min_size=12, max_size=16)
+
+        # Создаем Label с начальной позицией за пределами экрана слева
         build_label = Label(
             text=description,
-            font_size=16 if is_positive else 14,  # Размер шрифта
-            size_hint=(0.7, None),  # Ширина 30% от ширины окна, высота автоматическая
-            height=30,  # Фиксированная высота
-            pos_hint={"right": 1, "top": 0.2},
-            color=text_color,  # Цвет текста
-            halign="center",  # Выравнивание текста по центру
-            valign="middle",
+            font_size=font_size,
+            size_hint=(None, None),
+            size=(Window.width * 0.7, dp(40)),  # Ширина 70% экрана
+            pos=(-Window.width * 0.7, Window.height * 0.8),  # Начальная позиция за левой границей
+            color=text_color,
+            halign="left",
+            valign="middle"
         )
+        build_label.bind(texture_size=build_label.setter('size'))  # Автоматическая высота
 
-        # Добавляем черную рамку с помощью Canvas
+        # Добавляем черную рамку
         with build_label.canvas.before:
-            Color(0, 0, 0, 1)  # Черный цвет
-            build_label.rect = Rectangle(
-                pos=build_label.pos,
-                size=build_label.size
-            )
+            Color(0, 0, 0, 1)
+            build_label.rect = Rectangle(pos=build_label.pos, size=build_label.size)
 
-        # Обновляем позицию и размер прямоугольника при изменении размеров Label
+        # Обновление позиции прямоугольника при изменении Label
         def update_rect(instance, value):
             instance.rect.pos = instance.pos
             instance.rect.size = instance.size
 
         build_label.bind(pos=update_rect, size=update_rect)
 
-        # Добавляем виджет на экран игры
+        # Добавляем виджет на экран
         self.game_screen.add_widget(build_label)
 
-        # Удаляем виджет через 5 секунд
-        def remove_build(dt):
+        # Анимация бегущей строки
+        move_distance = Window.width + build_label.width  # Расстояние до правой границы
+        duration = move_distance / dp(100)  # Скорость анимации (100 px/сек)
+
+        anim = Animation(pos=(-build_label.width, build_label.y), duration=duration)
+        anim.start(build_label)
+
+        # Удаление виджета после анимации
+        def remove_widget(dt):
             self.game_screen.remove_widget(build_label)
 
-        Clock.schedule_once(remove_build, 5)
+        Clock.schedule_once(remove_widget, duration)
