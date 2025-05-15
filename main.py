@@ -352,7 +352,7 @@ class MapWidget(Widget):
                 ))
 
                 # Рисуем крепость
-                Rectangle(source=image_path, pos=(drawn_x, drawn_y), size=(60, 60))
+                Rectangle(source=image_path, pos=(drawn_x, drawn_y), size=(55, 55))
 
                 # Добавляем название города
                 display_name = fortress_name[:20] + "..." if len(fortress_name) > 20 else fortress_name
