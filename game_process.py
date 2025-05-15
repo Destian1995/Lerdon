@@ -306,21 +306,39 @@ class GameScreen(Screen):
         Clock.schedule_interval(self.update_cash, 1)
 
     def init_ui(self):
+        # === Контейнер для кнопки "Завершить ход" ===
+        end_turn_container = BoxLayout(
+            orientation='vertical',
+            size_hint=(None, None),
+            size=(dp(150), dp(60)),
+            pos_hint={'x': 0, 'y': 0.3},
+            padding=dp(5)
+        )
+        with end_turn_container.canvas.before:
+            Color(1, 0.2, 0.2, 0.9)  # Цвет фона кнопки
+            RoundedRectangle(pos=end_turn_container.pos, size=end_turn_container.size, radius=[15])
 
-        # === Кнопка "Завершить ход" ===
-        end_turn_size = (dp(180), dp(70))
+        def update_end_turn_rect(instance, value):
+            instance.canvas.before.clear()
+            with instance.canvas.before:
+                Color(1, 0.2, 0.2, 0.9)
+                RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
+
+        end_turn_container.bind(pos=update_end_turn_rect, size=update_end_turn_rect)
+
+        # === Сама кнопка внутри контейнера ===
         self.end_turn_button = Button(
             text="Завершить ход",
-            size_hint=(None, None),
-            size=end_turn_size,
-            pos_hint={'right': 0.65, 'top': 1},
-            background_color=(1, 0.2, 0.2, 0.9),
+            size_hint=(1, 1),
+            background_color=(0, 0, 0, 0),  # Отключаем стандартный фон кнопки
             font_size=sp(20),
             bold=True,
             color=(1, 1, 1, 1)
         )
         self.end_turn_button.bind(on_press=self.process_turn)
-        self.add_widget(self.end_turn_button)
+        end_turn_container.add_widget(self.end_turn_button)
+
+        self.add_widget(end_turn_container)
 
         # === Контейнер для названия фракции ===
         fraction_container = BoxLayout(
@@ -359,7 +377,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, 0.7),
             width=mode_panel_width,
-            pos_hint={'right': 1, 'top': 0.7},
+            pos_hint={'right': 1, 'top': 0.8},
             padding=dp(10),
             spacing=dp(10)
         )
@@ -398,7 +416,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=turn_counter_size,
-            pos_hint={'right': 1, 'top': 1},
+            pos_hint={'right': 0.7, 'top': 1},
             padding=dp(10),
             spacing=dp(5)
         )
@@ -424,7 +442,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=(dp(120) if self.is_android else 120, dp(60) if self.is_android else 60),
-            pos_hint={'x': 0, 'y': 0},
+            pos_hint={'x': 0.85, 'y': 0},
             padding=dp(10),
             spacing=dp(5)
         )
@@ -435,7 +453,7 @@ class GameScreen(Screen):
         def update_exit_rect(instance, value):
             instance.canvas.before.clear()
             with instance.canvas.before:
-                Color(0.1, 0.5, 0.1, 1)
+                Color(0.15, 0.2, 0.3, 0.9)
                 RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
 
         exit_container.bind(pos=update_exit_rect, size=update_exit_rect)

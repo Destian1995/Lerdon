@@ -376,7 +376,6 @@ def load_unit_data(faction):
 
 def start_army_mode(faction, game_area, class_faction):
     army_hire = ArmyCash(faction, class_faction)
-
     faction_colors = {
         "Аркадия": (0.2, 0.4, 0.9, 0.8),
         "Селестия": (0.2, 0.7, 0.3, 0.8),
@@ -384,43 +383,37 @@ def start_army_mode(faction, game_area, class_faction):
         "Этерия": (0, 0, 0, 0.8),
         "Халидон": (0.6, 0.5, 0.1, 0.8),
     }
-
     bg_color = faction_colors.get(faction, (0.15, 0.15, 0.15, 1))
-
     main_box = BoxLayout(
         orientation='horizontal',
         size_hint=(1, 1),
         padding=dp(10),
         spacing=dp(5)
     )
-
-    # Левое пространство (увеличен для сдвига вправо)
-    left_space = BoxLayout(size_hint=(0.3, 1))  # Было 0.3 → стало 0.4
-
-    # Контейнер для карусели (используем FloatLayout для стрелок)
-    right_container = FloatLayout(size_hint=(1, 1))  # Было BoxLayout → FloatLayout
+    left_space = BoxLayout(size_hint=(0.3, 1))
+    right_container = FloatLayout(size_hint=(1, 1))
 
     # Карусель
     carousel = Carousel(
         direction='right',
         size_hint=(1, 1),
         loop=True,
-        scroll_distance=100,
+        scroll_distance=30,
         pos_hint={'top': 1.1, 'right': 1.06}
     )
 
+    # Загрузка и сортировка юнитов
     unit_data = load_unit_data(faction)
     sorted_units = sorted(unit_data.items(), key=lambda x: int(x[1]['stats']['Класс юнита'].split()[0]))
 
+    # Создание слайдов
     for unit_name, unit_info in sorted_units:
-        # Уменьшен размер карточки
         slide = BoxLayout(
             orientation='vertical',
             size_hint=(0.8, 0.8),
             spacing=dp(1),
             padding=dp(1)
         )
-
         card = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -428,6 +421,7 @@ def start_army_mode(faction, game_area, class_faction):
             padding=dp(20)
         )
 
+        # Фон карточки
         with card.canvas.before:
             Color(rgba=bg_color)
             shadow_rect = RoundedRectangle(size=card.size, radius=[dp(25)])
@@ -465,7 +459,7 @@ def start_army_mode(faction, game_area, class_faction):
         # Тело карточки
         body = BoxLayout(orientation='horizontal', size_hint=(1, 0.6), spacing=dp(60))
 
-        # Картинка
+        # Изображение
         img_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), padding=[0, dp(10), 0, 0])
         img = Image(
             source=unit_info['image'],
@@ -476,7 +470,7 @@ def start_army_mode(faction, game_area, class_faction):
         )
         img_container.add_widget(img)
 
-        # Статы
+        # Статистика
         stats_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), spacing=dp(-5))
         main_stats = [
             ('Урон', unit_info['stats']['Урон'], '#FFFFFF'),
@@ -485,7 +479,6 @@ def start_army_mode(faction, game_area, class_faction):
             ('Класс', unit_info['stats']['Класс юнита'], '#FFFFFF'),
             ('Потребление', unit_info['stats']['Потребление сырья'], '#FFFFFF')
         ]
-
         for name, value, color in main_stats:
             stat_line = BoxLayout(orientation='horizontal', size_hint=(1, None), height='30sp')
             lbl_name = Label(
@@ -518,7 +511,6 @@ def start_army_mode(faction, game_area, class_faction):
             spacing=dp(10),
             padding=[dp(15), 0, dp(15), 0]
         )
-
         price_label = Label(
             text="Цена:  ",
             font_size='16sp',
@@ -527,7 +519,6 @@ def start_army_mode(faction, game_area, class_faction):
             halign='right',
             size_hint=(0.3, 1)
         )
-
         cost_values = BoxLayout(orientation='vertical', size_hint=(0.7, 1), spacing=dp(5))
         cost_money, cost_time = unit_info['cost']
 
@@ -575,14 +566,13 @@ def start_army_mode(faction, game_area, class_faction):
         cost_container.add_widget(price_label)
         cost_container.add_widget(cost_values)
 
-        # Контроллеры
+        # Контроллеры найма
         control_panel = BoxLayout(
             size_hint=(1, 0.18),
             orientation='horizontal',
             spacing=dp(10),
             padding=[dp(5), dp(10), dp(5), dp(5)]
         )
-
         input_qty = TextInput(
             hint_text='Количество',
             input_filter='int',
@@ -592,7 +582,6 @@ def start_army_mode(faction, game_area, class_faction):
             halign='center',
             multiline=False
         )
-
         btn_hire = Button(
             text='НАБРАТЬ',
             font_size='16sp',
@@ -601,14 +590,15 @@ def start_army_mode(faction, game_area, class_faction):
             color=TEXT_COLOR,
             size_hint=(0.4, 1)
         )
-
-        btn_hire.bind(on_release=lambda instance, name=unit_name, cost=unit_info['cost'],
-                                        input_box=input_qty, stats=unit_info['stats'], image=unit_info["image"]:
-        broadcast_units(name, cost, input_box, army_hire, image, stats))
-
+        btn_hire.bind(
+            on_release=lambda inst, name=unit_name, cost=unit_info['cost'],
+                              input_box=input_qty, stats=unit_info['stats'], image=unit_info["image"]:
+            broadcast_units(name, cost, input_box, army_hire, image, stats)
+        )
         control_panel.add_widget(input_qty)
         control_panel.add_widget(btn_hire)
 
+        # Сборка карточки
         card.add_widget(control_panel)
         card.add_widget(body)
         card.add_widget(header)
@@ -616,14 +606,24 @@ def start_army_mode(faction, game_area, class_faction):
         slide.add_widget(card)
         carousel.add_widget(slide)
 
+    # Добавляем стрелки прокрутки
+    arrow_size = dp(60)
 
-    # Добавляем стрелки прокрутки (опционально)
-    if platform == 'android':
-        arrow_size = dp(60)  # Увеличиваем размер для Android
-    else:
-        arrow_size = dp(60)  # Стандартный размер для десктопа
+    arrow_left = Image(
+        source='files/pict/left.png',
+        size_hint=(None, None),
+        size=(arrow_size, arrow_size),
+        pos_hint={'center_y': 0.5, 'left': -0.27},
+        allow_stretch=True,
+        keep_ratio=True,
+        mipmap=True
+    )
 
-    # Создаем стрелку с адаптированным размером
+    def on_arrow_left(instance, touch):
+        if instance.collide_point(*touch.pos):
+            carousel.load_previous()
+            animate_arrow_click(arrow_left)
+
     arrow_right = Image(
         source='files/pict/right.png',
         size_hint=(None, None),
@@ -639,44 +639,51 @@ def start_army_mode(faction, game_area, class_faction):
             carousel.load_next()
             animate_arrow_click(arrow_right)
 
-    right_container.add_widget(carousel)
-    right_container.add_widget(arrow_right)
+    arrow_left.bind(on_touch_down=on_arrow_left)
     arrow_right.bind(on_touch_down=on_arrow_right)
-    # Анимация нажатия на стрелки
+
+    right_container.add_widget(carousel)
+    right_container.add_widget(arrow_left)
+    right_container.add_widget(arrow_right)
+
+    # Анимация для стрелок
     def animate_arrow_click(arrow):
-        anim = Animation(size=(dp(65), dp(65)), duration=0.1, t='in_out_elastic') + Animation(
-            size=(dp(60), dp(60)), duration=0.2, t='in_out_elastic'
+        anim = (
+                Animation(size=(dp(65), dp(65)), duration=0.1, t='in_out_elastic') +
+                Animation(size=(dp(60), dp(60)), duration=0.2, t='in_out_elastic')
         )
         anim.start(arrow)
 
-    # --- Анимация отскока для стрелок ---
     def create_bounce_animation(direction):
         move_x = -dp(60) if direction == 'left' else dp(60)
-        move_anim = Animation(
-            x=arrow_left.x + move_x if direction == 'left' else arrow_right.x + move_x,
-            duration=0.3,
-            t='in_out_elastic'
-        )
-        return_anim = Animation(
-            x=arrow_left.x if direction == 'left' else arrow_right.x,
-            duration=0.4,
-            t='in_out_elastic'
-        )
+        arrow = arrow_left if direction == 'left' else arrow_right
+        move_anim = Animation(x=arrow.x + move_x, duration=0.3, t='in_out_elastic')
+        return_anim = Animation(x=arrow.x, duration=0.4, t='in_out_elastic')
         return move_anim + return_anim
 
     def animate_arrows(dt):
-        right_anim = create_bounce_animation('right')
-        right_anim.start(arrow_right)
+        # Чередуем отскок обеих стрелок для живости
+        create_bounce_animation('left').start(arrow_left)
+        create_bounce_animation('right').start(arrow_right)
 
     Clock.schedule_interval(animate_arrows, 2.5)
 
-    # --- Сборка интерфейса ---
+    # Мигание правой стрелки
+    def blink_arrow(instance, duration=0.5):
+        anim = Animation(opacity=0.3, duration=duration) + Animation(opacity=1.0, duration=duration)
+        anim.repeat = True
+        anim.start(instance)
+
+    blink_arrow(arrow_right)
+
+    # Сборка интерфейса
     main_box.add_widget(left_space)
     main_box.add_widget(right_container)
 
     float_layout = FloatLayout(size_hint=(1, 1))
     float_layout.add_widget(main_box)
 
+    # Кнопка закрытия
     close_icon = Image(
         source='files/pict/close.png',
         size_hint=(None, None),
@@ -688,28 +695,16 @@ def start_army_mode(faction, game_area, class_faction):
         color=(1, 1, 1, 0.9)
     )
 
-    # Функция для обработки нажатия
     def on_close_press(instance, touch):
         if instance.collide_point(*touch.pos):
             game_area.clear_widgets()
             animate_arrow_click(instance)
 
-    # Анимация при наведении
-    def on_enter_close(instance, touch):
-        if instance.collide_point(*touch.pos):
-            Animation(size=(dp(38), dp(38)), duration=0.1).start(instance)
-
-    def on_leave_close(instance, touch):
-        Animation(size=(dp(60), dp(60)), duration=0.2).start(instance)
-
-    # Привязываем обработчики
     close_icon.bind(on_touch_down=on_close_press)
-    close_icon.bind(on_touch_down=on_enter_close)
-    close_icon.bind(on_touch_up=on_leave_close)
-
-    # Добавляем иконку в интерфейс
     float_layout.add_widget(close_icon)
+
     game_area.add_widget(float_layout)
+
 
 
 
