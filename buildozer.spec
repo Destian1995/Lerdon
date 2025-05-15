@@ -28,7 +28,7 @@ p4a.whitelist = python3.11
 
 
 # Application version
-version = 0.28.33
+version = 0.28.34
 
 # Application author
 author = Lerdon Team
@@ -70,5 +70,9 @@ log_level = 2
 # Не очищать сборку при каждом запуске (позволит быстрее отлаживать)
 buildozer.build_logfile = buildozer.log
 
-#Архитектура
+# Архитектура Android
 android.archs = arm64-v8a, armeabi-v7a, x86_64
+
+# Архитектура IOS
+#ios.archs = arm64, x86_64
+#ios.min_os_version = 12.0
