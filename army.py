@@ -622,8 +622,8 @@ def start_army_mode(faction, game_area, class_faction):
         source='files/pict/right.png',
         size_hint=(None, None),
         size=(dp(60), dp(60)),
-        pos_hint={'center_y': 0.5, 'center_x': 1.18},
-        opacity=0.8
+        pos_hint={'center_y': 0.5, 'right': 1.27},  # Правый край родительского контейнера
+        pos=(-dp(20), 0)  # Смещение на 20dp влево от правого края
     )
 
     def on_arrow_right(instance, touch):
