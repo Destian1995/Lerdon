@@ -1101,8 +1101,6 @@ class FortressInfoPopup(Popup):
         # Основной контейнер с отступами
         layout = BoxLayout(orientation='vertical', padding=[20, 10], spacing=15)
 
-
-
         # Ползунок с динамическим обновлением
         slider_container = BoxLayout(orientation='horizontal', size_hint_y=None, height=60, spacing=10)
 
