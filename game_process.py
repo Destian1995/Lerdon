@@ -306,37 +306,21 @@ class GameScreen(Screen):
         Clock.schedule_interval(self.update_cash, 1)
 
     def init_ui(self):
-        # === Контейнер для кнопки выхода ===
-        exit_container = BoxLayout(
-            orientation='vertical',
+
+        # === Кнопка "Завершить ход" ===
+        end_turn_size = (dp(180), dp(70))
+        self.end_turn_button = Button(
+            text="Завершить ход",
             size_hint=(None, None),
-            size=(dp(120) if self.is_android else 120, dp(60) if self.is_android else 60),
-            pos_hint={'right': 0.57, 'top': 1},
-            padding=dp(10),
-            spacing=dp(5)
-        )
-        with exit_container.canvas.before:
-            Color(0.9, 0.2, 0.2, 0.9)
-            RoundedRectangle(pos=exit_container.pos, size=exit_container.size, radius=[15])
-
-        def update_exit_rect(instance, value):
-            instance.canvas.before.clear()
-            with instance.canvas.before:
-                Color(0.9, 0.2, 0.2, 0.9)
-                RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
-
-        exit_container.bind(pos=update_exit_rect, size=update_exit_rect)
-        self.exit_button = Button(
-            text="Выход",
-            size_hint=(1, 1),
-            background_color=(0, 0, 0, 0),
-            font_size='16sp',
+            size=end_turn_size,
+            pos_hint={'right': 0.65, 'top': 1},
+            background_color=(1, 0.2, 0.2, 0.9),
+            font_size=sp(20),
             bold=True,
             color=(1, 1, 1, 1)
         )
-        self.exit_button.bind(on_press=lambda x: self.confirm_exit())
-        exit_container.add_widget(self.exit_button)
-        self.add_widget(exit_container)
+        self.end_turn_button.bind(on_press=self.process_turn)
+        self.add_widget(self.end_turn_button)
 
         # === Контейнер для названия фракции ===
         fraction_container = BoxLayout(
@@ -434,21 +418,38 @@ class GameScreen(Screen):
         turn_counter_container.add_widget(self.turn_label)
         self.add_widget(turn_counter_container)
 
-        # === Кнопка "Завершить ход" ===
-        end_turn_size = (dp(200), dp(50))
-        self.end_turn_button = Button(
-            text="Завершить ход",
+
+        # === Контейнер для кнопки выхода ===
+        exit_container = BoxLayout(
+            orientation='vertical',
             size_hint=(None, None),
-            size=end_turn_size,
+            size=(dp(120) if self.is_android else 120, dp(60) if self.is_android else 60),
             pos_hint={'x': 0, 'y': 0},
-            background_color=(0.1, 0.5, 0.1, 1),
-            font_size=sp(18),
+            padding=dp(10),
+            spacing=dp(5)
+        )
+        with exit_container.canvas.before:
+            Color(0.1, 0.5, 0.1, 1)
+            RoundedRectangle(pos=exit_container.pos, size=exit_container.size, radius=[15])
+
+        def update_exit_rect(instance, value):
+            instance.canvas.before.clear()
+            with instance.canvas.before:
+                Color(0.1, 0.5, 0.1, 1)
+                RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
+
+        exit_container.bind(pos=update_exit_rect, size=update_exit_rect)
+        self.exit_button = Button(
+            text="Выход",
+            size_hint=(1, 1),
+            background_color=(0, 0, 0, 0),
+            font_size='16sp',
             bold=True,
             color=(1, 1, 1, 1)
         )
-        self.end_turn_button.bind(on_press=self.process_turn)
-        self.add_widget(self.end_turn_button)
-
+        self.exit_button.bind(on_press=lambda x: self.confirm_exit())
+        exit_container.add_widget(self.exit_button)
+        self.add_widget(exit_container)
         # === ResourceBox ===
         self.resource_box = ResourceBox(resource_manager=self.faction)
         self.resource_box.size_hint = (0.2, 0.7)
