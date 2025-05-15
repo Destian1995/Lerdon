@@ -1093,7 +1093,7 @@ class FortressInfoPopup(Popup):
             title=f"Добавление {unit_type}",
             size_hint=(None, None),
             width=window_width,
-            height=Window.height * 0.4,
+            height=Window.height,
             title_size='18sp',
             background_color=(0.1, 0.1, 0.1, 0.95)  # Темный фон для контраста
         )
@@ -1181,7 +1181,7 @@ class FortressInfoPopup(Popup):
         # Адаптация при изменении размера окна
         def adapt_popup_size(*args):
             popup.width = Window.width * 1.3 if Window.width < 600 else 700
-            popup.height = Window.height * 0.5
+            popup.height = Window.height
 
         Window.bind(on_resize=adapt_popup_size)
         popup.bind(on_dismiss=lambda _: Window.unbind(on_resize=adapt_popup_size))
