@@ -1084,44 +1084,47 @@ class FortressInfoPopup(Popup):
         """
         Открывает адаптивное всплывающее окно с ползунком для выбора количества войск.
         """
+        from kivy.metrics import dp, sp  # Убедитесь, что импортированы
         unit_type = unit_data["unit_type"]
         available_count = unit_data["quantity"]
 
         # Определение платформы
         is_mobile = platform == 'android' or platform == 'ios'
 
-        # Расчёт ширины окна (до 95% ширины экрана)
-        window_width = min(
-            Window.width * 0.95 if is_mobile else Window.width * 0.7,
-            800  # Максимальная ширина на больших экранах
-        )
-
-        # Высота окна
+        # Расчёт ширины окна (95% ширины экрана без ограничения)
+        window_width = Window.width * 0.95 if is_mobile else Window.width * 0.7
+        # Высота окна с коррекцией для Android
         window_height = Window.height * 0.6 if is_mobile else Window.height * 0.4
+        if is_mobile:
+            window_height *= 0.9  # Компенсация высоты для Android
 
+        # Создание Popup
         popup = Popup(
             title=f"Добавление {unit_type}",
             size_hint=(None, None),
             width=window_width,
             height=window_height,
-            title_size='20sp' if is_mobile else '18sp',
+            title_size=sp(20) if is_mobile else sp(18),
             background_color=(0.1, 0.1, 0.1, 0.95)
         )
 
         # Основной контейнер с адаптированными отступами
-        layout = BoxLayout(orientation='vertical', padding=[20, 15], spacing=20)
+        layout = BoxLayout(
+            orientation='vertical',
+            padding=[dp(20), dp(15)],
+            spacing=dp(20)
+        )
 
-        # Ползунок с меткой
+        # === Ползунок с меткой ===
         slider_container = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=80 if is_mobile else 60,
-            spacing=15
+            height=dp(80) if is_mobile else dp(60),
+            spacing=dp(15)
         )
-
         slider_label = Label(
             text="Количество: 0",
-            font_size='18sp' if is_mobile else '16sp',
+            font_size=sp(18) if is_mobile else sp(16),
             size_hint_x=0.4,
             color=(1, 1, 1, 1),
             halign='right',
@@ -1135,7 +1138,7 @@ class FortressInfoPopup(Popup):
             value=0,
             step=1,
             size_hint_x=0.6,
-            background_width=40 if is_mobile else 30
+            background_width=dp(40) if is_mobile else dp(30)
         )
 
         def update_slider_label(instance, value):
@@ -1146,29 +1149,27 @@ class FortressInfoPopup(Popup):
         slider_container.add_widget(slider)
         layout.add_widget(slider_container)
 
-        # Кнопки
+        # === Кнопки подтверждения ===
         button_layout = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=100 if is_mobile else 70,
-            spacing=25
+            height=dp(100) if is_mobile else dp(70),
+            spacing=dp(25)
         )
-
         confirm_button = Button(
             text="Подтвердить",
-            font_size='20sp' if is_mobile else '16sp',
+            font_size=sp(20) if is_mobile else sp(16),
             background_color=(0.4, 0.7, 0.4, 1),
             background_normal='',
-            border=[15, 15, 15, 15],
+            border=[dp(15), dp(15), dp(15), dp(15)],
             size_hint_x=0.5
         )
-
         cancel_button = Button(
             text="Отмена",
-            font_size='20sp' if is_mobile else '16sp',
+            font_size=sp(20) if is_mobile else sp(16),
             background_color=(0.7, 0.4, 0.4, 1),
             background_normal='',
-            border=[15, 15, 15, 15],
+            border=[dp(15), dp(15), dp(15), dp(15)],
             size_hint_x=0.5
         )
 
@@ -1191,10 +1192,14 @@ class FortressInfoPopup(Popup):
         button_layout.add_widget(cancel_button)
         layout.add_widget(button_layout)
 
-        # Адаптация размера окна при изменении размера экрана
+        # === Адаптация размера окна при изменении размера экрана ===
         def adapt_popup_size(*args):
-            popup.width = min(Window.width * 0.95 if is_mobile else Window.width * 0.7, 800)
-            popup.height = Window.height * 0.6 if is_mobile else Window.height * 0.4
+            if is_mobile:
+                popup.width = Window.width * 0.95
+                popup.height = Window.height * 0.6 * 0.9
+            else:
+                popup.width = Window.width * 0.7
+                popup.height = Window.height * 0.4
 
         Window.bind(on_resize=adapt_popup_size)
         popup.bind(on_dismiss=lambda _: Window.unbind(on_resize=adapt_popup_size))

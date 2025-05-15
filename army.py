@@ -619,7 +619,7 @@ def start_army_mode(faction, game_area, class_faction):
 
     # Добавляем стрелки прокрутки (опционально)
     if platform == 'android':
-        arrow_size = dp(100)  # Увеличиваем размер для Android
+        arrow_size = dp(60)  # Увеличиваем размер для Android
     else:
         arrow_size = dp(60)  # Стандартный размер для десктопа
 
