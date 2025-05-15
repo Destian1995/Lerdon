@@ -51,3 +51,5 @@ from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.selectioncontrol import MDCheckbox
 from kivy.core.image import Image as CoreImage
 from kivy.vector import Vector
+from kivy.config import Config
+from kivy.resources import resource_find
