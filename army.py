@@ -618,12 +618,20 @@ def start_army_mode(faction, game_area, class_faction):
 
 
     # Добавляем стрелки прокрутки (опционально)
+    if platform == 'android':
+        arrow_size = dp(100)  # Увеличиваем размер для Android
+    else:
+        arrow_size = dp(60)  # Стандартный размер для десктопа
+
+    # Создаем стрелку с адаптированным размером
     arrow_right = Image(
         source='files/pict/right.png',
         size_hint=(None, None),
-        size=(dp(60), dp(60)),
-        pos_hint={'center_y': 0.5, 'right': 1.27},  # Правый край родительского контейнера
-        pos=(-dp(20), 0)  # Смещение на 20dp влево от правого края
+        size=(arrow_size, arrow_size),
+        pos_hint={'center_y': 0.5, 'right': 1.27},
+        allow_stretch=True,
+        keep_ratio=True,
+        mipmap=True
     )
 
     def on_arrow_right(instance, touch):
