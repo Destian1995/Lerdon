@@ -1087,26 +1087,41 @@ class FortressInfoPopup(Popup):
         unit_type = unit_data["unit_type"]
         available_count = unit_data["quantity"]
 
-        # Адаптивный размер окна под экран
-        window_width = Window.width * 1.3 if Window.width < 600 else 700
+        # Определение платформы
+        is_mobile = platform == 'android' or platform == 'ios'
+
+        # Расчёт ширины окна (до 95% ширины экрана)
+        window_width = min(
+            Window.width * 0.95 if is_mobile else Window.width * 0.7,
+            800  # Максимальная ширина на больших экранах
+        )
+
+        # Высота окна
+        window_height = Window.height * 0.6 if is_mobile else Window.height * 0.4
+
         popup = Popup(
             title=f"Добавление {unit_type}",
             size_hint=(None, None),
-            width=window_width*1.2,
-            height=Window.height*0.7,
-            title_size='18sp',
-            background_color=(0.1, 0.1, 0.1, 0.95)  # Темный фон для контраста
+            width=window_width,
+            height=window_height,
+            title_size='20sp' if is_mobile else '18sp',
+            background_color=(0.1, 0.1, 0.1, 0.95)
         )
 
-        # Основной контейнер с отступами
-        layout = BoxLayout(orientation='vertical', padding=[20, 10], spacing=15)
+        # Основной контейнер с адаптированными отступами
+        layout = BoxLayout(orientation='vertical', padding=[20, 15], spacing=20)
 
-        # Ползунок с динамическим обновлением
-        slider_container = BoxLayout(orientation='horizontal', size_hint_y=None, height=60, spacing=10)
+        # Ползунок с меткой
+        slider_container = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=80 if is_mobile else 60,
+            spacing=15
+        )
 
         slider_label = Label(
             text="Количество: 0",
-            font_size='16sp',
+            font_size='18sp' if is_mobile else '16sp',
             size_hint_x=0.4,
             color=(1, 1, 1, 1),
             halign='right',
@@ -1120,41 +1135,43 @@ class FortressInfoPopup(Popup):
             value=0,
             step=1,
             size_hint_x=0.6,
-            background_width=30  # Утолщенный ползунок
+            background_width=40 if is_mobile else 30
         )
 
-        # Обновление метки при движении ползунка
         def update_slider_label(instance, value):
             slider_label.text = f"Количество: {int(value)}"
 
         slider.bind(value=update_slider_label)
-
         slider_container.add_widget(slider_label)
         slider_container.add_widget(slider)
         layout.add_widget(slider_container)
 
-        # Кнопки с улучшенной стилизацией
-        button_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=70, spacing=20)
+        # Кнопки
+        button_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=100 if is_mobile else 70,
+            spacing=25
+        )
 
         confirm_button = Button(
             text="Подтвердить",
-            font_size='16sp',
+            font_size='20sp' if is_mobile else '16sp',
             background_color=(0.4, 0.7, 0.4, 1),
-            background_normal='',  # Отключение стандартного фона
-            border=[10, 10, 10, 10],
+            background_normal='',
+            border=[15, 15, 15, 15],
             size_hint_x=0.5
         )
 
         cancel_button = Button(
             text="Отмена",
-            font_size='16sp',
+            font_size='20sp' if is_mobile else '16sp',
             background_color=(0.7, 0.4, 0.4, 1),
             background_normal='',
-            border=[10, 10, 10, 10],
+            border=[15, 15, 15, 15],
             size_hint_x=0.5
         )
 
-        # Логика подтверждения
         def confirm_action(btn):
             try:
                 selected_count = int(slider.value)
@@ -1163,23 +1180,21 @@ class FortressInfoPopup(Popup):
                     popup.dismiss()
                     self.update_garrison()
                     name_label.color = (0, 1, 0, 1)
-                    name_label.canvas.ask_update()
                 else:
-                    show_popup_message("Ошибка", "Выберите количество от 1 до " + str(available_count))
+                    show_popup_message("Ошибка", f"Выберите количество от 1 до {available_count}")
             except ValueError:
                 show_popup_message("Ошибка", "Введите корректное число")
 
-        # Обработка нажатий
         confirm_button.bind(on_press=confirm_action)
         cancel_button.bind(on_press=lambda btn: popup.dismiss())
         button_layout.add_widget(confirm_button)
         button_layout.add_widget(cancel_button)
         layout.add_widget(button_layout)
 
-        # Адаптация при изменении размера окна
+        # Адаптация размера окна при изменении размера экрана
         def adapt_popup_size(*args):
-            popup.width = Window.width * 1.3 if Window.width < 600 else 700
-            popup.height = Window.height
+            popup.width = min(Window.width * 0.95 if is_mobile else Window.width * 0.7, 800)
+            popup.height = Window.height * 0.6 if is_mobile else Window.height * 0.4
 
         Window.bind(on_resize=adapt_popup_size)
         popup.bind(on_dismiss=lambda _: Window.unbind(on_resize=adapt_popup_size))
