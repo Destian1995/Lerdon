@@ -477,7 +477,7 @@ def start_army_mode(faction, game_area, class_faction):
         img_container.add_widget(img)
 
         # Статы
-        stats_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), spacing=dp(1))
+        stats_container = BoxLayout(orientation='vertical', size_hint=(0.5, 1), spacing=dp(-5))
         main_stats = [
             ('Урон', unit_info['stats']['Урон'], '#FFFFFF'),
             ('Защита', unit_info['stats']['Защита'], '#FFFFFF'),
