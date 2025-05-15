@@ -1094,7 +1094,7 @@ class FortressInfoPopup(Popup):
         # Расчёт ширины окна (95% ширины экрана без ограничения)
         window_width = Window.width * 0.95 if is_mobile else Window.width * 0.7
         # Высота окна с коррекцией для Android
-        window_height = Window.height * 0.6 if is_mobile else Window.height * 0.4
+        window_height = Window.height * 0.75 if is_mobile else Window.height * 0.4
         if is_mobile:
             window_height *= 0.9  # Компенсация высоты для Android
 
