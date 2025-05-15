@@ -352,11 +352,11 @@ class MapWidget(Widget):
                 ))
 
                 # Рисуем крепость
-                Rectangle(source=image_path, pos=(drawn_x, drawn_y), size=(40, 40))
+                Rectangle(source=image_path, pos=(drawn_x, drawn_y), size=(60, 60))
 
                 # Добавляем название города
                 display_name = fortress_name[:20] + "..." if len(fortress_name) > 20 else fortress_name
-                label = CoreLabel(text=display_name, font_size=12, color=(0, 0, 0, 1))
+                label = CoreLabel(text=display_name, font_size=15, color=(0, 0, 0, 1))
                 label.refresh()
                 text_texture = label.texture
                 text_width, text_height = text_texture.size
