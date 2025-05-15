@@ -28,7 +28,7 @@ p4a.whitelist = python3.11
 
 
 # Application version
-version = 0.28.41
+version = 0.28.44
 
 # Application author
 author = Lerdon Team
@@ -74,5 +74,5 @@ buildozer.build_logfile = buildozer.log
 android.archs = arm64-v8a, armeabi-v7a, x86_64
 
 # Архитектура IOS
-#ios.archs = arm64, x86_64
-#ios.min_os_version = 12.0
+# ios.archs = arm64, x86_64
+# ios.min_os_version = 12.0
