@@ -311,7 +311,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=(dp(150), dp(60)),
-            pos_hint={'x': 0, 'y': 0.3},
+            pos_hint={'x': 0, 'y': 0.23},
             padding=dp(5)
         )
         with end_turn_container.canvas.before:
@@ -377,7 +377,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, 0.7),
             width=mode_panel_width,
-            pos_hint={'right': 1, 'top': 0.8},
+            pos_hint={'right': 1, 'top': 0.86},
             padding=dp(10),
             spacing=dp(10)
         )

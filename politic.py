@@ -1693,7 +1693,7 @@ def start_politic_mode(faction, game_area, class_faction):
         orientation='horizontal',
         size_hint=(1, None),
         height=dp(70) if is_android else 60,
-        pos_hint={'x': 0, 'y': 0},
+        pos_hint={'x': -0.15, 'y': 0},
         spacing=dp(10) if is_android else 10,
         padding=[dp(10), dp(5), dp(10), dp(5)] if is_android else [10, 5, 10, 5]
     )
