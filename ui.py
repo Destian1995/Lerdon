@@ -1088,7 +1088,7 @@ class FortressInfoPopup(Popup):
         available_count = unit_data["quantity"]
 
         # Адаптивный размер окна под экран
-        window_width = Window.width * 0.9 if Window.width < 600 else 500  # Максимум 500px на больших экранах
+        window_width = Window.width * 1.3 if Window.width < 600 else 700
         popup = Popup(
             title=f"Добавление {unit_type}",
             size_hint=(None, None),
@@ -1180,8 +1180,8 @@ class FortressInfoPopup(Popup):
 
         # Адаптация при изменении размера окна
         def adapt_popup_size(*args):
-            popup.width = Window.width * 0.9 if Window.width < 600 else 500
-            popup.height = Window.height * 0.4
+            popup.width = Window.width * 1.3 if Window.width < 600 else 700
+            popup.height = Window.height * 0.5
 
         Window.bind(on_resize=adapt_popup_size)
         popup.bind(on_dismiss=lambda _: Window.unbind(on_resize=adapt_popup_size))
