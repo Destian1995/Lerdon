@@ -345,7 +345,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=(dp(130) if self.is_android else 150, dp(40) if self.is_android else 40),
-            pos_hint={'x': 0.21, 'top': 1},  # Левее кнопки выхода и ближе к потолку
+            pos_hint={'x': 0.25, 'top': 1},  # Левее кнопки выхода и ближе к потолку
             padding=dp(10)
         )
         with fraction_container.canvas.before:
