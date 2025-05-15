@@ -1092,8 +1092,8 @@ class FortressInfoPopup(Popup):
         popup = Popup(
             title=f"Добавление {unit_type}",
             size_hint=(None, None),
-            width=window_width,
-            height=Window.height,
+            width=window_width*1.2,
+            height=Window.height*0.7,
             title_size='18sp',
             background_color=(0.1, 0.1, 0.1, 0.95)  # Темный фон для контраста
         )
