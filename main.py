@@ -420,6 +420,7 @@ class MapWidget(Widget):
         self.check_fortress_click(touch)
 
 
+
 class MenuWidget(FloatLayout):
     def __init__(self, **kwargs):
         super(MenuWidget, self).__init__(**kwargs)
