@@ -1100,7 +1100,7 @@ class FortressInfoPopup(Popup):
 
         # Создание Popup
         popup = Popup(
-            title=f"Добавление {unit_type}",
+            title=f"",
             size_hint=(None, None),
             width=window_width,
             height=window_height,
