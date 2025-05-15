@@ -636,14 +636,14 @@ def start_army_mode(faction, game_area, class_faction):
     arrow_right.bind(on_touch_down=on_arrow_right)
     # Анимация нажатия на стрелки
     def animate_arrow_click(arrow):
-        anim = Animation(size=(dp(35), dp(35)), duration=0.1, t='in_out_elastic') + Animation(
+        anim = Animation(size=(dp(65), dp(65)), duration=0.1, t='in_out_elastic') + Animation(
             size=(dp(60), dp(60)), duration=0.2, t='in_out_elastic'
         )
         anim.start(arrow)
 
     # --- Анимация отскока для стрелок ---
     def create_bounce_animation(direction):
-        move_x = -dp(8) if direction == 'left' else dp(8)
+        move_x = -dp(60) if direction == 'left' else dp(60)
         move_anim = Animation(
             x=arrow_left.x + move_x if direction == 'left' else arrow_right.x + move_x,
             duration=0.3,
