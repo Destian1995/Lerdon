@@ -22,7 +22,7 @@ source.include_patterns = assets/*, files/*, game_data.db, *.py
 source.main = main.py
 
 # Requirements (зависимости)
-requirements = python3==3.11.0,kivy==2.1.0,kivymd==1.1.1,pyjnius==1.5.0,cython==0.29.33,android
+requirements = python3==3.11.0,kivy==2.1.0,pyjnius==1.5.0,cython==0.29.33,android
 p4a.python_version = 3.11
 p4a.whitelist = python3.11
 
