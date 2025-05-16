@@ -28,7 +28,7 @@ p4a.whitelist = python3.11
 
 
 # Application version
-version = 0.28.48
+version = 0.28.50
 
 # Application author
 author = Lerdon Team
@@ -71,4 +71,4 @@ log_level = 2
 buildozer.build_logfile = buildozer.log
 
 # Архитектура Android
-android.archs = arm64-v8a, armeabi-v7a, x86_64, x86
+android.archs = x86, arm64-v8a, armeabi-v7a, x86_64

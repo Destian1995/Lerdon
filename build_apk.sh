@@ -20,7 +20,7 @@ export ANDROIDMINAPI=21
 # Установка временной зоны
 export TZ=:/usr/share/zoneinfo/Etc/GMT-4
 START_TIME=$(date +%s)
-echo "⏰ Текущее время в Саратове: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "⏰ Текущее время: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "🚀 Старт сборки: $(date '+%Y-%m-%d %H:%M:%S')"
 
 # === Функция для вывода ошибок и выхода ===
@@ -122,10 +122,12 @@ if ! grep -q '^p4a.whitelist = python3.11' "$SPEC_FILE"; then
     fi
 fi
 
-# Убедимся, что архитектура включает x86_64
-if ! grep -q '^android.archs =.*x86_64' "$SPEC_FILE"; then
-    echo "🔧 Указываем все три архитектуры: arm64-v8a, armeabi-v7a, x86_64"
-    sed -i 's/^android.archs =.*/android.archs = arm64-v8a, armeabi-v7a, x86_64/' "$SPEC_FILE"
+# === Укажи поддерживаемые архитектуры с x86 ===
+echo "🔧 Настройка архитектур: x86, arm64-v8a, armeabi-v7a, x86_64"
+if grep -q '^android.archs = ' "$SPEC_FILE"; then
+    sed -i 's/^android.archs =.*/android.archs = x86, arm64-v8a, armeabi-v7a, x86_64/' "$SPEC_FILE"
+else
+    echo "android.archs = x86, arm64-v8a, armeabi-v7a, x86_64" >> "$SPEC_FILE"
 fi
 log_time
 
