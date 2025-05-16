@@ -39,16 +39,6 @@ from kivy.properties import partial, StringProperty, NumericProperty, ObjectProp
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen
-
-from kivymd.uix.list import (
-    OneLineAvatarIconListItem, ImageLeftWidget, IconRightWidget
-)
-from kivymd.uix.dialog import MDDialog
-from kivy.uix.recycleview import RecycleView
-from kivymd.uix.button import MDFlatButton, MDRaisedButton
-from kivymd.uix.list import MDList, OneLineAvatarListItem, ImageLeftWidget
-from kivymd.uix.menu import MDDropdownMenu
-from kivymd.uix.selectioncontrol import MDCheckbox
 from kivy.core.image import Image as CoreImage
 from kivy.vector import Vector
 from kivy.config import Config
