@@ -310,7 +310,7 @@ class GameScreen(Screen):
         end_turn_container = BoxLayout(
             orientation='vertical',
             size_hint=(None, None),
-            size=(dp(150), dp(60)),
+            size=(dp(160), dp(75)),
             pos_hint={'x': 0, 'y': 0.23},
             padding=dp(5)
         )
@@ -442,7 +442,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=(dp(120) if self.is_android else 120, dp(60) if self.is_android else 60),
-            pos_hint={'x': 0.85, 'y': 0},
+            pos_hint={'x': 0.9, 'y': 0},
             padding=dp(10),
             spacing=dp(5)
         )

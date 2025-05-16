@@ -344,7 +344,7 @@ class MapWidget(Widget):
                     image_path = 'files/buildings/default.png'
 
                 # Сохраняем данные о крепости
-                fort_rect = (drawn_x, drawn_y, 75, 75)
+                fort_rect = (drawn_x, drawn_y, 77, 77)
                 self.fortress_rectangles.append((
                     fort_rect,
                     {"coordinates": (fort_x, fort_y), "name": fortress_name},
@@ -352,11 +352,11 @@ class MapWidget(Widget):
                 ))
 
                 # Рисуем крепость
-                Rectangle(source=image_path, pos=(drawn_x, drawn_y), size=(75, 75))
+                Rectangle(source=image_path, pos=(drawn_x, drawn_y), size=(77, 77))
 
                 # Добавляем название города
                 display_name = fortress_name[:20] + "..." if len(fortress_name) > 20 else fortress_name
-                label = CoreLabel(text=display_name, font_size=23, color=(0, 0, 0, 1))
+                label = CoreLabel(text=display_name, font_size=25, color=(0, 0, 0, 1))
                 label.refresh()
                 text_texture = label.texture
                 text_width, text_height = text_texture.size
