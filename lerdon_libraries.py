@@ -39,7 +39,7 @@ from kivy.properties import partial, StringProperty, NumericProperty, ObjectProp
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen
-from kivymd.uix.card import MDCard
+
 from kivymd.uix.list import (
     OneLineAvatarIconListItem, ImageLeftWidget, IconRightWidget
 )
