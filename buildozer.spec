@@ -1,6 +1,6 @@
 [app]
 
-# Title of your application
+# Название моего тайтла
 title = Лэрдон
 
 # Package name (без пробелов и спецсимволов)
