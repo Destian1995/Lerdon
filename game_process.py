@@ -311,7 +311,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=(dp(160), dp(75)),
-            pos_hint={'x': 0, 'y': 0.23},
+            pos_hint={'x': 0, 'y': 0.2},
             padding=dp(5)
         )
         with end_turn_container.canvas.before:
@@ -442,7 +442,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=(dp(120) if self.is_android else 120, dp(60) if self.is_android else 60),
-            pos_hint={'x': 0.9, 'y': 0},
+            pos_hint={'x': 0.87, 'y': 0},
             padding=dp(10),
             spacing=dp(5)
         )

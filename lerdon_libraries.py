@@ -22,7 +22,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
-from kivy.uix.image import Image
+from kivy.uix.image import Image, AsyncImage
 from kivy.metrics import dp, sp
 from kivy.utils import platform
 from kivy.utils import get_color_from_hex, platform
@@ -54,3 +54,4 @@ from kivy.vector import Vector
 from kivy.config import Config
 from kivy.resources import resource_find
 from kivy.graphics import Color, Ellipse
+from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelHeader

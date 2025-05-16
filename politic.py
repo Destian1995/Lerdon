@@ -990,13 +990,13 @@ def show_peace_form(player_faction):
             if player_points > enemy_points:
                 superiority_percentage = ((player_points - enemy_points) / enemy_points) * 100
                 if superiority_percentage >= 70:
-                    response = "А смысл нам сопротивляться? Все приплыли.."
-                elif 30 <= superiority_percentage < 70:
+                    response = "Это что сейчас было?...Пора менять командование"
+                elif 50 <= superiority_percentage < 70:
                     response = "Нихера себе повоевали...."
-                elif 20 <= superiority_percentage < 30:
-                    response = "Что там случилось...такое.."
-                elif 10 <= superiority_percentage < 20:
-                    response = "По-моему мы что-то упустили"
+                elif 20 <= superiority_percentage < 50:
+                    response = "Какой дебил нас сюда послал?.."
+                elif 5 <= superiority_percentage < 20:
+                    response = "Вам не стыдно слабых обижать?"
                 else:
                     response = "В следующий раз мы будем лучше готовы"
 
@@ -1015,10 +1015,10 @@ def show_peace_form(player_faction):
             elif player_points < enemy_points:
                 inferiority_percentage = ((enemy_points - player_points) / player_points) * 100
                 if inferiority_percentage <= 15:
-                    response = "Почти то что надо, подкинь пару крон и договоримся"
+                    response = "Может Вы и правы, но мы еще готовы продолжать сопротивление..."
                     show_warning(response, color=(1, 1, 0, 1))  # Желтый цвет
                 else:
-                    response = "Мы еще не закончили Вас бить"
+                    response = "Уже сдаетесь?! Мы еще не закончили Вас бить!"
                     show_warning(response, color=(1, 0, 0, 1))  # Красный цвет
             else:
                 response = "Сейчас передохнем и в рыло дадим"
@@ -1077,7 +1077,7 @@ alliance_phrases = {
     "Селестия": "Мы Вас прикроем, от огня врагов!",
     "Аркадия": "Светлого неба!",
     "Этерия": "Вместе мы непобедимы!",
-    "Халидон": "Мудрость в том чтобы не допустить войны. В любом случае мы с Вами",
+    "Халидон": "Надеюсь войны не будет...",
     "Хиперион": "Пора выбить кому то зубы. Так. На всякий случай"
 }
 
@@ -1330,12 +1330,12 @@ def show_declare_war_form(faction):
             cursor.execute("SELECT turn_count FROM turn")
             turn_result = cursor.fetchone()
             if turn_result is None:
-                show_popup_message("Ошибка", "Таблица 'turn' пуста или отсутствует.")
+                show_popup_message("Слишком рано", "Атаковать другие фракции можно только после 14 хода.")
                 return
 
             current_turn = turn_result[0]
-            if current_turn < 16:
-                show_popup_message("Слишком рано", "Атаковать другие фракции можно только после 16 хода.")
+            if current_turn < 14:
+                show_popup_message("Слишком рано", "Атаковать другие фракции можно только после 14 хода.")
                 return
 
             # Получение списка активных фракций
