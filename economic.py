@@ -1643,12 +1643,23 @@ def open_trade_popup(game_instance):
         spacing=dp(12)
     )
 
-    # === ПОЛЕ ВВОДА ===
+    # === ПОЛЕ ВВОДА (вверху) ===
     input_box = BoxLayout(orientation='vertical', spacing=dp(5), size_hint=(1, None), height=dp(80))
-    input_box.add_widget(Label(text="Количество лотов:", font_size=sp(14), color=(1, 1, 1, 1), halign="center"))
+
+    # Сначала создаём Label
+    available_label = Label(
+        text=f"Доступно для продажи: {game_instance.get_available_raw_material_lots()} лотов (1 лот = 10 тыс.)",
+        font_size=sp(16),
+        color=(1, 1, 1, 1),
+        halign="center"
+    )
+    available_label.bind(size=available_label.setter('text_size'))
+
+    # Добавляем Label в input_box
+    input_box.add_widget(available_label)
 
     quantity_input = TextInput(
-        hint_text="Например: 3",
+        hint_text="Введите количество лотов, например: 3",
         font_size=sp(16),
         multiline=False,
         input_filter='int',
@@ -1661,6 +1672,23 @@ def open_trade_popup(game_instance):
     )
     input_box.add_widget(quantity_input)
     trade_layout.add_widget(input_box)
+
+    # === ТЕКУЩАЯ ЦЕНА (между полем ввода и кнопками) ===
+    current_price = game_instance.current_raw_material_price
+    prev_price = game_instance.raw_material_price_history[-2] if len(game_instance.raw_material_price_history) > 1 else current_price
+    arrow_color = (0, 1, 0, 1) if current_price > prev_price else \
+        (1, 0, 0, 1) if current_price < prev_price else (0.8, 0.8, 0.8, 1)
+
+    current_price_label = Label(
+        text=f"[b]Текущая цена сырья:[/b] {current_price}",
+        markup=True,
+        font_size=sp(25),
+        color=arrow_color,
+        halign="center",
+        valign="middle"
+    )
+    current_price_label.bind(size=current_price_label.setter('text_size'))
+    trade_layout.add_widget(current_price_label)
 
     # === КНОПКИ ===
     button_layout = BoxLayout(spacing=dp(16), size_hint=(1, None), height=dp(60))
@@ -1690,34 +1718,6 @@ def open_trade_popup(game_instance):
     button_layout.add_widget(buy_btn)
     button_layout.add_widget(sell_btn)
     trade_layout.add_widget(button_layout)
-
-    # === ЛОТЫ И ДОСТУПНОЕ СЫРЬЁ ===
-    info_box = BoxLayout(orientation='vertical', spacing=dp(5), size_hint=(1, None), height=dp(60))
-    available_label = Label(
-        text=f"Доступно для продажи: {game_instance.get_available_raw_material_lots()} лотов",
-        font_size=sp(14), color=(1, 1, 1, 1), halign="center"
-    )
-    available_label.bind(size=available_label.setter('text_size'))
-
-    info_box.add_widget(available_label)
-    trade_layout.add_widget(info_box)
-
-    # === ТЕКУЩАЯ ЦЕНА (увеличенная и внизу) ===
-    current_price = game_instance.current_raw_material_price
-    prev_price = game_instance.raw_material_price_history[-2] if len(game_instance.raw_material_price_history) > 1 else current_price
-    arrow_color = (0, 1, 0, 1) if current_price > prev_price else \
-        (1, 0, 0, 1) if current_price < prev_price else (0.8, 0.8, 0.8, 1)
-
-    current_price_label = Label(
-        text=f"[b]Текущая цена:[/b] {current_price}",
-        markup=True,
-        font_size=sp(24),  # Увеличенный размер шрифта
-        color=arrow_color,
-        halign="center",
-        valign="middle"
-    )
-    current_price_label.bind(size=current_price_label.setter('text_size'))
-    trade_layout.add_widget(current_price_label)
 
     # === ПОПАП ===
     popup = Popup(title="Рынок сырья", content=trade_layout, size_hint=(0.95, 0.8))
@@ -2050,8 +2050,5 @@ def start_economy_mode(faction, game_area):
     economy_layout.add_widget(build_btn)
     economy_layout.add_widget(trade_btn)
     economy_layout.add_widget(tax_btn)
-
-    # Опционально: добавить отступ справа
-    # economy_layout.add_widget(Widget(size_hint_x=None, width=dp(20)))
 
     game_area.add_widget(economy_layout)
