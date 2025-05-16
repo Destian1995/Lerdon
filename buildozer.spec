@@ -1,7 +1,7 @@
 [app]
 
 # Title of your application
-title = Lerdon
+title = Лэрдон
 
 # Package name (без пробелов и спецсимволов)
 package.name = lerdon
@@ -28,7 +28,7 @@ p4a.whitelist = python3.11
 
 
 # Application version
-version = 0.28.47
+version = 0.28.48
 
 # Application author
 author = Lerdon Team
@@ -71,8 +71,4 @@ log_level = 2
 buildozer.build_logfile = buildozer.log
 
 # Архитектура Android
-android.archs = arm64-v8a, armeabi-v7a, x86_64
-
-# Архитектура IOS
-# ios.archs = arm64, x86_64
-# ios.min_os_version = 12.0
+android.archs = arm64-v8a, armeabi-v7a, x86_64, x86
