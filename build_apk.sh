@@ -4,26 +4,25 @@
 APP_NAME="lerdon"
 SPEC_FILE="buildozer.spec"
 LOG_FILE="buildozer.log"
+MIN_DISK_SPACE_MB=5120  # Минимум 5 ГБ
 
 # Путь к NDK
 NDK_ZIP="$HOME/.buildozer/android/platform/android-ndk-r25b-linux.zip"
 
-MIN_DISK_SPACE_MB=5120  # Минимум 5 ГБ свободного места
-
-# === Переменные окружения для Buildozer и P4A ===
+# Переменные окружения
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-export ANDROIDSDK=$HOME/.buildozer/android/platform/android-sdk
-export ANDROIDNDK=$HOME/.buildozer/android/platform/android-ndk-r25b
+export ANDROID_SDK_ROOT="$HOME/.buildozer/android/platform/android-sdk"
+export ANDROIDSDK="$ANDROID_SDK_ROOT"
+export ANDROIDNDK="$HOME/.buildozer/android/platform/android-ndk-r25b"
 export ANDROIDAPI=34
 export ANDROIDMINAPI=21
-
-# Установка временной зоны
 export TZ=:/usr/share/zoneinfo/Etc/GMT-4
+
 START_TIME=$(date +%s)
 echo "⏰ Текущее время: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "🚀 Старт сборки: $(date '+%Y-%m-%d %H:%M:%S')"
 
-# === Функция для вывода ошибок и выхода ===
+# === Функция для вывода ошибок ===
 error_exit() {
     echo "❌ Ошибка: $1" >&2
     echo "📜 Последние 50 строк лога ($LOG_FILE):"
@@ -31,7 +30,7 @@ error_exit() {
     exit 1
 }
 
-# === Вспомогательная функция: показывает время выполнения шагов ===
+# === Время выполнения шагов ===
 log_time() {
     local END_TIME=$(date +%s)
     local DURATION=$((END_TIME - START_TIME))
@@ -39,7 +38,7 @@ log_time() {
     START_TIME=$(date +%s)
 }
 
-# === Проверка установленного buildozer ===
+# === Проверка buildozer ===
 echo "🔍 Проверка установленного buildozer..."
 if ! command -v buildozer &> /dev/null; then
     error_exit "'buildozer' не установлен. Установите его: pip3 install buildozer"
@@ -54,37 +53,31 @@ if (( DISK_FREE < MIN_DISK_SPACE_MB )); then
 fi
 log_time
 
-# === Частичная очистка: сохраняем NDK/SDK, удаляем остальное ===
+# === Частичная очистка ===
 echo "🧹 Очистка временных файлов сборки..."
-
-# Сохраняем папку под NDK и SDK
 mkdir -p ~/.buildozer/android/platform
-
-# Удаляем временную сборку
 rm -rf ~/Lerdon/.buildozer
 mkdir -p ~/Lerdon/.buildozer
 log_time
 
-# === Принятие лицензии Android SDK автоматически ===
+# === Принятие лицензии ===
 echo "📜 Автоматическое принятие лицензии Android SDK..."
 SDK_LICENSE_DIR="$HOME/.buildozer/android/platform/android-sdk/licenses"
 mkdir -p "$SDK_LICENSE_DIR"
-
-# Добавляем оба хэша для совместимости
-LICENSE_CONTENT="8933bad161af4178b1185d1a37fbf4f9829056a34\nd56f5187e9b55dd56f65f0f5a4df33d351c9b0d5"
+LICENSE_CONTENT="8933bad161af4178b1185d1a37fbf4f9829056a34"
 echo -e "$LICENSE_CONTENT" > "$SDK_LICENSE_DIR/android-sdk-license"
 log_time
 
-# === Проверка наличия NDK ===
+# === Проверка NDK ===
 echo "📦 Проверка наличия NDK..."
 if [ ! -f "$NDK_ZIP" ]; then
-    error_exit "Файл NDK отсутствует: $NDK_ZIP. Загрузите android-ndk-r25b-linux.zip и положите в ~/.buildozer/android/platform/"
+    error_exit "Файл NDK отсутствует: $NDK_ZIP"
 else
     echo "✅ Найден NDK-файл: $(basename "$NDK_ZIP")"
 fi
 log_time
 
-# === Создание spec файла при необходимости ===
+# === Проверка spec файла ===
 echo "⚙️ Проверка buildozer.spec..."
 if [ ! -f "$SPEC_FILE" ]; then
     echo "📝 Создание нового buildozer.spec..."
@@ -98,48 +91,26 @@ log_time
 echo "🔄 Обновление версии приложения..."
 CURRENT_VERSION=$(grep '^version = ' "$SPEC_FILE" | cut -d' ' -f3 | tr -d '"')
 NEW_VERSION=$(echo "$CURRENT_VERSION" | awk -F. '{$NF = $NF + 1} 1' OFS=.)
-
-sed -i "s/version = $CURRENT_VERSION/version = $NEW_VERSION/" "$SPEC_FILE" || \
-    error_exit "Не удалось обновить версию в $SPEC_FILE"
+sed -i "s/version = $CURRENT_VERSION/version = $NEW_VERSION/" "$SPEC_FILE" || error_exit "Не удалось обновить версию в $SPEC_FILE"
 echo "🆕 Версия обновлена с $CURRENT_VERSION на $NEW_VERSION"
 log_time
 
-# === Укажи Python 3.11 в buildozer.spec ===
-echo "🔧 Настройка Python 3.11 в buildozer.spec..."
-if ! grep -q '^p4a.python_version = 3.11' "$SPEC_FILE"; then
-    if grep -q '^p4a.python_version = ' "$SPEC_FILE"; then
-        sed -i 's/^p4a.python_version =.*/p4a.python_version = 3.11/' "$SPEC_FILE"
-    else
-        echo "p4a.python_version = 3.11" >> "$SPEC_FILE"
-    fi
-fi
-
-if ! grep -q '^p4a.whitelist = python3.11' "$SPEC_FILE"; then
-    if grep -q '^p4a.whitelist = ' "$SPEC_FILE"; then
-        sed -i 's/^p4a.whitelist =.*/p4a.whitelist = python3.11/' "$SPEC_FILE"
-    else
-        echo "p4a.whitelist = python3.11" >> "$SPEC_FILE"
-    fi
-fi
-
-# === Укажи поддерживаемые архитектуры с x86 ===
-echo "🔧 Настройка архитектур: x86, arm64-v8a, armeabi-v7a, x86_64"
-if grep -q '^android.archs = ' "$SPEC_FILE"; then
-    sed -i 's/^android.archs =.*/android.archs = x86, arm64-v8a, armeabi-v7a, x86_64/' "$SPEC_FILE"
-else
-    echo "android.archs = x86, arm64-v8a, armeabi-v7a, x86_64" >> "$SPEC_FILE"
-fi
+# === Настройка Python и архитектур ===
+echo "🔧 Настройка Python 3.10 и архитектур..."
+sed -i 's/^p4a.python_version =.*/p4a.python_version = 3.10/' "$SPEC_FILE" 2>/dev/null || echo "p4a.python_version = 3.10" >> "$SPEC_FILE"
+sed -i 's/^p4a.whitelist =.*/p4a.whitelist = python3.10/' "$SPEC_FILE" 2>/dev/null || echo "p4a.whitelist = python3.10" >> "$SPEC_FILE"
+sed -i 's/^android.archs =.*/android.archs = x86, arm64-v8a, armeabi-v7a, x86_64/' "$SPEC_FILE" 2>/dev/null || echo "android.archs = x86, arm64-v8a, armeabi-v7a, x86_64" >> "$SPEC_FILE"
 log_time
 
-# === Сборка APK с сохранением лога ===
-echo "📦 Начинаем сборку APK... Это занимает 30-35 минут!"
+# === Сборка APK ===
+echo "📦 Начинаем сборку APK... Это занимает 35-40 минут!"
 START_BUILD_TIME=$(date +%s)
 buildozer -v android debug > "$LOG_FILE" 2>&1
 BUILD_EXIT_CODE=$?
 END_BUILD_TIME=$(date +%s)
 BUILD_DURATION=$((END_BUILD_TIME - START_BUILD_TIME))
 
-# === Проверка результата сборки ===
+# === Проверка результата ===
 echo "⏱️ Сборка завершена за $BUILD_DURATION сек."
 if [ $BUILD_EXIT_CODE -eq 0 ]; then
     echo "✅ Сборка успешно завершена!"
