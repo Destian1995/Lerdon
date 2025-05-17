@@ -372,12 +372,12 @@ class GameScreen(Screen):
         self.add_widget(fraction_container)
 
         # === Боковая панель с кнопками режимов ===
-        mode_panel_width = dp(80)
+        mode_panel_width = dp(90)
         mode_panel_container = BoxLayout(
             orientation='vertical',
             size_hint=(None, 0.7),
             width=mode_panel_width,
-            pos_hint={'right': 1, 'top': 0.86},
+            pos_hint={'right': 1, 'top': 0.96},
             padding=dp(10),
             spacing=dp(10)
         )
