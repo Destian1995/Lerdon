@@ -22,9 +22,9 @@ source.include_patterns = assets/*, files/*, game_data.db, *.py
 source.main = main.py
 
 # Requirements (зависимости)
-requirements = python3==3.10.0,kivy==2.1.0,pyjnius==1.5.0,cython==0.29.33,android
-p4a.python_version = 3.10
-p4a.whitelist = python3.10
+requirements = python3==3.11.0,kivy==2.1.0,pyjnius==1.5.0,cython==0.29.33,android
+p4a.python_version = 3.11
+p4a.whitelist = python3.11
 
 
 # Application version
@@ -72,4 +72,4 @@ buildozer.build_logfile = buildozer.log
 
 # Архитектура Android
 android.archs = x86, arm64-v8a, armeabi-v7a, x86_64
-#arm64-v8a, armeabi-v7a
+

@@ -96,9 +96,9 @@ echo "🆕 Версия обновлена с $CURRENT_VERSION на $NEW_VERSION
 log_time
 
 # === Настройка Python и архитектур ===
-echo "🔧 Настройка Python 3.10 и архитектур..."
-sed -i 's/^p4a.python_version =.*/p4a.python_version = 3.10/' "$SPEC_FILE" 2>/dev/null || echo "p4a.python_version = 3.10" >> "$SPEC_FILE"
-sed -i 's/^p4a.whitelist =.*/p4a.whitelist = python3.10/' "$SPEC_FILE" 2>/dev/null || echo "p4a.whitelist = python3.10" >> "$SPEC_FILE"
+echo "🔧 Настройка Python 3.11 и архитектур..."
+sed -i 's/^p4a.python_version =.*/p4a.python_version = 3.11/' "$SPEC_FILE" 2>/dev/null || echo "p4a.python_version = 3.11" >> "$SPEC_FILE"
+sed -i 's/^p4a.whitelist =.*/p4a.whitelist = python3.11/' "$SPEC_FILE" 2>/dev/null || echo "p4a.whitelist = python3.11" >> "$SPEC_FILE"
 sed -i 's/^android.archs =.*/android.archs = x86, arm64-v8a, armeabi-v7a, x86_64/' "$SPEC_FILE" 2>/dev/null || echo "android.archs = x86, arm64-v8a, armeabi-v7a, x86_64" >> "$SPEC_FILE"
 log_time
 
