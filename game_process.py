@@ -375,11 +375,11 @@ class GameScreen(Screen):
         mode_panel_width = dp(90)
         mode_panel_container = BoxLayout(
             orientation='vertical',
-            size_hint=(None, 0.7),
+            size_hint=(None, 0.85),
             width=mode_panel_width,
             pos_hint={'right': 1, 'top': 0.96},
             padding=dp(10),
-            spacing=dp(10)
+            spacing=dp(15)
         )
         with mode_panel_container.canvas.before:
             Color(0.15, 0.2, 0.3, 0.9)
