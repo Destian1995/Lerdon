@@ -3,6 +3,7 @@ from lerdon_libraries import *
 from fight import fight
 from economic import format_number
 
+
 # === Настройка пути к базе данных ===
 if platform == 'android':
     from android.storage import app_storage_path
