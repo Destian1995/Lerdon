@@ -408,7 +408,7 @@ class MenuWidget(FloatLayout):
         # Создаем два изображения для плавной смены фона
         self.bg_image_1 = Image(source=random.choice(list(self.menu_images.keys())), allow_stretch=True, keep_ratio=False)
         self.bg_image_2 = Image(source=random.choice(list(self.menu_images.keys())), allow_stretch=True, keep_ratio=False, opacity=0)
-
+ 
         # Добавляем оба изображения на виджет
         self.add_widget(self.bg_image_1)
         self.add_widget(self.bg_image_2)
