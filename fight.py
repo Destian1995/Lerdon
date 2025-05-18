@@ -149,6 +149,10 @@ def show_battle_report(report_data):
     Отображает красивый отчет о бое с использованием возможностей Kivy.
     :param report_data: Данные отчета о бое.
     """
+    if not report_data:
+        print("Нет данных для отображения.")
+        return
+
     # Основной контейнер
     content = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
 
@@ -159,106 +163,87 @@ def show_battle_report(report_data):
         content.bind(pos=lambda inst, value: setattr(inst.rect, 'pos', value),
                      size=lambda inst, value: setattr(inst.rect, 'size', value))
 
-    # Создаем ScrollView для таблиц
-    scroll_view = ScrollView()
-
-    # Основной макет для таблиц
-    main_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(20 if platform == 'android' else 10))
+    # Основной макет для отчёта
+    main_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(10))
     main_layout.bind(minimum_height=main_layout.setter('height'))
 
-    # Функция для создания таблицы с данными
-    def create_battle_table(side_data, title, side_color):
-        table_layout = GridLayout(
-            cols=4,
+    # === Единожды выводим название города ===
+    city_label = Label(
+        text=f"[b][color=#FFD700]Город: {report_data[0]['city']}[/color][/b]",
+        markup=True,
+        size_hint_y=None,
+        height=dp(30),
+        font_size=sp(16),
+        color=(1, 1, 1, 1)
+    )
+    main_layout.add_widget(city_label)
+
+    # === Выводим результат боя один раз ===
+    result_text = ""
+    result_color = "#FFFFFF"
+
+    for item in report_data:
+        if item.get("result"):
+            result_text = item["result"]
+            result_color = "#33FF57" if result_text == "Победа" else "#FF5733"
+            break
+
+    if result_text:
+        result_label = Label(
+            text=f"[b][color={result_color}]{result_text}[/color][/b]",
+            markup=True,
             size_hint_y=None,
-            spacing=dp(5 if platform == 'android' else 5),
-            padding=dp(10)
+            height=dp(30),
+            font_size=sp(16),
+            color=(1, 1, 1, 1)
         )
+        main_layout.add_widget(result_label)
+
+    # Функция для создания таблицы
+    def create_table(data, title):
+        table_layout = GridLayout(cols=4, size_hint_y=None, spacing=dp(5), padding=dp(10))
         table_layout.bind(minimum_height=table_layout.setter('height'))
 
-        # Заголовок таблицы
-        if title:
-            header_label = Label(
-                text=f"[b][color={side_color}]{title}[/color][/b]",
-                markup=True,
-                size_hint_y=None,
-                height=dp(30 if platform == 'android' else 20),
-                font_size=sp(15 if platform == 'android' else 20),
-                color=(1, 1, 1, 1)
-            )
-            main_layout.add_widget(header_label)
+        # Заголовок таблицы (без цвета)
+        header = Label(
+            text=f"[b]{title}[/b]",
+            markup=True,
+            size_hint_y=None,
+            height=dp(30),
+            font_size=sp(15),
+            color=(1, 1, 1, 1)
+        )
+        main_layout.add_widget(header)
 
         # Заголовки столбцов
         headers = ["Тип Юнита", "На начало боя", "Потери", "Осталось юнитов"]
-        for header in headers:
+        for header_text in headers:
             label = Label(
-                text=f"[b]{header}[/b]",
+                text=f"[b]{header_text}[/b]",
                 markup=True,
                 size_hint_y=None,
-                height=dp(30 if platform == 'android' else 20),
-                font_size=sp(14 if platform == 'android' else 14),
+                height=dp(30),
+                font_size=sp(14),
                 color=(0.8, 0.8, 0.8, 1)
             )
             table_layout.add_widget(label)
 
-        # Заполнение данных
-        for unit_data in side_data:
-            table_layout.add_widget(Label(
-                text=unit_data['unit_name'],
-                size_hint_y=None,
-                height=dp(30 if platform == 'android' else 30),
-                font_size=sp(14 if platform == 'android' else 14)
-            ))
-            table_layout.add_widget(Label(
-                text=str(unit_data["initial_count"]),
-                size_hint_y=None,
-                height=dp(30 if platform == 'android' else 30),
-                font_size=sp(14 if platform == 'android' else 14)
-            ))
-            table_layout.add_widget(Label(
-                text=str(unit_data["losses"]),
-                size_hint_y=None,
-                height=dp(30 if platform == 'android' else 30),
-                font_size=sp(14 if platform == 'android' else 14)
-            ))
-            table_layout.add_widget(Label(
-                text=str(unit_data["final_count"]),
-                size_hint_y=None,
-                height=dp(30 if platform == 'android' else 30),
-                font_size=sp(14 if platform == 'android' else 14)
-            ))
+        # Данные
+        for unit_data in data:
+            table_layout.add_widget(Label(text=unit_data['unit_name'], font_size=sp(14)))
+            table_layout.add_widget(Label(text=str(unit_data['initial_count']), font_size=sp(14)))
+            table_layout.add_widget(Label(text=str(unit_data['losses']), font_size=sp(14)))
+            table_layout.add_widget(Label(text=str(unit_data['final_count']), font_size=sp(14)))
 
-        return table_layout
+        main_layout.add_widget(table_layout)
 
-    # Разделение данных по сторонам
+    # Разделяем данные по сторонам
     attacking_data = [item for item in report_data if item['side'] == 'attacking']
     defending_data = [item for item in report_data if item['side'] == 'defending']
 
-    # Цвета для сторон
-    attacking_color = "#FF5733"  # Красный
-    defending_color = "#33FF57"  # Зеленый
-
-    # Определение заголовков таблиц
-    attacking_title = None
-    defending_title = None
-
-    if attacking_data and attacking_data[0]['result']:
-        result_color = "#33FF57" if attacking_data[0]['result'] == "Победа" else "#FF5733"
-        attacking_title = f"[color={result_color}]{attacking_data[0]['result']}[/color]"
-
-    if defending_data and defending_data[0]['result']:
-        result_color = "#33FF57" if defending_data[0]['result'] == "Победа" else "#FF5733"
-        defending_title = f"[color={result_color}]{defending_data[0]['result']}[/color]"
-
-    # Создаем таблицы
-    attacking_table = create_battle_table(attacking_data, attacking_title, attacking_color)
-    defending_table = create_battle_table(defending_data, defending_title, defending_color)
-
-    main_layout.add_widget(attacking_table)
-    main_layout.add_widget(defending_table)
-
-    scroll_view.add_widget(main_layout)
-    content.add_widget(scroll_view)
+    # Создаем таблицы без заголовков "Атакующая сторона" и "Обороняющаяся сторона"
+    create_table(attacking_data, "Атакующие силы")
+    create_table(defending_data, "Оборонительные силы")
 
     # Кнопка закрытия окна
     close_button = Button(
@@ -270,6 +255,12 @@ def show_battle_report(report_data):
         color=(1, 1, 1, 1)
     )
     close_button.bind(on_release=lambda instance: popup.dismiss())
+
+    # ScrollView
+    scroll_view = ScrollView()
+    scroll_view.add_widget(main_layout)
+
+    content.add_widget(scroll_view)
     content.add_widget(close_button)
 
     # Всплывающее окно
@@ -281,22 +272,50 @@ def show_battle_report(report_data):
     )
     popup.open()
 
-
 def fight(attacking_city, defending_city, defending_army, attacking_army,
           attacking_fraction, defending_fraction, db_connection):
     """
     Основная функция боя между двумя армиями.
     """
+    print('Армия attacking_army: ', attacking_army)
     db_connection.row_factory = sqlite3.Row
     cursor = db_connection.cursor()
     try:
-        cursor.execute("SELECT faction FROM user_faction")
+        cursor.execute("SELECT faction_name FROM user_faction")
         result = cursor.fetchone()
-        user_faction = result['faction'] if result else None
+        user_faction = result['faction_name'] if result else None
     except Exception as e:
-        print(f"Ошибка загрузки faction: {e}")
+        print(f"Ошибка загрузки faction_name: {e}")
         user_faction = None
-    is_user_involved = user_faction in (attacking_fraction, defending_fraction)
+    is_user_involved = False
+
+    if user_faction:
+        cursor = db_connection.cursor()
+
+        # Проверяем атакующую армию
+        for unit in attacking_army:
+            unit_name = unit['unit_name']
+            try:
+                cursor.execute("SELECT faction FROM units WHERE unit_name = ?", (unit_name,))
+                result = cursor.fetchone()
+                if result and result['faction'] == user_faction:
+                    is_user_involved = True
+                    break
+            except Exception as e:
+                print(f"Ошибка при проверке фракции для {unit_name}: {e}")
+
+        # Если не найдено, проверяем обороняющуюся армию
+        if not is_user_involved:
+            for unit in defending_army:
+                unit_name = unit['unit_name']
+                try:
+                    cursor.execute("SELECT faction FROM units WHERE unit_name = ?", (unit_name,))
+                    result = cursor.fetchone()
+                    if result and result['faction'] == user_faction:
+                        is_user_involved = True
+                        break
+                except Exception as e:
+                    print(f"Ошибка при проверке фракции для {unit_name}: {e}")
 
     # Объединяем одинаковые юниты
     merged_attacking = merge_units(attacking_army)
@@ -389,7 +408,8 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
             winner=winner,
             attacking_fraction=attacking_fraction,
             defending_fraction=defending_fraction,
-            user_faction=user_faction
+            user_faction=user_faction,
+            city=defending_city
         )
         show_battle_report(report_data)
 
@@ -403,7 +423,7 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
         "defending_units": final_report_defending
     }
 
-def generate_battle_report(attacking_army, defending_army, winner, attacking_fraction, defending_fraction, user_faction):
+def generate_battle_report(attacking_army, defending_army, winner, attacking_fraction, defending_fraction, user_faction, city):
     """
     Генерирует отчет о бое.
     :param attacking_army: Данные об атакующей армии (список словарей).
@@ -414,7 +434,7 @@ def generate_battle_report(attacking_army, defending_army, winner, attacking_fra
     :return: Отчет о бое (список словарей).
     """
     global attacking_result, defending_result
-    report_data = []
+    report_data = []  # ← Теперь это список, а не словарь
 
     def process_army(army, side, result=None):
         for unit in army:
@@ -427,7 +447,8 @@ def generate_battle_report(attacking_army, defending_army, winner, attacking_fra
                 'final_count': final_count,
                 'losses': losses,
                 'side': side,
-                'result': result  # Добавляем результат только если он указан
+                'result': result,
+                'city': city
             })
 
     # Определяем результат только для фракции игрока

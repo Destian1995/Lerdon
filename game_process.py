@@ -305,6 +305,15 @@ class GameScreen(Screen):
         # Запускаем обновление ресурсов каждую 1 секунду
         Clock.schedule_interval(self.update_cash, 1)
 
+    def save_selected_faction_to_db(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("INSERT INTO user_faction (faction_name) VALUES (?)", (self.selected_faction,))
+
+        conn.commit()
+        conn.close()
+
     def init_ui(self):
         # === Контейнер для кнопки "Завершить ход" ===
         end_turn_container = BoxLayout(
@@ -441,10 +450,10 @@ class GameScreen(Screen):
         exit_container = BoxLayout(
             orientation='vertical',
             size_hint=(None, None),
-            size=(dp(120) if self.is_android else 120, dp(60) if self.is_android else 60),
-            pos_hint={'x': 0.87, 'y': 0},
+            size=(dp(100) if self.is_android else 100, dp(50) if self.is_android else 50),
+            pos_hint={'x': 0.84, 'y': 0},
             padding=dp(10),
-            spacing=dp(5)
+            spacing=dp(4)
         )
         with exit_container.canvas.before:
             Color(0.1, 0.5, 0.1, 1)
@@ -461,7 +470,7 @@ class GameScreen(Screen):
             text="Выход",
             size_hint=(1, 1),
             background_color=(0, 0, 0, 0),
-            font_size='16sp',
+            font_size='15sp',
             bold=True,
             color=(1, 1, 1, 1)
         )
@@ -494,22 +503,6 @@ class GameScreen(Screen):
             self.game_area.pos_hint = {'x': 0.25, 'y': 0}
             self.end_turn_button.pos_hint = {'x': 0.02, 'y': 0.02}
 
-    def save_selected_faction_to_db(self):
-        """
-        Сохраняет выбранную фракцию пользователя в таблицу user_faction.
-        """
-        try:
-            # SQL-запрос для вставки данных
-            query = "INSERT INTO user_faction (faction) VALUES (?)"
-            # Выполнение запроса с кортежем в качестве параметра
-            self.cursor.execute(query, (self.selected_faction,))
-            # Фиксация изменений в базе данных
-            self.conn.commit()
-            print(f"Фракция '{self.selected_faction}' успешно сохранена для пользователя.")
-        except Exception as e:
-            # Откат изменений в случае ошибки
-            self.conn.rollback()
-            print(f"Ошибка при сохранении фракции: {e}")
 
     def process_turn(self, instance=None):
         """

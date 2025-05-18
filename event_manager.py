@@ -125,10 +125,10 @@ class EventManager:
         # Генерируем событие на основе значения karma_score
         if karma_score > 6:
             print("Положительное событие sequences!")
-            self.generate_sequence_event("positive")
+            self.generate_sequence_event()
         elif karma_score < 0:
             print("Отрицательное событие sequences!")
-            self.generate_sequence_event("negative")
+            self.generate_sequence_event()
         else:
             print("Нейтральная карма. События sequences не генерируются.")
 
@@ -148,29 +148,59 @@ class EventManager:
         :param event_type: Тип события ('positive' или 'negative').
         """
         cursor = self.db_connection.cursor()
-        # Фильтруем события по коэффициенту kf
-        if event_type == "sequences":
-            cursor.execute("""
-                SELECT id, description, effects
-                FROM events
-                WHERE event_type = 'sequences'
-                ORDER BY RANDOM()
-                LIMIT 1
-            """)
-        else:
-            print(f"Неизвестный тип события: {event_type}")
-            return
-
+        cursor.execute("""
+            SELECT id, description
+            FROM events
+            WHERE event_type = 'sequences'
+            ORDER BY RANDOM()
+            LIMIT 1
+        """)
         event = cursor.fetchone()
         if not event:
             print(f"Событие типа '{event_type}' не найдено.")
             return
 
-        event_id, description, effects = event
-        effects = json.loads(effects)
+        event_id, description = event
+        # Показываем событие как модальное окно с кнопкой "Ясно"
+        self.show_event_sequence_popup(description)
 
-        # Передаем только один раз с event_type="sequences"
-        self.handle_passive_event(description, effects, event_type="sequences")
+    def show_event_sequence_popup(self, description):
+        """
+        Отображает событие типа sequences в виде модального окна с кнопкой "Ясно".
+        """
+        font_size = get_adaptive_font_size()
+
+        content = BoxLayout(orientation="vertical", padding=dp(15), spacing=dp(10))
+
+        label = Label(
+            text=description,
+            font_size=font_size * 1.1,
+            size_hint=(1, None),
+            halign="center",
+            valign="middle",
+            markup=True,
+            shorten=False,
+            max_lines=0,
+            line_height=1.2,
+        )
+
+        def update_label_size(instance, width):
+            label.text_size = (width - dp(30), None)
+            label.texture_update()
+            if label.texture:
+                label.height = max(dp(100), label.texture_size[1] + dp(10))
+
+        content.bind(width=update_label_size)
+
+        button_ok = self.create_gradient_button("Ясно", (0.2, 0.7, 0.2, 1), (0.1, 0.5, 0.1, 1), font_size)
+
+        popup = self.create_styled_popup("", content)
+
+        button_ok.bind(on_press=lambda x: popup.dismiss())
+
+        content.add_widget(label)
+        content.add_widget(button_ok)
+        popup.open()
 
     def handle_passive_event(self, description, effects, event_type=None):
         """

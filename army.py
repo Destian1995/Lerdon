@@ -609,21 +609,6 @@ def start_army_mode(faction, game_area, class_faction):
     # Добавляем стрелки прокрутки
     arrow_size = dp(60)
 
-    arrow_left = Image(
-        source='files/pict/left.png',
-        size_hint=(None, None),
-        size=(arrow_size, arrow_size),
-        pos_hint={'center_y': 0.5, 'left': -0.27},
-        allow_stretch=True,
-        keep_ratio=True,
-        mipmap=True
-    )
-
-    def on_arrow_left(instance, touch):
-        if instance.collide_point(*touch.pos):
-            carousel.load_previous()
-            animate_arrow_click(arrow_left)
-
     arrow_right = Image(
         source='files/pict/right.png',
         size_hint=(None, None),
@@ -639,11 +624,9 @@ def start_army_mode(faction, game_area, class_faction):
             carousel.load_next()
             animate_arrow_click(arrow_right)
 
-    arrow_left.bind(on_touch_down=on_arrow_left)
     arrow_right.bind(on_touch_down=on_arrow_right)
 
     right_container.add_widget(carousel)
-    right_container.add_widget(arrow_left)
     right_container.add_widget(arrow_right)
 
     # Анимация для стрелок
@@ -653,20 +636,6 @@ def start_army_mode(faction, game_area, class_faction):
                 Animation(size=(dp(60), dp(60)), duration=0.2, t='in_out_elastic')
         )
         anim.start(arrow)
-
-    def create_bounce_animation(direction):
-        move_x = -dp(60) if direction == 'left' else dp(60)
-        arrow = arrow_left if direction == 'left' else arrow_right
-        move_anim = Animation(x=arrow.x + move_x, duration=0.3, t='in_out_elastic')
-        return_anim = Animation(x=arrow.x, duration=0.4, t='in_out_elastic')
-        return move_anim + return_anim
-
-    def animate_arrows(dt):
-        # Чередуем отскок обеих стрелок для живости
-        create_bounce_animation('left').start(arrow_left)
-        create_bounce_animation('right').start(arrow_right)
-
-    Clock.schedule_interval(animate_arrows, 2.5)
 
     # Мигание правой стрелки
     def blink_arrow(instance, duration=0.5):

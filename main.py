@@ -392,7 +392,6 @@ class MapWidget(Widget):
 
 
 
-
 class MenuWidget(FloatLayout):
     def __init__(self, **kwargs):
         super(MenuWidget, self).__init__(**kwargs)
@@ -414,55 +413,39 @@ class MenuWidget(FloatLayout):
         self.add_widget(self.bg_image_1)
         self.add_widget(self.bg_image_2)
 
-        # Заголовок
-        self.title = Label(
-            text="[b][color=FFFFFF]Лэрдон[/color][/b]",
-            font_size='40sp',
-            markup=True,
-            size_hint=(1, 0.2),
-            pos_hint={'center_x': 0.5, 'top': 0.95},
-            color=(1, 1, 1, 1)  # Белый текст
+        # Логотип — png вместо текста
+        self.title_label = Label(
+            text="Лэрдон",
+            font_size='48sp',  # Размер шрифта
+            bold=True,
+            color=(1, 1, 1, 1),  # Белый цвет текста
+            outline_color=(0, 0, 0, 1),  # Черный контур для читаемости
+            outline_width=2,
+            halign='center',
+            valign='middle',
+            size_hint=(0.6, 0.3),
+            pos_hint={'center_x': 0.5, 'top': 0.98},
+            markup=True  # Позволяет использовать форматирование
         )
-        self.add_widget(self.title)
+        self.add_widget(self.title_label)
 
         # Кнопки
-        button_height = 0.1
-        button_spacing = 0.02  # Уменьшенное расстояние между кнопками
-        button_start_y = 0.6  # Начальная позиция по Y для первой кнопки
+        button_height = 0.08
+        button_spacing = 0.03
+        button_start_y = 0.65  # Начальная позиция по Y для первой кнопки
 
-        btn_start_game = Button(
-            text="В Лэрдон",
-            size_hint=(0.5, button_height),
-            pos_hint={'center_x': 0.5, 'center_y': button_start_y},
-            background_normal='',
-            background_color=(0.2, 0.6, 1, 1),  # Голубой цвет
-            color=(1, 1, 1, 1)  # Белый текст
-        )
+        btn_start_game = self.create_styled_button("В Лэрдон", button_start_y)
         btn_start_game.bind(on_press=self.start_game)
 
-        btn_how_to_play = Button(
-            text="Как играть",
-            size_hint=(0.5, button_height),
-            pos_hint={'center_x': 0.5, 'center_y': button_start_y - (button_height + button_spacing)},
-            background_normal='',
-            background_color=(0.2, 0.6, 1, 1),
-            color=(1, 1, 1, 1)
-        )
+        btn_how_to_play = self.create_styled_button("Как играть", button_start_y - (button_height + button_spacing))
         btn_how_to_play.bind(on_press=self.open_how_to_play)
-        self.add_widget(btn_how_to_play)
 
-        btn_exit = Button(
-            text="Выход",
-            size_hint=(0.5, button_height),
-            pos_hint={'center_x': 0.5, 'center_y': button_start_y - 2 * (button_height + button_spacing)},
-            background_normal='',
-            background_color=(0.2, 0.6, 1, 1),
-            color=(1, 1, 1, 1)
-        )
+        btn_exit = self.create_styled_button("Выход", button_start_y - 2 * (button_height + button_spacing))
         btn_exit.bind(on_press=self.exit_game)
 
         # Добавляем кнопки
         self.add_widget(btn_start_game)
+        self.add_widget(btn_how_to_play)
         self.add_widget(btn_exit)
 
         # Запускаем анимацию фона
@@ -470,17 +453,32 @@ class MenuWidget(FloatLayout):
         self.next_image = self.bg_image_2
         Clock.schedule_interval(self.animate_background, 5)  # Меняем фон каждые 5 секунд
 
-        # Цвета для заголовка в зависимости от фракции
-        self.faction_colors = {
-            "Аркадия": (0, 0, 1, 1),  # Синий
-            "Хиперион": (0.5, 0, 0.5, 1),  # Фиолетовый
-            "Халидон": (1, 0, 0, 1),  # Красный
-            "Этерия": (1, 1, 0, 1),  # Желтый
-            "Селестия": (0, 0.5, 0, 1)  # Темно-зеленый
-        }
+    def create_styled_button(self, text, y_pos):
+        """Создаёт стилизованную кнопку с эффектом при наведении."""
+        btn = Button(
+            text=text,
+            size_hint=(0.4, 0.08),
+            pos_hint={'center_x': 0.5, 'center_y': y_pos},
+            background_normal='',
+            background_color=(0.2, 0.6, 1, 0.9),
+            color=(1, 1, 1, 1),
+            font_size='20sp',
+            markup=True
+        )
 
-        # Пример: изменение цвета заголовка при старте игры
-        self.change_title_color("Аркадия")  # Можно заменить на текущую фракцию игрока
+        # Анимация при наведении
+        def on_enter(instance):
+            animate = Animation(background_color=(0.3, 0.7, 1, 1), duration=0.2)
+            animate.start(instance)
+
+        def on_leave(instance):
+            animate = Animation(background_color=(0.2, 0.6, 1, 0.9), duration=0.2)
+            animate.start(instance)
+
+        btn.bind(on_enter=on_enter)
+        btn.bind(on_leave=on_leave)
+
+        return btn
 
     def open_how_to_play(self, instance):
         app = App.get_running_app()
@@ -489,27 +487,19 @@ class MenuWidget(FloatLayout):
 
     def animate_background(self, dt):
         """Анимация плавной смены фоновых изображений."""
-        # Выбираем новое случайное изображение
         new_image_source = random.choice(list(self.menu_images.keys()))
-        while new_image_source == self.next_image.source:  # Избегаем повторения текущего изображения
+        while new_image_source == self.next_image.source:
             new_image_source = random.choice(list(self.menu_images.keys()))
         self.next_image.source = new_image_source
-        self.next_image.opacity = 0  # Начинаем с прозрачности 0
+        self.next_image.opacity = 0
 
-        # Анимация растворения старого изображения
         fade_out = Animation(opacity=0, duration=2)
         fade_out.start(self.current_image)
 
-        # Анимация появления нового изображения
         fade_in = Animation(opacity=1, duration=2)
         fade_in.start(self.next_image)
 
-        # Меняем местами current_image и next_image
         self.current_image, self.next_image = self.next_image, self.current_image
-
-        # Определяем фракцию для нового изображения
-        faction = self.menu_images[new_image_source]
-        self.change_title_color(faction)
 
     def start_game(self, instance):
         app = App.get_running_app()
@@ -518,24 +508,6 @@ class MenuWidget(FloatLayout):
 
     def exit_game(self, instance):
         App.get_running_app().stop()
-
-    def change_title_color(self, faction):
-        """
-        Изменяет цвет заголовка "Лэрдон" в зависимости от фракции.
-        :param faction: Название фракции
-        """
-        color = self.faction_colors.get(faction, (1, 1, 1, 1))  # По умолчанию белый
-        self.title.color = color
-        self.title.text = f"[b][color={self.rgb_to_hex(color)}]Лэрдон[/color][/b]"
-
-    def rgb_to_hex(self, rgba):
-        """
-        Преобразует RGB(A) кортеж в шестнадцатеричный формат для Kivy.
-        :param rgba: Кортеж (R, G, B, A)
-        :return: Шестнадцатеричная строка (например, "#FFFFFF")
-        """
-        r, g, b, _ = rgba
-        return "#{:02X}{:02X}{:02X}".format(int(r * 255), int(g * 255), int(b * 255))
 
 
 # Вкладка обучения

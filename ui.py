@@ -548,10 +548,10 @@ class FortressInfoPopup(Popup):
         for header in headers:
             label = Label(
                 text=header,
-                font_size='14sp',
+                font_size='16sp',
                 bold=True,
                 size_hint_y=None,
-                height=40,
+                height=60,
                 color=(1, 1, 1, 1)  # Черный текст
             )
             table_layout.add_widget(label)
@@ -567,9 +567,9 @@ class FortressInfoPopup(Popup):
             # Город
             city_label = Label(
                 text=city_id,
-                font_size='14sp',
+                font_size='16sp',
                 size_hint_y=None,
-                height=60,
+                height=80,
                 color=(1, 1, 1, 1)  # Черный текст
             )
             table_layout.add_widget(city_label)
@@ -577,9 +577,9 @@ class FortressInfoPopup(Popup):
             # Юнит
             unit_label = Label(
                 text=unit_name,
-                font_size='14sp',
+                font_size='16sp',
                 size_hint_y=None,
-                height=60,
+                height=80,
                 color=(1, 1, 1, 1)  # Черный текст
             )
             table_layout.add_widget(unit_label)
@@ -587,9 +587,9 @@ class FortressInfoPopup(Popup):
             # Количество
             count_label = Label(
                 text=str(format_number(unit_count)),
-                font_size='14sp',
+                font_size='16sp',
                 size_hint_y=None,
-                height=60,
+                height=80,
                 color=(1, 1, 1, 1)  # Черный текст
             )
             table_layout.add_widget(count_label)
@@ -599,7 +599,7 @@ class FortressInfoPopup(Popup):
             unit_image_widget = Image(
                 source=unit_image,
                 size_hint=(None, None),
-                size=(50, 50)
+                size=(60, 60)
             )
             image_container.add_widget(unit_image_widget)
             table_layout.add_widget(image_container)
@@ -607,9 +607,9 @@ class FortressInfoPopup(Popup):
             # Кнопка действия
             action_button = Button(
                 text="Добавить",
-                font_size='14sp',
+                font_size='16sp',
                 size_hint_y=None,
-                height=40,
+                height=60,
                 background_color=(0.6, 0.8, 0.6, 1)
             )
             action_button.bind(on_press=lambda btn, data=(city_id, unit_name, unit_count, unit_image):
@@ -632,9 +632,9 @@ class FortressInfoPopup(Popup):
         # Кнопка "Отправить группу в город"
         send_group_button = Button(
             text="Отправить группу в город",
-            font_size='14sp',
+            font_size='16sp',
             size_hint_y=None,
-            height=50,
+            height=80,
             background_color=(0.6, 0.8, 0.6, 1),
             disabled=True  # Кнопка изначально неактивна
         )
@@ -642,11 +642,11 @@ class FortressInfoPopup(Popup):
         self.send_group_button = send_group_button  # Сохраняем ссылку на кнопку
 
         # Кнопка для закрытия окна
-        close_button = Button(text="Закрыть", size_hint_y=None, height=50, background_color=(0.8, 0.8, 0.8, 1))
+        close_button = Button(text="Закрыть", size_hint_y=None, height=80, background_color=(0.8, 0.8, 0.8, 1))
         close_button.bind(on_press=popup.dismiss)
 
         # Добавляем кнопки в макет
-        buttons_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=60, spacing=10)
+        buttons_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=90, spacing=10)
         buttons_layout.add_widget(send_group_button)
         buttons_layout.add_widget(close_button)
         main_layout.add_widget(buttons_layout)
@@ -669,15 +669,15 @@ class FortressInfoPopup(Popup):
         city_id, unit_name, unit_count, unit_image = troop_data
 
         # Создаем всплывающее окно
-        popup = Popup(title=f"Добавление {unit_name} в группу", size_hint=(0.6, 0.5))
+        popup = Popup(title=f"Добавление {unit_name} в группу", size_hint=(0.8, 0.7))
         layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
         # Информация о юните
         info_label = Label(
             text=f"{unit_name}\nДоступно: {format_number(unit_count)}",
-            font_size='14sp',
+            font_size='16sp',
             size_hint_y=None,
-            height=60,
+            height=70,
             color=(1, 1, 1, 1)  # Черный текст
         )
         layout.add_widget(info_label)
@@ -693,10 +693,10 @@ class FortressInfoPopup(Popup):
         layout.add_widget(image_container)
 
         # Слайдер для выбора количества
-        slider_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=50, spacing=10)
+        slider_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=70, spacing=10)
         slider_label = Label(
             text="Количество: 0",
-            font_size='14sp',
+            font_size='16sp',
             size_hint_x=None,
             width=100,
             color=(1, 1, 1, 1)
@@ -1372,9 +1372,10 @@ class FortressInfoPopup(Popup):
 
                 else:
                     show_popup_message("Логистика не выдержит", "Слишком далеко. Найдите ближайший населенный пункт")
+                    return
             else:
                 show_popup_message("Ошибка", "Нельзя нападать на нейтральный город.")
-
+                return
         except sqlite3.Error as e:
             show_popup_message("Ошибка", f"Произошла ошибка при работе с базой данных(transfer): {e}")
         except Exception as e:
