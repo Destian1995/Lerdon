@@ -84,6 +84,24 @@ def load_cities_from_db(selected_kingdom):
         # Закрытие соединения с базой данных
         conn.close()
 
+def cleanup_sqlite_cache(db_path):
+    """
+    Удаляет .shm и .wal файлы, если они старше 5 минут.
+    """
+    shm_file = db_path + "-shm"
+    wal_file = db_path + "-wal"
+
+    for cache_file in [shm_file, wal_file]:
+        if os.path.exists(cache_file):
+            # Получаем время последнего изменения файла
+            file_mtime = os.path.getmtime(cache_file)
+            age_seconds = time.time() - file_mtime
+            if age_seconds > 300:  # 5 минут = 300 секунд
+                try:
+                    os.remove(cache_file)
+                    print(f"🗑️ Удалён устаревший файл кэша: {cache_file}")
+                except Exception as e:
+                    print(f"❌ Не удалось удалить файл {cache_file}: {e}")
 
 def restore_from_backup():
     """
@@ -408,7 +426,7 @@ class MenuWidget(FloatLayout):
         # Создаем два изображения для плавной смены фона
         self.bg_image_1 = Image(source=random.choice(list(self.menu_images.keys())), allow_stretch=True, keep_ratio=False)
         self.bg_image_2 = Image(source=random.choice(list(self.menu_images.keys())), allow_stretch=True, keep_ratio=False, opacity=0)
- 
+
         # Добавляем оба изображения на виджет
         self.add_widget(self.bg_image_1)
         self.add_widget(self.bg_image_2)
@@ -596,7 +614,7 @@ class HowToPlayScreen(FloatLayout):
             {"type": "text", "content": "Политика...че вы начинаете? нормально же общались!.\n\n"
                                         "Итак первое что надо сделать на первом же ходу выяснить кто ты Коммунист или "
                                         "Капиталист?.\n"
-                                        },
+             },
             {"type": "image", "source": "files/menu/tutorial/politic_1.jpg"},
             {"type": "text", "content": "Там выбираем полит. строй и видим:"},
             {"type": "image", "source": "files/menu/tutorial/politic_2.jpg"},
@@ -1066,5 +1084,9 @@ class EmpireApp(App):
             if hasattr(child, 'results_game'):
                 child.results_game.close_connection()
 
+        # Очистка устаревших файлов SQLite (.shm, .wal)
+        cleanup_sqlite_cache(copied_db_path)
+
 if __name__ == '__main__':
+    cleanup_sqlite_cache(copied_db_path)
     EmpireApp().run()  # Запуск приложения

@@ -125,7 +125,9 @@ class ManageFriend(Popup):
     def __init__(self, faction_name, game_area, **kwargs):
         super().__init__(**kwargs)
         self.faction_name = faction_name
-        self.title = f"Союзник фракции {faction_name}"
+        allies = self._get_allies_from_db()
+        ally_name = allies[0] if allies else "Нет союзника"
+        self.title = f"Союзник: {ally_name}"
         self.title_size = dp(18)
         self.title_color = (0.9, 0.9, 0.9, 1)
         self.separator_color = (0.3, 0.6, 0.8, 1)
@@ -292,7 +294,6 @@ class ManageFriend(Popup):
 
     def _create_table(self):
         allies = self._get_allies_from_db()
-
         main_container = BoxLayout(
             orientation='vertical',
             spacing=dp(15),
@@ -313,112 +314,123 @@ class ManageFriend(Popup):
             scroll.add_widget(main_container)
             return scroll
 
-        ally_name = allies[0]
-
-        # Заголовок с именем союзника
-        ally_header = Label(
-            text=f"Союзник: {ally_name}",
-            **STYLE_LABEL_HEADER,
-            size_hint_y=None,
-            height=dp(50),
-            halign='center'
-        )
-        ally_header.bind(size=ally_header.setter('text_size'))
-        main_container.add_widget(ally_header)
-
-        # Основной контейнер с двумя колонками
-        columns_container = BoxLayout(
-            orientation='horizontal',
-            spacing=dp(20),
-            size_hint=(1, None)  # Автоматическая ширина, фиксированная высота
-        )
-
-        # Левая колонка - экономическая помощь
-        economic_column = BoxLayout(
-            orientation='vertical',
-            spacing=dp(10),
-            size_hint=(0.5, None)  # 50% ширины контейнера
-        )
-
+        # === Блок экономики ===
         economic_header = Label(
             text="Экономическая помощь",
             **STYLE_LABEL_HEADER,
             size_hint_y=None,
-            height=dp(40),
-            halign='center'
+            height=dp(30),
+            halign='left'
         )
         economic_header.bind(size=economic_header.setter('text_size'))
-        economic_column.add_widget(economic_header)
+        main_container.add_widget(economic_header)
 
-        resources = ['Кроны', 'Сырьё', 'Рабочие']
-        for res in resources:
-            btn_res = StyledButton(
-                text=res,
-                background_color=(0.2, 0.6, 0.8, 1) if res != "Сырьё" else (0.3, 0.7, 0.3, 1),
-                **STYLE_BUTTON_ACTION,
-                size_hint_y=None,
-                height=dp(50)  # Фиксированная высота кнопок
-            )
-            btn_res.bind(on_release=lambda btn, r=res: self._on_resource_selected(ally_name, r))
-            economic_column.add_widget(btn_res)
-
-        economic_column.bind(minimum_height=economic_column.setter('height'))
-
-        # Правая колонка - военная помощь
-        military_column = BoxLayout(
-            orientation='vertical',
-            spacing=dp(10),
-            size_hint=(0.5, None)  # 50% ширины контейнера
+        btn_crowns = self.create_action_button(
+            icon='files/pict/friends/economic_crowns.png',
+            text='Кроны',
+            bg_color=(0.2, 0.6, 0.8, 1),
+            on_press=lambda btn: self._on_resource_selected(ally_name, "Кроны")
         )
+        main_container.add_widget(btn_crowns)
 
+        btn_materials = self.create_action_button(
+            icon='files/pict/friends/economic_materials.png',
+            text='Сырьё',
+            bg_color=(0.3, 0.7, 0.3, 1),
+            on_press=lambda btn: self._on_resource_selected(ally_name, "Сырьё")
+        )
+        main_container.add_widget(btn_materials)
+
+        btn_workers = self.create_action_button(
+            icon='files/pict/friends/economic_workers.png',
+            text='Рабочие',
+            bg_color=(0.8, 0.6, 0.2, 1),
+            on_press=lambda btn: self._on_resource_selected(ally_name, "Рабочие")
+        )
+        main_container.add_widget(btn_workers)
+
+        # === Разделитель между блоками ===
+        separator = Widget(size_hint_y=None, height=dp(10))
+        main_container.add_widget(separator)
+
+        # === Блок армии ===
         military_header = Label(
             text="Военная помощь",
             **STYLE_LABEL_HEADER,
             size_hint_y=None,
-            height=dp(50),
-            halign='center'
+            height=dp(30),
+            halign='left'
         )
         military_header.bind(size=military_header.setter('text_size'))
-        military_column.add_widget(military_header)
+        main_container.add_widget(military_header)
 
-        defense_btn = StyledButton(
-            text="Защита",
-            background_color=(0.3, 0.7, 0.3, 1),
-            **STYLE_BUTTON_ACTION,
-            size_hint_y=None,
-            height=dp(50)
+        btn_defense = self.create_action_button(
+            icon='files/pict/friends/military_defense.png',
+            text='Защита',
+            bg_color=(0.3, 0.7, 0.3, 1),
+            on_press=lambda btn: self._on_action_wrapper('defense', ally_name, btn)
         )
-        defense_btn.bind(on_release=lambda btn: self._on_action_wrapper('defense', ally_name, btn))
+        main_container.add_widget(btn_defense)
 
-        attack_btn = StyledButton(
-            text="Атака",
-            background_color=(0.8, 0.3, 0.3, 1),
-            **STYLE_BUTTON_DANGER,
-            size_hint_y=None,
-            height=dp(50)
+        btn_attack = self.create_action_button(
+            icon='files/pict/friends/military_attack.png',
+            text='Атака',
+            bg_color=(0.8, 0.3, 0.3, 1),
+            on_press=lambda btn: self._on_action_wrapper('attack', ally_name, btn)
         )
-        attack_btn.bind(on_release=lambda btn: self._on_action_wrapper('attack', ally_name, btn))
-
-        military_column.add_widget(defense_btn)
-        military_column.add_widget(attack_btn)
-
-        # Добавляем пустой виджет для выравнивания
-        spacer = Widget(size_hint_y=None, height=dp(50))
-        military_column.add_widget(spacer)
-
-        military_column.bind(minimum_height=military_column.setter('height'))
-
-        # Добавляем колонки в основной контейнер
-        columns_container.add_widget(economic_column)
-        columns_container.add_widget(military_column)
-
-        columns_container.bind(minimum_height=columns_container.setter('height'))
-        main_container.add_widget(columns_container)
+        main_container.add_widget(btn_attack)
 
         scroll = ScrollView(size_hint=(1, 1))
         scroll.add_widget(main_container)
         return scroll
 
+    def create_action_button(self, icon, text, bg_color, on_press):
+        btn_layout = BoxLayout(
+            orientation='horizontal',
+            spacing=dp(15),
+            size_hint_y=None,
+            height=dp(60)
+        )
+
+        with btn_layout.canvas.before:
+            Color(rgba=bg_color)
+            rect = RoundedRectangle(
+                size=btn_layout.size,
+                pos=btn_layout.pos,
+                radius=[dp(10)] * 4
+            )
+            btn_layout.bind(pos=lambda *x: setattr(rect, 'pos', btn_layout.pos),
+                            size=lambda *x: setattr(rect, 'size', btn_layout.size))
+
+        img = Image(
+            source=icon,
+            size_hint=(None, None),
+            width=dp(30),
+            height=dp(30)
+        )
+
+        label = Label(
+            text=text,
+            color=(1, 1, 1, 1),
+            font_size=dp(14),
+            halign='left',
+            valign='middle',
+            size_hint_x=1
+        )
+        label.bind(size=label.setter('text_size'))
+
+        btn_layout.add_widget(img)
+        btn_layout.add_widget(label)
+
+        def on_touch_down(touch):
+            if btn_layout.collide_point(*touch.pos):
+                on_press(btn_layout)
+                return True
+            return False
+
+        btn_layout.on_touch_down = on_touch_down
+
+        return btn_layout
 
     def _on_action_wrapper(self, action, ally, instance):
         self._on_action(action, ally)
@@ -453,7 +465,7 @@ class ManageFriend(Popup):
         # Инициализация переменных для отслеживания выбора города
         self.city_wait_start_time = time.time()
         self.city_last_name = ""
-        self.city_selection_duration = 3  # Минимальное время для подтверждения выбора
+        self.city_selection_duration = 2  # Минимальное время для подтверждения выбора
 
         # Запуск проверки выбора города
         self.city_check_event = Clock.schedule_interval(
@@ -467,7 +479,7 @@ class ManageFriend(Popup):
 
         # Таймер на 10 секунд для отмены выбора
         self.cancel_timer = Clock.schedule_once(
-            lambda dt: self._cancel_selection(action, ally), 10
+            lambda dt: self._cancel_selection(action, ally), 5
         )
 
         self.dismiss()

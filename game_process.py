@@ -384,7 +384,7 @@ class GameScreen(Screen):
         mode_panel_width = dp(90)
         mode_panel_container = BoxLayout(
             orientation='vertical',
-            size_hint=(None, 0.85),
+            size_hint=(None, 0.82),
             width=mode_panel_width,
             pos_hint={'right': 1, 'top': 0.96},
             padding=dp(10),
@@ -451,7 +451,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=(dp(100) if self.is_android else 100, dp(50) if self.is_android else 50),
-            pos_hint={'x': 0.84, 'y': 0},
+            pos_hint={'x': 0.89, 'y': 0},
             padding=dp(10),
             spacing=dp(4)
         )
