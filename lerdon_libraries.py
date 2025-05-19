@@ -48,3 +48,4 @@ from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelHeader
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.image import Image as KivyImage
 from kivy.graphics import RoundedRectangle, Color, Rectangle as KvRect
+from kivy.uix.video import Video

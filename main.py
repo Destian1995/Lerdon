@@ -414,8 +414,56 @@ class MapWidget(Widget):
         self.draw_fortresses()
 
 
-class AnimatedButton(Button):
-    animated_center_y = NumericProperty(0)
+class RoundedButton(Button):
+    instances = []  # Список всех созданных кнопок
+
+    def __init__(self, bg_color=(0.1, 0.5, 0.9, 1), radius=25, **kwargs):
+        super().__init__(**kwargs)
+        self.bg_color = bg_color
+        self.radius = radius
+        self.background_color = (0, 0, 0, 0)  # Отключаем стандартный фон
+        self.active = False  # Состояние кнопки: активна ли она
+        self.darken_factor = 0.8  # Коэффициент затемнения
+
+        # Сохраняем инстанс кнопки
+        RoundedButton.instances.append(self)
+
+        with self.canvas.before:
+            self.rect_color = Color(*self.bg_color)
+            self.rect = RoundedRectangle(
+                pos=self.pos,
+                size=self.size,
+                radius=[radius]
+            )
+
+        self.bind(pos=self.update_rect, size=self.update_rect)
+
+    def update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+
+    def darken_color(self, color, factor):
+        return [c * factor for c in color[:3]] + list(color[3:])
+
+    def on_press(self):
+        # Сообщаем всем кнопкам, что эта активна
+        self.set_active_button(self)
+
+    def deactivate(self):
+        self.active = False
+        self.rect_color.rgba = self.bg_color
+
+    def activate(self):
+        self.active = True
+        self.rect_color.rgba = self.darken_color(self.bg_color, self.darken_factor)
+
+    @classmethod
+    def set_active_button(cls, active_button):
+        for btn in cls.instances:
+            if btn == active_button:
+                btn.activate()
+            else:
+                btn.deactivate()
 
 class MenuWidget(FloatLayout):
     def __init__(self, **kwargs):
@@ -443,134 +491,62 @@ class MenuWidget(FloatLayout):
         )
         self.add_widget(self.title_label)
 
-        # Кнопки
-        button_height = 0.1
-        button_spacing = 0.05
-        button_start_y = 0.68
+        # Кнопки (изначально вне экрана)
+        self.btn_start_game = RoundedButton(
+            text="В Лэрдон",
+            size_hint=(0.4, 0.08),
+            pos=(-400, Window.height * 0.68),
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
+            font_size='20sp'
+        )
+        self.btn_how_to_play = RoundedButton(
+            text="Как играть",
+            size_hint=(0.4, 0.08),
+            pos=(-400, Window.height * 0.53),
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
+            font_size='20sp'
+        )
+        self.btn_exit = RoundedButton(
+            text="Выход",
+            size_hint=(0.4, 0.08),
+            pos=(-400, Window.height * 0.38),
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
+            font_size='20sp'
+        )
 
-        btn_start_game = self.create_styled_button("В Лэрдон", button_start_y)
-        btn_start_game.bind(on_press=self.start_game)
+        # Привязываем действия
+        self.btn_start_game.bind(on_press=self.start_game)
+        self.btn_how_to_play.bind(on_press=self.open_how_to_play)
+        self.btn_exit.bind(on_press=self.exit_game)
 
-        btn_how_to_play = self.create_styled_button("Как играть", button_start_y - (button_height + button_spacing))
-        btn_how_to_play.bind(on_press=self.open_how_to_play)
+        # Добавляем кнопки на экран
+        self.add_widget(self.btn_start_game)
+        self.add_widget(self.btn_how_to_play)
+        self.add_widget(self.btn_exit)
 
-        btn_exit = self.create_styled_button("Выход", button_start_y - 2 * (button_height + button_spacing))
-        btn_exit.bind(on_press=self.exit_game)
+        # Анимация появления кнопок
+        Clock.schedule_once(self.animate_buttons_in, 0.5)
 
-        self.add_widget(btn_start_game)
-        self.add_widget(btn_how_to_play)
-        self.add_widget(btn_exit)
-
-        Clock.schedule_once(lambda dt: self.animate_buttons_in_exit([btn_exit]), 0.02)
-        Clock.schedule_once(lambda dt: self.animate_buttons_in_game([btn_how_to_play]), 0.3)
-        Clock.schedule_once(lambda dt: self.animate_buttons_in_start([btn_start_game]), 0.7)
         # Анимация фона
         self.current_image = self.bg_image_1
         self.next_image = self.bg_image_2
         Clock.schedule_interval(self.animate_background, 5)
 
-    def create_styled_button(self, text, y_pos):
-        btn = AnimatedButton(
-            text=text,
-            size_hint=(0.4, 0.08),
-            pos_hint={'center_x': 0.5, 'center_y': y_pos},
-            background_normal='',
-            background_color=(0, 0, 0, 0),
-            color=(1, 1, 1, 1),
-            font_size='20sp',
-            markup=True
-        )
-        # Сохраняем начальную позицию Y для анимации
-        btn.initial_center_y = y_pos  # <--- Добавленная строка
+    def animate_buttons_in(self, dt):
+        # Анимация: кнопки выезжают с левой стороны
+        anim1 = Animation(x=Window.width * 0.5 - self.btn_start_game.width / 2, y=Window.height * 0.68, duration=0.6, t='out_back')
+        anim2 = Animation(x=Window.width * 0.5 - self.btn_how_to_play.width / 2, y=Window.height * 0.53, duration=0.6, t='out_back')
+        anim3 = Animation(x=Window.width * 0.5 - self.btn_exit.width / 2, y=Window.height * 0.38, duration=0.6, t='out_back')
 
-        with btn.canvas.before:
-            Color(0.2, 0.6, 1, 0.9)
-            btn.rect = RoundedRectangle(pos=btn.pos, size=btn.size, radius=[20])
-
-        def update_rect(instance, value):
-            instance.rect.pos = instance.pos
-            instance.rect.size = instance.size
-
-        btn.bind(pos=update_rect, size=update_rect)
-        return btn
-
-    def animate_buttons_in_game(self, buttons):
-        for i, btn in enumerate(buttons):
-            print(f"[{btn.text}] Initial Y: {btn.initial_center_y}")
-
-            btn.opacity = 0
-            btn.scale = 0.8
-            btn.pos_hint = {'center_x': 0.5, 'center_y': btn.initial_center_y + 0.2}
-            btn.animated_center_y = btn.initial_center_y + 0.1
-
-            anim = Animation(
-                animated_center_y=btn.initial_center_y,
-                opacity=1,
-                scale=1,
-                duration=0.5,
-                transition='out_back'
-            )
-            btn.bind(animated_center_y=self.update_button_pos)
-
-            Clock.schedule_once(lambda dt, b=btn: anim.start(b), i * 0.15)
-
-    def animate_buttons_in_start(self, buttons):
-        for i, btn in enumerate(buttons):
-            print(f"[{btn.text}] Initial Y: {btn.initial_center_y}")
-
-            btn.opacity = 0
-            btn.scale = 0.8
-            btn.pos_hint = {'center_x': 0.5, 'center_y': btn.initial_center_y + 0.2}
-            btn.animated_center_y = btn.initial_center_y + 0.1
-
-            anim = Animation(
-                animated_center_y=btn.initial_center_y,
-                opacity=1,
-                scale=1,
-                duration=0.5,
-                transition='out_back'
-            )
-            btn.bind(animated_center_y=self.update_button_pos)
-
-            Clock.schedule_once(lambda dt, b=btn: anim.start(b), i * 0.15)
-
-    def animate_buttons_in_exit(self, buttons):
-        for i, btn in enumerate(buttons):
-            print(f"[{btn.text}] Initial Y: {btn.initial_center_y}")
-
-            btn.opacity = 0
-            btn.scale = 0.8
-            btn.pos_hint = {'center_x': 0.5, 'center_y': btn.initial_center_y + 0.2}
-            btn.animated_center_y = btn.initial_center_y + 0.1
-
-            anim = Animation(
-                animated_center_y=btn.initial_center_y,
-                opacity=1,
-                scale=1,
-                duration=0.5,
-                transition='out_back'
-            )
-            btn.bind(animated_center_y=self.update_button_pos)
-
-            Clock.schedule_once(lambda dt, b=btn: anim.start(b), i * 0.15)
-
-
-    def update_button_pos(self, instance, value):
-        instance.pos_hint = {'center_x': 0.5, 'center_y': value}
-
-    # Остальные методы остаются без изменений
-    def open_how_to_play(self, instance):
-        app = App.get_running_app()
-        app.root.clear_widgets()
-        app.root.add_widget(HowToPlayScreen())
-
-    def start_game(self, instance):
-        app = App.get_running_app()
-        app.root.clear_widgets()
-        app.root.add_widget(KingdomSelectionWidget())
-
-    def exit_game(self, instance):
-        App.get_running_app().stop()
+        anim1.start(self.btn_start_game)
+        anim2.start(self.btn_how_to_play)
+        anim3.start(self.btn_exit)
 
     def animate_background(self, dt):
         new_source = random.choice([
@@ -588,15 +564,25 @@ class MenuWidget(FloatLayout):
                 'files/menu/halidon.jpg',
                 'files/menu/giperion.jpg'
             ])
-
         self.next_image.source = new_source
         fade_out = Animation(opacity=0, duration=1.5)
         fade_in = Animation(opacity=1, duration=1.5)
-
         fade_out.start(self.current_image)
         fade_in.start(self.next_image)
-
         self.current_image, self.next_image = self.next_image, self.current_image
+
+    def open_how_to_play(self, instance):
+        app = App.get_running_app()
+        app.root.clear_widgets()
+        app.root.add_widget(HowToPlayScreen())
+
+    def start_game(self, instance):
+        app = App.get_running_app()
+        app.root.clear_widgets()
+        app.root.add_widget(KingdomSelectionWidget())
+
+    def exit_game(self, instance):
+        App.get_running_app().stop()
 
 # Вкладка обучения
 class HowToPlayScreen(FloatLayout):
@@ -852,145 +838,166 @@ class HowToPlayScreen(FloatLayout):
         app.root.add_widget(MenuWidget())
 
 
-# Виджет выбора княжества
 class KingdomSelectionWidget(FloatLayout):
     def __init__(self, **kwargs):
         super(KingdomSelectionWidget, self).__init__(**kwargs)
         is_android = platform == 'android'
-        # Подключение к базе данных
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
-        self.kingdom_data = self.load_kingdoms_from_db()
-        # === Новые атрибуты для подсветки фракции ===
-        self.selected_button = None  # Хранит ссылку на последнюю выбранную кнопку
-        self.default_button_color = (0.1, 0.5, 0.9, 1)  # Цвет кнопок по умолчанию
-        # Фон выбора княжества
-        self.add_widget(Image(source='files/choice.jpg', allow_stretch=True, keep_ratio=False))
 
-        # === Заголовок ===
-        label_size = '20sp' if is_android else '10sp'
+        # === Статичные элементы (фон, заголовок, информация, советник) ===
+        # Фон - видео
+        self.bg_video = Video(
+            source='files/menu/choice.mp4',
+            state='play',
+            options={'eos': 'loop'}  # Может сработать в некоторых реализациях
+        )
+        self.bg_video.allow_stretch = True
+        self.bg_video.keep_ratio = False
+        self.bg_video.size = Window.size
+        self.bg_video.bind(on_eos=self.loop_video)  # Ловим конец видео
+        self.add_widget(self.bg_video)
+
+        # Заголовок
+        label_size = '20sp' if is_android else '36sp'
         self.select_side_label = Label(
             text="Выберите сторону",
             font_size=label_size,
-            size_hint=(None, None),
-            size=(300, 60) if is_android else (500, 350),
-            pos_hint={'center_x': 0.75, 'center_y': 0.85},
-            color=(1, 1, 1, 1),
-            outline_color=(0, 0, 0, 1),
-            outline_width=2,
-            markup=True
-        )
-        self.add_widget(self.select_side_label)
-
-        # === Надпись с названием фракции ===
-        faction_label_size = '14sp' if is_android else '24sp'
-        self.faction_label = Label(
-            text="",
-            font_size=faction_label_size,
-            size_hint=(None, None),
-            size=(250, 100) if is_android else (300, 100),
-            pos_hint={'center_x': 0.75, 'center_y': 0.30},
             color=(1, 1, 1, 1),
             outline_color=(0, 0, 0, 1),
             outline_width=2,
             markup=True,
-            halign="center",
-            valign="middle"
+            halign='center',
+            valign='middle',
+            size_hint=(0.8, None),
+            height=dp(60) if is_android else 80,
+            pos_hint={'center_x': 0.5, 'top': 0.9}
         )
-        self.faction_label.bind(size=self.faction_label.setter('text_size'))
-        self.add_widget(self.faction_label)
+        self.add_widget(self.select_side_label)
 
-        # === Панель кнопок ===
-        # Настройки для Android
-        if is_android:
-            button_height = dp(50)  # Высота кнопок
-            button_font_size = '18sp'  # Крупный шрифт
-            panel_width = 0.4  # Шире панель для удобства
-            spacing_val = dp(15)  # Уменьшаем промежуток
-            padding = [dp(20), dp(20), dp(20), dp(20)]  # Отступы
-        else:
-            button_height = 60
-            button_font_size = '14sp'
-            panel_width = 0.4
-            spacing_val = 15
-            padding = [20, 20, 20, 20]
+        # Информация о фракции
+        self.faction_info_container = BoxLayout(
+            orientation='vertical',
+            size_hint=(0.2, None),
+            height=dp(120),
+            pos_hint={'center_x': 0.73, 'center_y': 0.4},
+            spacing=dp(8)
+        )
+        self.add_widget(self.faction_info_container)
+
+        # Советник
+        advisor_size = (0.3, 0.3) if is_android else (0.25, 0.25)
+        self.advisor_image = Image(
+            source='files/null.png',
+            size_hint=advisor_size,
+            pos_hint={'center_x': 0.75, 'center_y': 0.6}
+        )
+        self.add_widget(self.advisor_image)
+
+        # === Анимируемый блок (только кнопки) ===
+        self.buttons_container = FloatLayout()
+        self.add_widget(self.buttons_container)
+
+        # Подключение к базе данных
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.kingdom_data = self.load_kingdoms_from_db()
+
+        # === Новые атрибуты для подсветки фракции ===
+        self.selected_button = None
+
+        # Панель кнопок (выезжает слева)
+        panel_width = 0.3
+        button_height = dp(50) if is_android else 60
+        spacing_val = dp(10) if is_android else 10
+        padding = [dp(20), dp(20), dp(20), dp(20)] if is_android else [20, 20, 20, 20]
 
         self.kingdom_buttons = BoxLayout(
             orientation='vertical',
             spacing=spacing_val,
-            size_hint=(panel_width, None),  # Фиксируем ширину, гибкая высота
-            pos_hint={'center_x': 0.4, 'center_y': 0.5},
-            padding=padding,
-            height=self.calculate_panel_height(button_height, spacing_val, padding)
+            size_hint=(panel_width, None),
+            height=self.calculate_panel_height(button_height, spacing_val, padding),
+            pos=(-Window.width * 0.5, self.center_y * 2.4)
         )
 
         for kingdom in self.kingdom_data.keys():
-            btn = Button(
+            btn = RoundedButton(
                 text=kingdom,
-                size_hint_y=None,  # Фиксированная высота кнопок
+                size_hint_y=None,
                 height=button_height,
-                font_size=button_font_size,
-                background_normal='',
-                background_color=(0.1, 0.5, 0.9, 1),
+                font_size='18sp' if is_android else '16sp',
                 color=(1, 1, 1, 1),
-                border=(dp(20), dp(20), dp(20), dp(20)),
-                halign='center',
-                valign='middle'
+                bg_color=(0.1, 0.5, 0.9, 1)
             )
             btn.bind(on_press=self.select_kingdom)
-            btn.bind(on_enter=lambda x: Animation(background_color=(0.2, 0.6, 1, 1), duration=0.2).start(x))
-            btn.bind(on_leave=lambda x: Animation(background_color=(0.1, 0.5, 0.9, 1), duration=0.2).start(x))
             self.kingdom_buttons.add_widget(btn)
 
-        self.add_widget(self.kingdom_buttons)
+        self.buttons_container.add_widget(self.kingdom_buttons)
 
-        # === Изображение советника ===
-        advisor_size = (0.3, 0.3) if is_android else (0.3, 0.3)
-        advisor_pos = {'center_x': 0.75, 'center_y': 0.6}
-        self.advisor_image = Image(
-            source='files/null.png',
-            size_hint=advisor_size,
-            pos_hint=advisor_pos
-        )
-        self.add_widget(self.advisor_image)
-        # Кнопка "Вернуться в главное меню"
-        back_button = Button(
-            text=" Вернуться в главное меню",
-            size_hint=(0.34, 0.08),
-            pos_hint={'center_x': 0.15, 'y': 0},
-            background_normal='',
-            background_color=(0.2, 0.6, 1, 1),
-            color=(1, 1, 1, 1),
-            font_size='16sp'
-        )
-        back_button.bind(on_press=self.back_to_menu)
-        self.add_widget(back_button)
-
-        # === Кнопка "Начать игру" ===
-        start_btn_size = (0.3, None)
-        start_btn_height = dp(50) if is_android else 60
-        start_btn_font = '15sp' if is_android else '14sp'
-
-        self.start_game_button = Button(
+        # Кнопка "Начать игру" (появляется справа)
+        self.start_game_button = RoundedButton(
             text="Начать игру",
-            size_hint=start_btn_size,
-            height=start_btn_height,
-            font_size=start_btn_font,
+            size_hint=(0.3, None),
+            height=button_height,
+            font_size='18sp' if is_android else '16sp',
             bold=True,
-            pos_hint={'center_x': 0.8, 'center_y': 0.10},
-            background_normal='',
-            background_color=(0.1, 0.5, 0.9, 1),
             color=(1, 1, 1, 1),
-            border=(20, 20, 20, 20)
+            bg_color=(0.1, 0.5, 0.9, 1),
+            pos=(Window.width * 1.2, Window.height * 0.1)
         )
         self.start_game_button.bind(on_press=self.start_game)
-        self.start_game_button.bind(
-            on_enter=lambda x: Animation(background_color=(0.2, 0.6, 1, 1), duration=0.2).start(x))
-        self.start_game_button.bind(
-            on_leave=lambda x: Animation(background_color=(0.1, 0.5, 0.9, 1), duration=0.2).start(x))
-        self.add_widget(self.start_game_button)
+        self.buttons_container.add_widget(self.start_game_button)
+
+        # Кнопка "Вернуться в главное меню"
+        back_btn = RoundedButton(
+            text="Вернуться в главное меню",
+            size_hint=(0.34, 0.08),
+            pos=(Window.width * 0.005, Window.height * 0.05),
+            color=(1, 1, 1, 1),
+            font_size='16sp',
+            bg_color=(0.1, 0.5, 0.9, 1)
+        )
+        back_btn.bind(on_press=self.back_to_menu)
+        self.buttons_container.add_widget(back_btn)
+
+        # Анимация появления только кнопок
+        Clock.schedule_once(lambda dt: self.animate_in(), 0.3)
+
+    def loop_video(self, instance):
+        print("Видео закончилось, перезапускаем...")
+        instance.state = 'stop'
+        instance.state = 'play'
+
+    def animate_in(self):
+        center_x = Window.width * 0.5
+        center_y = Window.height * 0.5
+
+        # Панель фракций — выезжает слева
+        anim_panel = Animation(
+            x=center_x - self.kingdom_buttons.width / 1.4,
+            y=center_y * 0.4,
+            duration=0.6,
+            t='out_back'
+        )
+        anim_panel.start(self.kingdom_buttons)
+
+        # Кнопка "Начать игру" — появляется справа
+        anim_start = Animation(
+            x=center_x + self.kingdom_buttons.width / 2 + dp(30),
+            y=Window.height * 0.1,
+            duration=0.6,
+            t='out_back'
+        )
+        anim_start.start(self.start_game_button)
+
+        # Кнопка "Вернуться в главное меню" — выезжает слева
+        back_btn = self.children[-1]
+        anim_back = Animation(
+            x=center_x - back_btn.width / 2,
+            y=Window.height * 0.001,
+            duration=0.6,
+            t='out_back'
+        )
+        anim_back.start(back_btn)
 
     def calculate_panel_height(self, btn_height, spacing, padding):
-        """Рассчитывает общую высоту панели кнопок"""
         num_buttons = len(self.kingdom_data)
         return (btn_height * num_buttons) + (spacing * (num_buttons - 1)) + (padding[1] + padding[3])
 
@@ -1000,51 +1007,40 @@ class KingdomSelectionWidget(FloatLayout):
         app.root.add_widget(MenuWidget())
 
     def load_kingdoms_from_db(self):
-        """Загружает данные о княжествах из базы данных."""
         kingdoms = {}
         try:
             cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT kingdom, fortress_name, coordinates, color
-                FROM city_default
-            """)
+            cursor.execute("SELECT kingdom, fortress_name, coordinates, color FROM city_default")
             rows = cursor.fetchall()
             print(f"Загружено записей из city_default: {len(rows)}")
             for row in rows:
                 kingdom, fortress_name, coordinates, color = row
                 if kingdom not in kingdoms:
-                    kingdoms[kingdom] = {
-                        "fortresses": [],
-                        "color": color
-                    }
-                kingdoms[kingdom]["fortresses"].append({
-                    "name": fortress_name,
-                    "coordinates": coordinates
-                })
+                    kingdoms[kingdom] = {"fortresses": [], "color": color}
+                kingdoms[kingdom]["fortresses"].append({"name": fortress_name, "coordinates": coordinates})
         except sqlite3.Error as e:
             print(f"Ошибка при загрузке данных из базы данных: {e}")
         return kingdoms
 
     def select_kingdom(self, instance):
-        """Метод для обработки выбора княжества с подсветкой кнопки"""
         kingdom_name = instance.text
         kingdom_info = self.kingdom_data[kingdom_name]
 
-        # === Сохраняем текущий цвет кнопки, если он ещё не сохранен ===
+        # Сохраняем оригинальный цвет
         if not hasattr(instance, "original_color"):
-            instance.original_color = instance.background_color
+            instance.original_color = instance.rect_color.rgba
 
-        # === Если есть предыдущая выбранная кнопка, восстанавливаем её цвет ===
+        # Сбрасываем предыдущую кнопку
         if self.selected_button:
-            self.selected_button.background_color = self.default_button_color
+            self.selected_button.rect_color.rgba = self.selected_button.original_color
 
-        # === Устанавливаем цвет кнопки в соответствии с фракцией ===
-        faction_color = kingdom_info["color"]  # Цвет фракции из БД (например, "#0000FF")
-        rgba_color = self.hex_to_rgba(faction_color)  # Преобразуем в RGBA
-        instance.background_color = rgba_color
-        self.selected_button = instance  # Обновляем ссылку на выбранную кнопку
+        # Применяем новый цвет
+        faction_color = kingdom_info["color"]
+        rgba_color = self.hex_to_rgba(faction_color)
+        instance.rect_color.rgba = rgba_color
+        self.selected_button = instance
 
-        # === Остальной код метода без изменений ===
+        # Обновляем данные интерфейса
         kingdom_rename = {
             "Аркадия": "arkadia",
             "Селестия": "celestia",
@@ -1059,49 +1055,91 @@ class KingdomSelectionWidget(FloatLayout):
         self.advisor_image.source = advisor_image_path
         self.advisor_image.reload()
 
-        faction_info_text = self.get_kingdom_info(kingdom_name)
-        self.faction_label.text = f"[b]{kingdom_name}[/b]\n{faction_info_text}"
+        # === ОБНОВЛЕНИЕ: вызываем метод, который заполняет self.faction_label через Image() ===
+        self.get_kingdom_info(kingdom_name)
 
     def hex_to_rgba(self, hex_color):
-        return (0, 0.3, 0.4, 1)  # Красный (fallback)
+        return (0, 0.3, 0.4, 1)
+
+    def generate_icons_layout(self, value, max_value=3):
+        layout = BoxLayout(orientation='horizontal', size_hint_y=None, height='20dp')
+        for i in range(max_value):
+            img_path = 'files/pict/menu/full.png' if i < value else 'files/pict/menu/grey.png'
+            img = Image(source=img_path, size_hint=(None, None), size=('16dp', '16dp'))
+            layout.add_widget(img)
+        return layout
 
     def get_kingdom_info(self, kingdom):
-        info = {
-            "Аркадия": "Доход крон: 10\nДоход сырья: 5\nАрмия: 9\n",
-            "Селестия": "Доход крон: 8\nДоход сырья: 6\nАрмия: 7\n",
-            "Хиперион": "Доход крон: 7\nДоход сырья: 7\nАрмия: 10\n",
-            "Халидон": "Доход крон: 4\nДоход сырья: 10\nАрмия: 6\n",
-            "Этерия": "Доход крон: 6\nДоход сырья: 8\nАрмия: 8\n"
+        full_img = 'files/pict/menu/full.png'
+        empty_img = 'files/pict/menu/grey.png'
+
+        if not os.path.exists(full_img) or not os.path.exists(empty_img):
+            print("❌ Один или оба файла изображений отсутствуют!")
+            return self.get_fallback_kingdom_info(kingdom)
+
+        stats = {
+            "Аркадия": {"Доход крон": 3, "Доход сырья": 1, "Армия": 2},
+            "Селестия": {"Доход крон": 2, "Доход сырья": 2, "Армия": 2},
+            "Хиперион": {"Доход крон": 2, "Доход сырья": 2, "Армия": 3},
+            "Халидон": {"Доход крон": 1, "Доход сырья": 3, "Армия": 1},
+            "Этерия": {"Доход крон": 1, "Доход сырья": 2, "Армия": 2}
         }
-        return info.get(kingdom, "")
+
+        data = stats.get(kingdom)
+        if not data:
+            return ""
+
+        # Чистим старый контент
+        self.faction_info_container.clear_widgets()
+
+        # Заголовок: Название фракции — больше и левее
+        title_label = Label(
+            text=f"[b]{kingdom}[/b]",
+            markup=True,
+            font_size='20sp' if platform == 'android' else '24sp',  # ← Больше текст
+            size_hint_y=None,
+            height=dp(10),
+            halign='left',
+            valign='middle',
+            text_size=(None, dp(40))
+        )
+        self.faction_info_container.add_widget(title_label)
+
+        # Доход крон
+        crown_row = BoxLayout(size_hint_y=None, height=dp(20))
+        crown_row.add_widget(Label(text="Доход крон:", size_hint_x=None, width=dp(100)))
+        crown_row.add_widget(self.generate_icons_layout(data["Доход крон"]))
+        self.faction_info_container.add_widget(crown_row)
+
+        # Доход сырья
+        resource_row = BoxLayout(size_hint_y=None, height=dp(20))
+        resource_row.add_widget(Label(text="Доход сырья:", size_hint_x=None, width=dp(100)))
+        resource_row.add_widget(self.generate_icons_layout(data["Доход сырья"]))
+        self.faction_info_container.add_widget(resource_row)
+
+        # Армия
+        army_row = BoxLayout(size_hint_y=None, height=dp(20))
+        army_row.add_widget(Label(text="Армия:", size_hint_x=None, width=dp(100)))
+        army_row.add_widget(self.generate_icons_layout(data["Армия"]))
+        self.faction_info_container.add_widget(army_row)
+
 
     def start_game(self, instance):
-        # Очистка старых данных из БД
         conn = sqlite3.connect(db_path)
         clear_tables(conn)
         conn.close()
-
-        # Восстановление из backup
         restore_from_backup()
-
         app = App.get_running_app()
         selected_kingdom = app.selected_kingdom
-
         if not selected_kingdom:
-            print("Фракция не выбрана. Пожалуйста, выберите фракцию перед началом игры.")
+            print("Фракция не выбрана.")
             return
-
-        # Загружаем данные из базы данных
         cities = load_cities_from_db(selected_kingdom)
         if not cities:
-            print("Для выбранного княжества не найдено городов.")
+            print("Города не найдены.")
             return
-
-        # Передаем выбранное княжество на новый экран игры
         game_screen = GameScreen(selected_kingdom, cities, db_path=db_path)
         app.root.clear_widgets()
-
-        # Создаем MapWidget с правильными параметрами
         map_widget = MapWidget(selected_kingdom=selected_kingdom, player_kingdom=selected_kingdom)
         app.root.add_widget(map_widget)
         app.root.add_widget(game_screen)

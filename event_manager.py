@@ -22,6 +22,42 @@ if not os.path.exists(copied_db_path):
     else:
         raise FileNotFoundError(f"❌ game_data.db отсутствует в проекте!")
 
+def format_number(number):
+    """Форматирует число с добавлением приставок (тыс., млн., млрд., трлн., квадр., квинт., секст., септил., октил., нонил., децил., андец.)"""
+    if not isinstance(number, (int, float)):
+        return str(number)
+    if number == 0:
+        return "0"
+
+    absolute = abs(number)
+    sign = -1 if number < 0 else 1
+
+    if absolute >= 1_000_000_000_000_000_000_000_000_000_000_000_000:  # 1e36
+        return f"{sign * absolute / 1e36:.1f} андец."
+    elif absolute >= 1_000_000_000_000_000_000_000_000_000_000_000:  # 1e33
+        return f"{sign * absolute / 1e33:.1f} децил."
+    elif absolute >= 1_000_000_000_000_000_000_000_000_000_000:  # 1e30
+        return f"{sign * absolute / 1e30:.1f} нонил."
+    elif absolute >= 1_000_000_000_000_000_000_000_000_000:  # 1e27
+        return f"{sign * absolute / 1e27:.1f} октил."
+    elif absolute >= 1_000_000_000_000_000_000_000_000:  # 1e24
+        return f"{sign * absolute / 1e24:.1f} септил."
+    elif absolute >= 1_000_000_000_000_000_000_000:  # 1e21
+        return f"{sign * absolute / 1e21:.1f} секст."
+    elif absolute >= 1_000_000_000_000_000_000:  # 1e18
+        return f"{sign * absolute / 1e18:.1f} квинт."
+    elif absolute >= 1_000_000_000_000_000:  # 1e15
+        return f"{sign * absolute / 1e15:.1f} квадр."
+    elif absolute >= 1_000_000_000_000:  # 1e12
+        return f"{sign * absolute / 1e12:.1f} трлн."
+    elif absolute >= 1_000_000_000:  # 1e9
+        return f"{sign * absolute / 1e9:.1f} млрд."
+    elif absolute >= 1_000_000:  # 1e6
+        return f"{sign * absolute / 1e6:.1f} млн."
+    elif absolute >= 1_000:  # 1e3
+        return f"{sign * absolute / 1e3:.1f} тыс."
+    else:
+        return f"{number}"
 
 def get_adaptive_font_size(min_size=15, max_size=20):
     """Адаптирует размер шрифта под ширину экрана с учетом Android"""
@@ -183,13 +219,21 @@ class EventManager:
         event_id, description, effects_json = event
         effects = json.loads(effects_json)
 
-        # Получаем тип ресурса из JSON
+        # Получаем тип ресурса и коэффициент
         resource_type = effects.get("resource", None)
+        kf = effects.get("kf", 1.0)
+
         if resource_type:
-            # Обнуляем ресурс напрямую
-            self.zero_resource(resource_type)
-            # Добавляем описание для бегущей строки
-            full_description = f"{description} Мы теряли: [b]{resource_type}[/b]"
+            current_value = self.get_resource_amount(resource_type)
+            if kf > 1.0:
+                # Увеличиваем ресурс по коэффициенту
+                new_value = int(current_value * kf)
+                self.economics.update_resource_now(resource_type, new_value)
+                full_description = f"{description} [b]{resource_type}[/b] увеличено до {format_number(new_value)}."
+            else:
+                # Обнуляем ресурс, если kf <= 1.0
+                self.economics.update_resource_now(resource_type, 0)
+                full_description = f"{description} Мы потеряли: [b]{resource_type}[/b]"
         else:
             full_description = description
 
@@ -421,7 +465,7 @@ class EventManager:
 
         # === Создаем контейнер во всю ширину экрана ===
         container_width = Window.width
-        container_height = dp(40)
+        container_height = dp(30)
 
         # Позиция: полностью за пределами экрана справа, пониже
         container_pos = (Window.width, Window.height * 0.1)  # ~10% от низа экрана
@@ -465,7 +509,7 @@ class EventManager:
 
         # === Анимация движения слева направо ===
         move_distance = container.width + Window.width
-        duration = move_distance / dp(130)
+        duration = move_distance / dp(150)
 
         anim = Animation(pos=(-container.width, container.y), duration=duration)
         anim.start(container)

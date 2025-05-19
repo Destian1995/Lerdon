@@ -221,10 +221,11 @@ class ManageFriend(Popup):
                 size=lambda *x: setattr(self.main_bg, 'size', main_container.size)
             )
 
-        # Таблица союзников
-        main_container.add_widget(self._create_table())
+        # Таблица союзников (ScrollView должен растягиваться)
+        table_scroll = self._create_table()
+        table_scroll.size_hint_y = 1  # ← Теперь займёт всё доступное пространство
 
-        # Прогресс-бар с кастомной отрисовкой
+        # Прогресс-бар
         self.progress_bar = ProgressBar(
             max=100,
             size_hint_y=None,
@@ -232,15 +233,14 @@ class ManageFriend(Popup):
         )
         self.progress_bar.opacity = 0
 
+        # Графика прогрессбара
         with self.progress_bar.canvas.before:
-            # Фон прогрессбара
             Color(0.3, 0.3, 0.3, 1)
             self.progress_bg = RoundedRectangle(
                 size=self.progress_bar.size,
                 pos=self.progress_bar.pos,
                 radius=[dp(5)] * 4
             )
-            # Активная часть
             Color(0.2, 0.6, 0.8, 1)
             self.progress_rect = RoundedRectangle(
                 size=(0, self.progress_bar.height),
@@ -255,12 +255,15 @@ class ManageFriend(Popup):
         )
 
         # Статус бар
-        status_box = BoxLayout(size_hint_y=None, height=dp(70))
         status_content = BoxLayout(orientation='vertical', spacing=dp(5))
         status_content.add_widget(self.status_label)
         status_content.add_widget(self.progress_bar)
+
+        status_box = BoxLayout(
+            size_hint_y=None,
+            height=dp(70)
+        )
         status_box.add_widget(status_content)
-        main_container.add_widget(status_box)
 
         # Кнопки управления
         button_box = BoxLayout(
@@ -275,9 +278,12 @@ class ManageFriend(Popup):
             **STYLE_BUTTON
         )
         close_btn.bind(on_release=lambda btn: self.dismiss())
-
         button_box.add_widget(close_btn)
-        main_container.add_widget(button_box)
+
+        # Добавляем всё в main_container
+        main_container.add_widget(table_scroll)  # ← size_hint_y=1
+        main_container.add_widget(status_box)  # ← фиксированная высота
+        main_container.add_widget(button_box)  # ← фиксированная высота
 
         self.content = main_container
 
@@ -301,6 +307,7 @@ class ManageFriend(Popup):
             size_hint_y=None
         )
         main_container.bind(minimum_height=main_container.setter('height'))
+        main_container.minimum_height = dp(800)
 
         if not allies:
             no_allies_label = Label(
