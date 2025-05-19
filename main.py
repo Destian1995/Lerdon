@@ -1123,7 +1123,6 @@ class KingdomSelectionWidget(FloatLayout):
         army_row.add_widget(self.generate_icons_layout(data["Армия"]))
         self.faction_info_container.add_widget(army_row)
 
-
     def start_game(self, instance):
         conn = sqlite3.connect(db_path)
         clear_tables(conn)
