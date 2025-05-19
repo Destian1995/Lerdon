@@ -977,30 +977,35 @@ class KingdomSelectionWidget(FloatLayout):
         instance.state = 'play'
 
     def animate_in(self):
-        center_x = Window.width * 0.5
-        center_y = Window.height * 0.5
+        # Размеры окна
+        window_center_x = Window.width * 0.5
+        window_center_y = Window.height * 0.5
 
         # === Анимация панели фракций: выезжает слева ===
-        target_x_panel = center_x - self.kingdom_buttons.width / 1.4
+        target_x_panel = window_center_x - self.kingdom_buttons.width / 1.4
+        target_y_panel = window_center_y - self.kingdom_buttons.height / 2  # Центрируем вертикально
+
         anim_panel = Animation(
             x=target_x_panel,
-            y=center_y * 0.4,
+            y=target_y_panel,
             duration=0.8,
             t='out_back'
         )
         anim_panel.start(self.kingdom_buttons)
 
         # === Анимация кнопки "Начать игру": появляется справа ===
-        target_x_start = center_x + self.kingdom_buttons.width / 2 + dp(30)
+        target_x_start = window_center_x + self.kingdom_buttons.width / 2 + dp(30)
+        target_y_start = Window.height * 0.1
+
         anim_start = Animation(
             x=target_x_start,
-            y=Window.height * 0.1,
+            y=target_y_start,
             duration=0.8,
             t='out_back'
         )
         anim_start.start(self.start_game_button)
 
-        # === Анимация кнопки "Вернуться в главное меню": подъезжает снизу или слева ===
+        # === Анимация кнопки "Вернуться в главное меню" ===
         back_btn = None
         for child in self.buttons_container.children:
             if child.text == "Вернуться в главное меню":
@@ -1008,9 +1013,12 @@ class KingdomSelectionWidget(FloatLayout):
                 break
 
         if back_btn:
+            target_x_back = window_center_x - back_btn.width * 1.5
+            target_y_back = dp(4)  # Фиксируем близко к нижнему краю с учётом dp()
+
             anim_back = Animation(
-                x=center_x - back_btn.width / 0.68,
-                y=Window.height * 0.05,
+                x=target_x_back,
+                y=target_y_back,
                 duration=0.8,
                 t='out_back'
             )
