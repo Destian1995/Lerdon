@@ -869,7 +869,7 @@ class KingdomSelectionWidget(FloatLayout):
             valign='middle',
             size_hint=(0.8, None),
             height=dp(60) if is_android else 80,
-            pos_hint={'center_x': 0.5, 'top': 0.9}
+            pos_hint={'center_x': 0.8, 'top': 0.9}
         )
         self.add_widget(self.select_side_label)
 
@@ -904,8 +904,8 @@ class KingdomSelectionWidget(FloatLayout):
         self.selected_button = None
 
         # Панель кнопок (выезжает слева)
-        panel_width = 0.3
-        button_height = dp(50) if is_android else 60
+        panel_width = 0.38
+        button_height = dp(40) if is_android else 60
         spacing_val = dp(10) if is_android else 10
         padding = [dp(20), dp(20), dp(20), dp(20)] if is_android else [20, 20, 20, 20]
 
