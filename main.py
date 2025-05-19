@@ -9,6 +9,7 @@ screen_width, screen_height = 1200, 800
 # === Настройка пути к базе данных ===
 if platform == 'android':
     from android.storage import app_storage_path
+
     storage_dir = app_storage_path()
 else:
     storage_dir = os.path.dirname(__file__)
@@ -20,6 +21,7 @@ copied_db_path = os.path.join(storage_dir, 'game_data.db')
 if not os.path.exists(copied_db_path):
     if os.path.exists(original_db_path):
         import shutil
+
         shutil.copy(original_db_path, copied_db_path)
         print(f"✅ База данных скопирована в {copied_db_path}")
     else:
@@ -40,6 +42,7 @@ def save_last_clicked_city(city_name: str):
     )
     conn.commit()
     conn.close()
+
 
 def load_cities_from_db(selected_kingdom):
     """
@@ -84,6 +87,7 @@ def load_cities_from_db(selected_kingdom):
         # Закрытие соединения с базой данных
         conn.close()
 
+
 def cleanup_sqlite_cache(db_path):
     """
     Удаляет .shm и .wal файлы, если они старше 5 минут.
@@ -102,6 +106,7 @@ def cleanup_sqlite_cache(db_path):
                     print(f"🗑️ Удалён устаревший файл кэша: {cache_file}")
                 except Exception as e:
                     print(f"❌ Не удалось удалить файл {cache_file}: {e}")
+
 
 def restore_from_backup():
     """
@@ -215,7 +220,6 @@ def clear_tables(conn):
     except sqlite3.Error as e:
         print(f"Ошибка при очистке таблиц: {e}")
         conn.rollback()  # Откат изменений в случае ошибки
-
 
 
 class MapWidget(Widget):
@@ -396,7 +400,8 @@ class MapWidget(Widget):
                     player_fraction=self.current_player_kingdom
                 )
                 popup.open()
-                print(f"Крепость {fortress_data['coordinates']} принадлежит {'вашему' if owner == self.current_player_kingdom else 'чужому'} королевству!")
+                print(
+                    f"Крепость {fortress_data['coordinates']} принадлежит {'вашему' if owner == self.current_player_kingdom else 'чужому'} королевству!")
                 break
 
     def on_touch_up(self, touch):
@@ -409,35 +414,26 @@ class MapWidget(Widget):
         self.draw_fortresses()
 
 
+class AnimatedButton(Button):
+    animated_center_y = NumericProperty(0)
 
 class MenuWidget(FloatLayout):
     def __init__(self, **kwargs):
         super(MenuWidget, self).__init__(**kwargs)
 
-        # Список с именами файлов картинок и соответствующими фракциями
-        self.menu_images = {
-            'files/menu/arkadia.jpg': "Аркадия",
-            'files/menu/celestia.jpg': "Селестия",
-            'files/menu/eteria.jpg': "Этерия",
-            'files/menu/halidon.jpg': "Халидон",
-            'files/menu/giperion.jpg': "Хиперион"
-        }
-
-        # Создаем два изображения для плавной смены фона
-        self.bg_image_1 = Image(source=random.choice(list(self.menu_images.keys())), allow_stretch=True, keep_ratio=False)
-        self.bg_image_2 = Image(source=random.choice(list(self.menu_images.keys())), allow_stretch=True, keep_ratio=False, opacity=0)
-
-        # Добавляем оба изображения на виджет
+        # Фон
+        self.bg_image_1 = Image(source='files/menu/arkadia.jpg', allow_stretch=True, keep_ratio=False)
+        self.bg_image_2 = Image(source='files/menu/celestia.jpg', allow_stretch=True, keep_ratio=False, opacity=0)
         self.add_widget(self.bg_image_1)
         self.add_widget(self.bg_image_2)
 
-        # Логотип — png вместо текста
+        # Логотип
         self.title_label = Label(
             text="Лэрдон",
-            font_size='48sp',  # Размер шрифта
+            font_size='48sp',
             bold=True,
-            color=(1, 1, 1, 1),  # Белый цвет текста
-            outline_color=(0, 0, 0, 1),  # Черный контур для читаемости
+            color=(1, 1, 1, 1),
+            outline_color=(0, 0, 0, 1),
             outline_width=2,
             halign='center',
             valign='middle',
@@ -448,9 +444,9 @@ class MenuWidget(FloatLayout):
         self.add_widget(self.title_label)
 
         # Кнопки
-        button_height = 0.08
-        button_spacing = 0.03
-        button_start_y = 0.65  # Начальная позиция по Y для первой кнопки
+        button_height = 0.1
+        button_spacing = 0.05
+        button_start_y = 0.68
 
         btn_start_game = self.create_styled_button("В Лэрдон", button_start_y)
         btn_start_game.bind(on_press=self.start_game)
@@ -461,63 +457,112 @@ class MenuWidget(FloatLayout):
         btn_exit = self.create_styled_button("Выход", button_start_y - 2 * (button_height + button_spacing))
         btn_exit.bind(on_press=self.exit_game)
 
-        # Добавляем кнопки
         self.add_widget(btn_start_game)
         self.add_widget(btn_how_to_play)
         self.add_widget(btn_exit)
 
-        # Запускаем анимацию фона
+        Clock.schedule_once(lambda dt: self.animate_buttons_in_exit([btn_exit]), 0.02)
+        Clock.schedule_once(lambda dt: self.animate_buttons_in_game([btn_how_to_play]), 0.3)
+        Clock.schedule_once(lambda dt: self.animate_buttons_in_start([btn_start_game]), 0.7)
+        # Анимация фона
         self.current_image = self.bg_image_1
         self.next_image = self.bg_image_2
-        Clock.schedule_interval(self.animate_background, 5)  # Меняем фон каждые 5 секунд
+        Clock.schedule_interval(self.animate_background, 5)
 
     def create_styled_button(self, text, y_pos):
-        """Создаёт стилизованную кнопку с эффектом при наведении."""
-        btn = Button(
+        btn = AnimatedButton(
             text=text,
             size_hint=(0.4, 0.08),
             pos_hint={'center_x': 0.5, 'center_y': y_pos},
             background_normal='',
-            background_color=(0.2, 0.6, 1, 0.9),
+            background_color=(0, 0, 0, 0),
             color=(1, 1, 1, 1),
             font_size='20sp',
             markup=True
         )
+        # Сохраняем начальную позицию Y для анимации
+        btn.initial_center_y = y_pos  # <--- Добавленная строка
 
-        # Анимация при наведении
-        def on_enter(instance):
-            animate = Animation(background_color=(0.3, 0.7, 1, 1), duration=0.2)
-            animate.start(instance)
+        with btn.canvas.before:
+            Color(0.2, 0.6, 1, 0.9)
+            btn.rect = RoundedRectangle(pos=btn.pos, size=btn.size, radius=[20])
 
-        def on_leave(instance):
-            animate = Animation(background_color=(0.2, 0.6, 1, 0.9), duration=0.2)
-            animate.start(instance)
+        def update_rect(instance, value):
+            instance.rect.pos = instance.pos
+            instance.rect.size = instance.size
 
-        btn.bind(on_enter=on_enter)
-        btn.bind(on_leave=on_leave)
-
+        btn.bind(pos=update_rect, size=update_rect)
         return btn
 
+    def animate_buttons_in_game(self, buttons):
+        for i, btn in enumerate(buttons):
+            print(f"[{btn.text}] Initial Y: {btn.initial_center_y}")
+
+            btn.opacity = 0
+            btn.scale = 0.8
+            btn.pos_hint = {'center_x': 0.5, 'center_y': btn.initial_center_y + 0.2}
+            btn.animated_center_y = btn.initial_center_y + 0.1
+
+            anim = Animation(
+                animated_center_y=btn.initial_center_y,
+                opacity=1,
+                scale=1,
+                duration=0.5,
+                transition='out_back'
+            )
+            btn.bind(animated_center_y=self.update_button_pos)
+
+            Clock.schedule_once(lambda dt, b=btn: anim.start(b), i * 0.15)
+
+    def animate_buttons_in_start(self, buttons):
+        for i, btn in enumerate(buttons):
+            print(f"[{btn.text}] Initial Y: {btn.initial_center_y}")
+
+            btn.opacity = 0
+            btn.scale = 0.8
+            btn.pos_hint = {'center_x': 0.5, 'center_y': btn.initial_center_y + 0.2}
+            btn.animated_center_y = btn.initial_center_y + 0.1
+
+            anim = Animation(
+                animated_center_y=btn.initial_center_y,
+                opacity=1,
+                scale=1,
+                duration=0.5,
+                transition='out_back'
+            )
+            btn.bind(animated_center_y=self.update_button_pos)
+
+            Clock.schedule_once(lambda dt, b=btn: anim.start(b), i * 0.15)
+
+    def animate_buttons_in_exit(self, buttons):
+        for i, btn in enumerate(buttons):
+            print(f"[{btn.text}] Initial Y: {btn.initial_center_y}")
+
+            btn.opacity = 0
+            btn.scale = 0.8
+            btn.pos_hint = {'center_x': 0.5, 'center_y': btn.initial_center_y + 0.2}
+            btn.animated_center_y = btn.initial_center_y + 0.1
+
+            anim = Animation(
+                animated_center_y=btn.initial_center_y,
+                opacity=1,
+                scale=1,
+                duration=0.5,
+                transition='out_back'
+            )
+            btn.bind(animated_center_y=self.update_button_pos)
+
+            Clock.schedule_once(lambda dt, b=btn: anim.start(b), i * 0.15)
+
+
+    def update_button_pos(self, instance, value):
+        instance.pos_hint = {'center_x': 0.5, 'center_y': value}
+
+    # Остальные методы остаются без изменений
     def open_how_to_play(self, instance):
         app = App.get_running_app()
         app.root.clear_widgets()
         app.root.add_widget(HowToPlayScreen())
-
-    def animate_background(self, dt):
-        """Анимация плавной смены фоновых изображений."""
-        new_image_source = random.choice(list(self.menu_images.keys()))
-        while new_image_source == self.next_image.source:
-            new_image_source = random.choice(list(self.menu_images.keys()))
-        self.next_image.source = new_image_source
-        self.next_image.opacity = 0
-
-        fade_out = Animation(opacity=0, duration=2)
-        fade_out.start(self.current_image)
-
-        fade_in = Animation(opacity=1, duration=2)
-        fade_in.start(self.next_image)
-
-        self.current_image, self.next_image = self.next_image, self.current_image
 
     def start_game(self, instance):
         app = App.get_running_app()
@@ -527,6 +572,31 @@ class MenuWidget(FloatLayout):
     def exit_game(self, instance):
         App.get_running_app().stop()
 
+    def animate_background(self, dt):
+        new_source = random.choice([
+            'files/menu/arkadia.jpg',
+            'files/menu/celestia.jpg',
+            'files/menu/eteria.jpg',
+            'files/menu/halidon.jpg',
+            'files/menu/giperion.jpg'
+        ])
+        while new_source == self.next_image.source:
+            new_source = random.choice([
+                'files/menu/arkadia.jpg',
+                'files/menu/celestia.jpg',
+                'files/menu/eteria.jpg',
+                'files/menu/halidon.jpg',
+                'files/menu/giperion.jpg'
+            ])
+
+        self.next_image.source = new_source
+        fade_out = Animation(opacity=0, duration=1.5)
+        fade_in = Animation(opacity=1, duration=1.5)
+
+        fade_out.start(self.current_image)
+        fade_in.start(self.next_image)
+
+        self.current_image, self.next_image = self.next_image, self.current_image
 
 # Вкладка обучения
 class HowToPlayScreen(FloatLayout):
@@ -560,7 +630,6 @@ class HowToPlayScreen(FloatLayout):
             {"type": "image", "source": "files/menu/tutorial/economy_2.jpg"},
             {"type": "text", "content": "* Для более детальной информации об экономике игры посетите раздел схема"}
         ])
-
 
         # === Вкладка "Армия" ===
         army_content = self.create_scrollable_content([
@@ -607,7 +676,6 @@ class HowToPlayScreen(FloatLayout):
                                         "\n"
                                         "Будь осторожен игрок! И помни вся твоя навоеванная статистика учитывается в финальном отчете!"}
         ])
-
 
         # === Вкладка "Политика" ===
         politics_content = self.create_scrollable_content([
@@ -690,7 +758,6 @@ class HowToPlayScreen(FloatLayout):
                                         "умирать от голода. Пока ее потребление снова не станет меньше или равно лимиту"}
         ])
 
-
         # === Вкладка "Экономика" ===
         economy_tab = TabbedPanelHeader(text='Экономика')
         economy_tab.content = economy_content
@@ -732,8 +799,6 @@ class HowToPlayScreen(FloatLayout):
         )
         back_button.bind(on_press=self.back_to_menu)
         self.add_widget(back_button)
-
-
 
     def create_scrollable_content(self, content_blocks):
         layout = BoxLayout(orientation='vertical', size_hint_y=None)
@@ -1079,13 +1144,12 @@ class EmpireApp(App):
     def on_stop(self):
         # Закрываем все соединения при завершении
         for child in self.root.children:
-            if hasattr(child, 'game_process'):
-                child.game_process.close_connection()
-            if hasattr(child, 'results_game'):
-                child.results_game.close_connection()
+            if hasattr(child, 'conn'):
+                child.conn.close()
 
         # Очистка устаревших файлов SQLite (.shm, .wal)
         cleanup_sqlite_cache(copied_db_path)
+
 
 if __name__ == '__main__':
     cleanup_sqlite_cache(copied_db_path)

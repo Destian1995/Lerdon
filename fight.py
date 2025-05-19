@@ -201,15 +201,20 @@ def show_battle_report(report_data):
 
     # Функция для создания таблицы
     def create_table(data, title):
-        table_layout = GridLayout(cols=4, size_hint_y=None, spacing=dp(5), padding=dp(10))
+        table_layout = GridLayout(
+            cols=4,
+            size_hint_y=None,
+            spacing=dp(10),  # <-- Увеличенное расстояние между ячейками
+            padding=dp(10)
+        )
         table_layout.bind(minimum_height=table_layout.setter('height'))
 
-        # Заголовок таблицы (без цвета)
+        # Заголовок таблицы
         header = Label(
             text=f"[b]{title}[/b]",
             markup=True,
             size_hint_y=None,
-            height=dp(30),
+            height=dp(40),  # <-- Высота заголовка
             font_size=sp(15),
             color=(1, 1, 1, 1)
         )
@@ -222,7 +227,7 @@ def show_battle_report(report_data):
                 text=f"[b]{header_text}[/b]",
                 markup=True,
                 size_hint_y=None,
-                height=dp(30),
+                height=dp(40),  # <-- Увеличили высоту заголовков
                 font_size=sp(14),
                 color=(0.8, 0.8, 0.8, 1)
             )
@@ -230,10 +235,19 @@ def show_battle_report(report_data):
 
         # Данные
         for unit_data in data:
-            table_layout.add_widget(Label(text=unit_data['unit_name'], font_size=sp(14)))
-            table_layout.add_widget(Label(text=str(unit_data['initial_count']), font_size=sp(14)))
-            table_layout.add_widget(Label(text=str(unit_data['losses']), font_size=sp(14)))
-            table_layout.add_widget(Label(text=str(unit_data['final_count']), font_size=sp(14)))
+            for value in [
+                unit_data['unit_name'],
+                str(unit_data['initial_count']),
+                str(unit_data['losses']),
+                str(unit_data['final_count'])
+            ]:
+                cell = Label(
+                    text=value,
+                    font_size=sp(14),
+                    size_hint_y=None,
+                    height=dp(40)  # <-- Увеличили высоту строк с данными
+                )
+                table_layout.add_widget(cell)
 
         main_layout.add_widget(table_layout)
 

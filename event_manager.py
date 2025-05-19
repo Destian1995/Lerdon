@@ -53,13 +53,15 @@ class EventManager:
     def generate_event(self, current_turn):
         """
         Генерирует случайное событие из базы данных и определяет его тип.
+        За один ход происходит максимум одно событие.
         :param current_turn: Текущий ход игры.
         """
-        # Проверяем карму и генерируем события sequences (если текущий ход >= 20)
-        if current_turn >= 20:
-            self.check_karma_and_generate_sequence(current_turn)
+        # Проверяем карму и пытаемся сгенерировать событие sequences
+        generated = self.check_karma_and_generate_sequence(current_turn)
+        if generated:
+            return  # Если событие sequences сгенерировано — выходим
 
-        # Генерируем обычное событие (active или passive)
+        # Иначе генерируем обычное событие (active или passive)
         cursor = self.db_connection.cursor()
         cursor.execute("""
             SELECT id, description, event_type, effects, option_1_description, option_2_description
@@ -76,8 +78,6 @@ class EventManager:
         # Распаковываем данные события
         event_id, description, event_type, effects, option_1_description, option_2_description = event
         effects = json.loads(effects)  # Преобразуем JSON-строку в словарь
-
-        # Добавляем описания опций в словарь effects
         effects["option_1_description"] = option_1_description
         effects["option_2_description"] = option_2_description
 
@@ -101,77 +101,94 @@ class EventManager:
 
         self.show_event_active_popup(description, option_1, option_2, effects)
 
-
     def check_karma_and_generate_sequence(self, current_turn):
         """
         Проверяет карму и генерирует событие типа 'sequences' на основе значения karma_score.
-        После проверки очищает значение кармы.
+        После успешной генерации события очищает значение кармы.
         :param current_turn: Текущий ход игры.
+        :return: True, если событие было сгенерировано
         """
-        # Получаем текущее значение кармы и последний ход проверки
         cursor = self.db_connection.cursor()
         cursor.execute("SELECT karma_score, last_check_turn FROM karma WHERE faction = ?", (self.player_faction,))
         result = cursor.fetchone()
         if not result:
-            return
+            return False
 
         karma_score, last_check_turn = result
         turns_since_last_check = current_turn - last_check_turn
 
         # Проверяем, прошло ли достаточно ходов для нового "среза"
         if turns_since_last_check < random.randint(8, 13):
-            return
+            return False
 
-        # Генерируем событие на основе значения karma_score
+        # Генерируем событие только если карма соответствует условиям
         if karma_score > 6:
             print("Положительное событие sequences!")
-            self.generate_sequence_event()
+            success = self.generate_sequence_event('posi')
+            if success:
+                self.clear_karma(current_turn)
+                return True
+            return False
         elif karma_score < 0:
             print("Отрицательное событие sequences!")
-            self.generate_sequence_event()
+            success = self.generate_sequence_event('negat')
+            if success:
+                self.clear_karma(current_turn)
+                return True
+            return False
         else:
             print("Нейтральная карма. События sequences не генерируются.")
 
-        # Очищаем значение кармы
+        return False
+
+    def clear_karma(self, current_turn):
+        """
+        Обнуляет значение кармы и обновляет last_check_turn.
+        """
+        cursor = self.db_connection.cursor()
         cursor.execute("""
             UPDATE karma
             SET karma_score = 0, last_check_turn = ?
             WHERE faction = ?
         """, (current_turn, self.player_faction))
         self.db_connection.commit()
-
         print(f"[DEBUG] Карма для фракции '{self.player_faction}' очищена.")
 
-    def generate_sequence_event(self, event_type):
+    def generate_sequence_event(self, karma_type):
         """
-        Генерирует событие типа 'sequences' из базы данных.
-        :param event_type: Тип события ('positive' или 'negative').
+        Генерирует событие sequences с учётом типа кармы.
+        :param karma_type: 'posi' или 'negat'
         """
-        cursor = self.db_connection.cursor()
-        cursor.execute("""
-            SELECT id, description
+        # Определяем условие KF
+        kf_condition = "> 1.0" if karma_type == "posi" else "< 1.0"
+        query = f"""
+            SELECT id, description, effects 
             FROM events
             WHERE event_type = 'sequences'
+              AND json_extract(effects, '$.kf') {kf_condition}
             ORDER BY RANDOM()
             LIMIT 1
-        """)
+        """
+        cursor = self.db_connection.cursor()
+        cursor.execute(query)
         event = cursor.fetchone()
         if not event:
-            print(f"Событие типа '{event_type}' не найдено.")
+            print(f"[WARN] Нет подходящих событий для '{karma_type}' (kf {kf_condition})")
             return
 
-        event_id, description = event
-        # Показываем событие как модальное окно с кнопкой "Ясно"
-        self.show_event_sequence_popup(description)
+        event_id, description, effects_json = event
+        effects = json.loads(effects_json)
 
-    def show_event_sequence_popup(self, description):
+        # Вызываем обработчик событий напрямую
+        self.handle_passive_event(description, effects, event_type='sequences')
+
+    def show_event_sequence_popup(self, description, effects=None):
         """
-        Отображает событие типа sequences в виде модального окна с кнопкой "Ясно".
+        Отображает событие типа sequences в виде модального окна с кнопкой "Ясно"
+        и применяет эффекты к ресурсам.
         """
         font_size = get_adaptive_font_size()
-
         content = BoxLayout(orientation="vertical", padding=dp(15), spacing=dp(10))
-
         label = Label(
             text=description,
             font_size=font_size * 1.1,
@@ -196,10 +213,17 @@ class EventManager:
 
         popup = self.create_styled_popup("", content)
 
-        button_ok.bind(on_press=lambda x: popup.dismiss())
+        # Применяем эффекты при нажатии на кнопку
+        def on_ok(instance):
+            if effects:
+                self.handle_passive_event(description, effects, event_type='sequences')
+            popup.dismiss()
+
+        button_ok.bind(on_press=on_ok)
 
         content.add_widget(label)
         content.add_widget(button_ok)
+
         popup.open()
 
     def handle_passive_event(self, description, effects, event_type=None):
@@ -259,12 +283,12 @@ class EventManager:
         # Обработчики нажатий
         def on_button_1(instance):
             self.apply_effects_with_economic_module(effects.get("option_1", {}))
-            self.update_karma(self.player_faction, 2)
+            self.update_karma(self.player_faction, 4)
             popup.dismiss()
 
         def on_button_2(instance):
             self.apply_effects_with_economic_module(effects.get("option_2", {}))
-            self.update_karma(self.player_faction, -3)
+            self.update_karma(self.player_faction, -6)
             popup.dismiss()
 
         button_1.bind(on_press=on_button_1)
@@ -482,58 +506,75 @@ class EventManager:
 
     def show_temporary_build(self, description, event_type):
         """
-        Отображает бегущую строку слева с цветом в зависимости от типа события.
+        Отображает бегущую строку по всей ширине окна.
+        Текст плавно движется справа налево.
         :param description: Описание события.
         :param event_type: Тип события ('passive' или 'sequences').
         """
-        # Определяем цвет текста и коэффициент скорости анимации
+
+        # Цвет текста в зависимости от типа события
         if event_type == "passive":
             text_color = (1, 1, 1, 1)  # Белый
         elif event_type == "sequences":
             text_color = (0.5, 0.8, 1, 1)  # Светло-синий
         else:
-            text_color = (1, 1, 1, 1)  # По умолчанию белый
+            text_color = (1, 1, 1, 1)
 
-        # Адаптивный размер шрифта
-        font_size = get_adaptive_font_size(min_size=12, max_size=16)
+        font_size = get_adaptive_font_size(min_size=14, max_size=20)
 
-        # Создаем Label с начальной позицией за пределами экрана слева
+        # === Создаем контейнер во всю ширину экрана ===
+        container_width = Window.width
+        container_height = dp(50)
+
+        # Позиция: полностью за пределами экрана справа, пониже
+        container_pos = (Window.width, Window.height * 0.1)  # ~10% от низа экрана
+
+        container = BoxLayout(
+            orientation='horizontal',
+            size_hint=(None, None),
+            size=(container_width, container_height),
+            pos=container_pos
+        )
+
+        # === Внутри контейнера — Label с текстом ===
         build_label = Label(
             text=description,
             font_size=font_size,
-            size_hint=(None, None),
-            size=(Window.width * 0.7, dp(40)),  # Ширина 70% экрана
-            pos=(-Window.width * 0.7, Window.height * 0.8),  # Начальная позиция за левой границей
             color=text_color,
             halign="left",
-            valign="middle"
+            valign="middle",
+            size_hint_x=None,
+            width=container_width * 1.5,  # Чтобы текст выходил за край
+            text_size=(None, container_height),  # Для переноса и выравнивания
+            shorten=False,
+            markup=True
         )
-        build_label.bind(texture_size=build_label.setter('size'))  # Автоматическая высота
+        build_label.bind(texture_size=build_label.setter('size'))
 
-        # Добавляем черную рамку
-        with build_label.canvas.before:
-            Color(0, 0, 0, 1)
-            build_label.rect = Rectangle(pos=build_label.pos, size=build_label.size)
+        container.add_widget(build_label)
 
-        # Обновление позиции прямоугольника при изменении Label
+        # === Добавляем черную рамку вокруг контейнера ===
+        with container.canvas.before:
+            Color(0, 0, 0, 0.7)  # Черный фон с прозрачностью
+            container.rect = Rectangle(pos=container.pos, size=container.size)
+
         def update_rect(instance, value):
             instance.rect.pos = instance.pos
             instance.rect.size = instance.size
 
-        build_label.bind(pos=update_rect, size=update_rect)
+        container.bind(pos=update_rect, size=update_rect)
 
-        # Добавляем виджет на экран
-        self.game_screen.add_widget(build_label)
+        self.game_screen.add_widget(container)
 
-        # Анимация бегущей строки
-        move_distance = Window.width + build_label.width  # Расстояние до правой границы
-        duration = move_distance / dp(100)  # Скорость анимации (100 px/сек)
+        # === Анимация движения слева направо ===
+        move_distance = container.width + Window.width
+        duration = move_distance / dp(80)  # Медленнее и плавнее
 
-        anim = Animation(pos=(-build_label.width, build_label.y), duration=duration)
-        anim.start(build_label)
+        anim = Animation(pos=(-container.width, container.y), duration=duration)
+        anim.start(container)
 
-        # Удаление виджета после анимации
+        # === Удаляем виджет после завершения анимации ===
         def remove_widget(dt):
-            self.game_screen.remove_widget(build_label)
+            self.game_screen.remove_widget(container)
 
         Clock.schedule_once(remove_widget, duration)

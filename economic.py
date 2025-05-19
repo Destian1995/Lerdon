@@ -1634,7 +1634,7 @@ def open_build_popup(faction):
 
 
 def open_trade_popup(game_instance):
-    game_instance.load_resources_from_db()
+    game_instance.get_resources()
     game_instance.generate_raw_material_price()
 
     trade_layout = BoxLayout(

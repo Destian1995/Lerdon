@@ -46,3 +46,5 @@ from kivy.resources import resource_find
 from kivy.graphics import Color, Ellipse
 from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelHeader
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.image import Image as KivyImage
+from kivy.graphics import RoundedRectangle, Color, Rectangle as KvRect
