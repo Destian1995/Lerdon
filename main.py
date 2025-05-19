@@ -1144,7 +1144,6 @@ class KingdomSelectionWidget(FloatLayout):
         app.root.add_widget(map_widget)
         app.root.add_widget(game_screen)
 
-
 # Основное приложение
 class EmpireApp(App):
     def __init__(self, **kwargs):
