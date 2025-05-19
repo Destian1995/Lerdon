@@ -904,7 +904,7 @@ class KingdomSelectionWidget(FloatLayout):
         self.selected_button = None
 
         # Панель кнопок (выезжает слева)
-        panel_width = 0.38
+        panel_width = 0.35
         button_height = dp(40) if is_android else 60
         spacing_val = dp(10) if is_android else 10
         padding = [dp(20), dp(20), dp(20), dp(20)] if is_android else [20, 20, 20, 20]
@@ -914,7 +914,7 @@ class KingdomSelectionWidget(FloatLayout):
             spacing=spacing_val,
             size_hint=(panel_width, None),
             height=self.calculate_panel_height(button_height, spacing_val, padding),
-            pos=(-Window.width * 0.5, self.center_y * 2.4)
+            pos=(-Window.width * 0.5, self.center_y * 2.52)
         )
 
         for kingdom in self.kingdom_data.keys():
