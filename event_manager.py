@@ -105,21 +105,27 @@ class EventManager:
         """
         Проверяет карму и генерирует событие типа 'sequences' на основе значения karma_score.
         После успешной генерации события очищает значение кармы.
-        :param current_turn: Текущий ход игры.
-        :return: True, если событие было сгенерировано
         """
         cursor = self.db_connection.cursor()
         cursor.execute("SELECT karma_score, last_check_turn FROM karma WHERE faction = ?", (self.player_faction,))
         result = cursor.fetchone()
         if not result:
             return False
-
         karma_score, last_check_turn = result
+
         turns_since_last_check = current_turn - last_check_turn
 
         # Проверяем, прошло ли достаточно ходов для нового "среза"
-        if turns_since_last_check < random.randint(8, 13):
+        if turns_since_last_check < random.randint(10, 15):  # ↑ увеличили интервал
             return False
+
+        # Обновляем last_check_turn, чтобы избежать повторной попытки в ближайших ходах
+        cursor.execute("""
+            UPDATE karma
+            SET last_check_turn = ?
+            WHERE faction = ?
+        """, (current_turn, self.player_faction))
+        self.db_connection.commit()
 
         # Генерируем событие только если карма соответствует условиям
         if karma_score > 6:
@@ -138,7 +144,6 @@ class EventManager:
             return False
         else:
             print("Нейтральная карма. События sequences не генерируются.")
-
         return False
 
     def clear_karma(self, current_turn):
@@ -159,7 +164,6 @@ class EventManager:
         Генерирует событие sequences с учётом типа кармы.
         :param karma_type: 'posi' или 'negat'
         """
-        # Определяем условие KF
         kf_condition = "> 1.0" if karma_type == "posi" else "< 1.0"
         query = f"""
             SELECT id, description, effects 
@@ -174,57 +178,31 @@ class EventManager:
         event = cursor.fetchone()
         if not event:
             print(f"[WARN] Нет подходящих событий для '{karma_type}' (kf {kf_condition})")
-            return
+            return False
 
         event_id, description, effects_json = event
         effects = json.loads(effects_json)
 
-        # Вызываем обработчик событий напрямую
-        self.handle_passive_event(description, effects, event_type='sequences')
+        # Получаем тип ресурса из JSON
+        resource_type = effects.get("resource", None)
+        if resource_type:
+            # Обнуляем ресурс напрямую
+            self.zero_resource(resource_type)
+            # Добавляем описание для бегущей строки
+            full_description = f"{description} Мы теряли: [b]{resource_type}[/b]"
+        else:
+            full_description = description
 
-    def show_event_sequence_popup(self, description, effects=None):
+        # Отображаем как бегущую строку
+        self.show_temporary_build(full_description, "sequences")
+        return True
+
+    def zero_resource(self, resource_type):
         """
-        Отображает событие типа sequences в виде модального окна с кнопкой "Ясно"
-        и применяет эффекты к ресурсам.
+        Обнуляет указанный ресурс через экономический модуль.
         """
-        font_size = get_adaptive_font_size()
-        content = BoxLayout(orientation="vertical", padding=dp(15), spacing=dp(10))
-        label = Label(
-            text=description,
-            font_size=font_size * 1.1,
-            size_hint=(1, None),
-            halign="center",
-            valign="middle",
-            markup=True,
-            shorten=False,
-            max_lines=0,
-            line_height=1.2,
-        )
-
-        def update_label_size(instance, width):
-            label.text_size = (width - dp(30), None)
-            label.texture_update()
-            if label.texture:
-                label.height = max(dp(100), label.texture_size[1] + dp(10))
-
-        content.bind(width=update_label_size)
-
-        button_ok = self.create_gradient_button("Ясно", (0.2, 0.7, 0.2, 1), (0.1, 0.5, 0.1, 1), font_size)
-
-        popup = self.create_styled_popup("", content)
-
-        # Применяем эффекты при нажатии на кнопку
-        def on_ok(instance):
-            if effects:
-                self.handle_passive_event(description, effects, event_type='sequences')
-            popup.dismiss()
-
-        button_ok.bind(on_press=on_ok)
-
-        content.add_widget(label)
-        content.add_widget(button_ok)
-
-        popup.open()
+        print(f"[DEBUG] Обнуление ресурса '{resource_type}' через экономический модуль.")
+        self.economics.update_resource_now(resource_type, 0)  # ← Теперь через модуль
 
     def handle_passive_event(self, description, effects, event_type=None):
         """
@@ -369,87 +347,6 @@ class EventManager:
 
         return btn
 
-    def check_karma_effects(self, faction, current_turn):
-        """
-        Проверяет карму и применяет бонусы/штрафы.
-        :param faction: Название фракции.
-        :param current_turn: Текущий ход.
-        """
-        cursor = self.db_connection.cursor()
-        cursor.execute("SELECT karma_score, last_check_turn FROM karma WHERE faction = ?", (faction,))
-        result = cursor.fetchone()
-        if not result:
-            return
-
-        karma_score, last_check_turn = result
-
-        # Проверяем, прошло ли достаточно ходов для новой проверки
-        if current_turn - last_check_turn < random.randint(14, 17):
-            return
-
-        # Применяем эффекты на основе кармы
-        if karma_score > 5:
-            print("Положительное событие! Бонус игроку.")
-            self.apply_bonus(faction)
-        elif 0 <= karma_score <= 5:
-            print("Небольшой минус для игрока.")
-            self.apply_penalty(faction, minor=True)
-        else:
-            print("Серьезные последствия!")
-            self.apply_penalty(faction, minor=False)
-
-        # Обновляем последний ход проверки
-        cursor.execute("""
-            UPDATE karma
-            SET last_check_turn = ?
-            WHERE faction = ?
-        """, (current_turn, faction))
-        self.db_connection.commit()
-
-    def apply_bonus(self, faction):
-        """
-        Применяет положительный бонус игроку.
-        :param faction: Название фракции.
-        """
-        cursor = self.db_connection.cursor()
-        cursor.execute("""
-            UPDATE resources
-            SET amount = amount + 10000
-            WHERE faction = ? AND resource_type = 'Кроны'
-        """, (faction,))
-        self.db_connection.commit()
-        print(f"Фракции {faction} начислено 10000 Крон.")
-
-    def apply_penalty(self, faction, minor=True):
-        """
-        Применяет штраф игроку в процентах от текущих Крон.
-        :param faction: Название фракции.
-        :param minor: True для небольшого штрафа (10%), False для серьезного (30%).
-        """
-        # Получаем текущее количество Крон
-        current_krons = self.get_resource_amount("Кроны")
-
-        # Определяем процент штрафа
-        penalty_percent = 0.10 if minor else 0.30  # 10% или 30%
-
-        # Рассчитываем штраф
-        penalty_amount = int(current_krons * penalty_percent)
-
-        # Минимальный штраф - 100 Крон (если текущие ресурсы слишком малы)
-        penalty_amount = max(penalty_amount, 100 if minor else 500)
-
-        # Обновляем ресурсы в базе данных
-        cursor = self.db_connection.cursor()
-        cursor.execute("""
-            UPDATE resources
-            SET amount = amount - ?
-            WHERE faction = ? AND resource_type = 'Кроны'
-        """, (penalty_amount, faction))
-        self.db_connection.commit()
-
-        # Логируем результат
-        print(f"Фракции {faction} списано {penalty_amount} Крон ({penalty_percent * 100:.0f}% от текущих ресурсов).")
-
     def apply_effects_with_economic_module(self, effects):
         """
         Применение эффектов события через экономический модуль.
@@ -524,7 +421,7 @@ class EventManager:
 
         # === Создаем контейнер во всю ширину экрана ===
         container_width = Window.width
-        container_height = dp(50)
+        container_height = dp(40)
 
         # Позиция: полностью за пределами экрана справа, пониже
         container_pos = (Window.width, Window.height * 0.1)  # ~10% от низа экрана
@@ -568,7 +465,7 @@ class EventManager:
 
         # === Анимация движения слева направо ===
         move_distance = container.width + Window.width
-        duration = move_distance / dp(80)  # Медленнее и плавнее
+        duration = move_distance / dp(130)
 
         anim = Animation(pos=(-container.width, container.y), duration=duration)
         anim.start(container)
