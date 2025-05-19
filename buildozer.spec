@@ -13,7 +13,7 @@ package.domain = com.lerdon
 source.dir = .
 
 # Include files (расширения файлов для включения)
-source.include_exts = py,png,jpg,ttf,mp3,db,sqlite3,json,txt
+source.include_exts = py,png,jpg,ttf,mp3,mp4,db,sqlite3,json,txt
 
 # Include patterns (шаблоны для включения файлов)
 source.include_patterns = assets/*, files/*, game_data.db, *.py
@@ -22,13 +22,13 @@ source.include_patterns = assets/*, files/*, game_data.db, *.py
 source.main = main.py
 
 # Requirements (зависимости)
-requirements = python3==3.11.0,kivy==2.1.0,pyjnius==1.5.0,cython==0.29.33,android
+requirements = python3==3.11.0,kivy==2.1.0,pyjnius==1.5.0,cython==0.29.33,android,ffpyplayer,ffmpeg
 p4a.python_version = 3.11
 p4a.whitelist = python3.11
 
 
 # Application version
-version = 0.90.20
+version = 0.90.22
 
 # Application author
 author = Vladislav Lerdon Team
@@ -72,4 +72,3 @@ buildozer.build_logfile = buildozer.log
 
 # Архитектура Android
 android.archs = x86, arm64-v8a, armeabi-v7a, x86_64
-
