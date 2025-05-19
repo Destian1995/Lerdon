@@ -539,11 +539,22 @@ class MenuWidget(FloatLayout):
         Clock.schedule_interval(self.animate_background, 5)
 
     def animate_buttons_in(self, dt):
-        # Анимация: кнопки выезжают с левой стороны
-        anim1 = Animation(x=Window.width * 0.5 - self.btn_start_game.width / 2, y=Window.height * 0.68, duration=0.6, t='out_back')
-        anim2 = Animation(x=Window.width * 0.5 - self.btn_how_to_play.width / 2, y=Window.height * 0.53, duration=0.6, t='out_back')
-        anim3 = Animation(x=Window.width * 0.5 - self.btn_exit.width / 2, y=Window.height * 0.38, duration=0.6, t='out_back')
+        # Сначала перемещаем кнопки за левую границу экрана (скрываем их)
+        self.btn_start_game.x = -self.btn_start_game.width
+        self.btn_how_to_play.x = -self.btn_how_to_play.width
+        self.btn_exit.x = -self.btn_exit.width
 
+        # Целевые координаты для анимации
+        target_x1 = Window.width * 0.5 - self.btn_start_game.width / 2
+        target_x2 = Window.width * 0.5 - self.btn_how_to_play.width / 2
+        target_x3 = Window.width * 0.5 - self.btn_exit.width / 2
+
+        # Анимация: кнопки выезжают слева в нужные позиции
+        anim1 = Animation(x=target_x1, y=Window.height * 0.68, duration=0.6, t='out_back')
+        anim2 = Animation(x=target_x2, y=Window.height * 0.53, duration=0.6, t='out_back')
+        anim3 = Animation(x=target_x3, y=Window.height * 0.38, duration=0.6, t='out_back')
+
+        # Запуск анимаций
         anim1.start(self.btn_start_game)
         anim2.start(self.btn_how_to_play)
         anim3.start(self.btn_exit)
@@ -914,7 +925,7 @@ class KingdomSelectionWidget(FloatLayout):
             spacing=spacing_val,
             size_hint=(panel_width, None),
             height=self.calculate_panel_height(button_height, spacing_val, padding),
-            pos=(-Window.width * 0.5, self.center_y * 2.52)
+            pos=(-Window.width * 0.6, self.center_y * 2.62)
         )
 
         for kingdom in self.kingdom_data.keys():
@@ -969,33 +980,41 @@ class KingdomSelectionWidget(FloatLayout):
         center_x = Window.width * 0.5
         center_y = Window.height * 0.5
 
-        # Панель фракций — выезжает слева
+        # === Анимация панели фракций: выезжает слева ===
+        target_x_panel = center_x - self.kingdom_buttons.width / 1.4
         anim_panel = Animation(
-            x=center_x - self.kingdom_buttons.width / 1.4,
+            x=target_x_panel,
             y=center_y * 0.4,
-            duration=0.6,
+            duration=0.8,
             t='out_back'
         )
         anim_panel.start(self.kingdom_buttons)
 
-        # Кнопка "Начать игру" — появляется справа
+        # === Анимация кнопки "Начать игру": появляется справа ===
+        target_x_start = center_x + self.kingdom_buttons.width / 2 + dp(30)
         anim_start = Animation(
-            x=center_x + self.kingdom_buttons.width / 2 + dp(30),
+            x=target_x_start,
             y=Window.height * 0.1,
-            duration=0.6,
+            duration=0.8,
             t='out_back'
         )
         anim_start.start(self.start_game_button)
 
-        # Кнопка "Вернуться в главное меню" — выезжает слева
-        back_btn = self.children[-1]
-        anim_back = Animation(
-            x=center_x - back_btn.width / 2,
-            y=Window.height * 0.001,
-            duration=0.6,
-            t='out_back'
-        )
-        anim_back.start(back_btn)
+        # === Анимация кнопки "Вернуться в главное меню": подъезжает снизу или слева ===
+        back_btn = None
+        for child in self.buttons_container.children:
+            if child.text == "Вернуться в главное меню":
+                back_btn = child
+                break
+
+        if back_btn:
+            anim_back = Animation(
+                x=center_x - back_btn.width / 0.68,
+                y=Window.height * 0.05,
+                duration=0.8,
+                t='out_back'
+            )
+            anim_back.start(back_btn)
 
     def calculate_panel_height(self, btn_height, spacing, padding):
         num_buttons = len(self.kingdom_data)
@@ -1091,19 +1110,6 @@ class KingdomSelectionWidget(FloatLayout):
 
         # Чистим старый контент
         self.faction_info_container.clear_widgets()
-
-        # Заголовок: Название фракции — больше и левее
-        title_label = Label(
-            text=f"[b]{kingdom}[/b]",
-            markup=True,
-            font_size='20sp' if platform == 'android' else '24sp',  # ← Больше текст
-            size_hint_y=None,
-            height=dp(10),
-            halign='left',
-            valign='middle',
-            text_size=(None, dp(40))
-        )
-        self.faction_info_container.add_widget(title_label)
 
         # Доход крон
         crown_row = BoxLayout(size_hint_y=None, height=dp(20))
