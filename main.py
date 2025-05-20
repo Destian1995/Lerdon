@@ -951,7 +951,7 @@ class KingdomSelectionWidget(FloatLayout):
             font_size='18sp' if is_android else '16sp',
             bold=True,
             color=(1, 1, 1, 1),
-            bg_color=(0.1, 0.5, 0.9, 1),
+            bg_color=(0.2, 0.8, 0.2, 1),
             pos=(Window.width * 1.2, Window.height * 0.1)
         )
         self.start_game_button.bind(on_press=self.start_game)
@@ -964,7 +964,7 @@ class KingdomSelectionWidget(FloatLayout):
             pos=(Window.width * 0.005, Window.height * 0.05),
             color=(1, 1, 1, 1),
             font_size='16sp',
-            bg_color=(0.1, 0.5, 0.9, 1)
+            bg_color=(0.8, 0.2, 0.2, 1)
         )
         back_btn.bind(on_press=self.back_to_menu)
         self.buttons_container.add_widget(back_btn)
