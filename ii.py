@@ -554,18 +554,26 @@ class AIController:
         dominant_type = self.determine_dominant_unit_type()
         print(f"Доминирующий тип войск: {dominant_type}")
 
-        # Устанавливаем приоритет найма противоположного типа
-        resource_allocation = {
-            "attack": 1.0 if dominant_type == 'defense' else 0.0,
-            "defense": 1.0 if dominant_type == 'attack' else 0.0,
-            "middle": 0.0,
-            "hard_attack": 0.0
-        }
+        # В поздней игре используем только middle и hard_attack юниты
+        if self.turn > 14:
+            resource_allocation = {
+                "attack": 0.0,
+                "defense": 0.0,
+                "middle": 0.7,  # Больший приоритет универсальным юнитам
+                "hard_attack": 0.3  # Меньший приоритет супер-атакующим
+            }
+        else:
+            # Определяем доминирующий тип войск для ранней игры
+            dominant_type = self.determine_dominant_unit_type()
+            print(f"Доминирующий тип войск: {dominant_type}")
 
-        # Добавляем универсальные юниты в поздней игре
-        if self.turn > 30:
-            resource_allocation["middle"] = 0.1
-            resource_allocation["hard_attack"] = 0.1
+            # Устанавливаем приоритет найма противоположного типа
+            resource_allocation = {
+                "attack": 1.0 if dominant_type == 'defense' else 0.0,
+                "defense": 1.0 if dominant_type == 'attack' else 0.0,
+                "middle": 0.0,
+                "hard_attack": 0.0
+            }
 
         # Списки для найма юнитов по категориям
         hired_units = {
@@ -589,6 +597,7 @@ class AIController:
                 continue
 
             # Учитываем лимит потребления
+            print('Учитываем лимит потребления')
             max_units = min(affordable_units,
                             available_consumption // consumption if consumption > 0 else affordable_units)
             if max_units <= 0:
@@ -596,15 +605,16 @@ class AIController:
 
             # Определяем эффективность для каждой категории
             efficiency = {
-                "attack": attack / (cost_money + cost_time),
-                "defense": (defense + durability) / (cost_money + cost_time),
-                "middle": (attack + defense + durability) / (cost_money + cost_time),
+                "attack": attack / consumption,
+                "defense": (defense + durability) / consumption,
+                "middle": (attack + defense + durability) / consumption,
                 "hard_attack": attack
             }
 
             # Обновляем лучшие юниты для каждой категории
+            print('Обновляем лучшие юниты для каждой категории')
             for category in ["attack", "defense", "middle", "hard_attack"]:
-                if category == "hard_attack" and self.turn <= 30:
+                if category == "hard_attack" and self.turn <= 14:
                     continue  # Супер-атакующие юниты только в поздней игре
 
                 if efficiency[category] > hired_units[category]["best_efficiency"]:
