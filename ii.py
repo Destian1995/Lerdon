@@ -1389,46 +1389,32 @@ class AIController:
         except sqlite3.Error as e:
             print(f"Ошибка при передислокации: {e}")
 
-    def launch_attack_on_city(self, city_name, faction):
+    def launch_attack_on_city(self, city_name, target_faction):
+        """
+        Запускает атаку на указанный город от лица текущей фракции.
+        :param city_name: Название города, который атакуется
+        :param target_faction: Фракция-владелец города
+        """
         try:
-            # Проверяем, является ли атака результатом запроса союзника
-            is_ally_request = self.is_faction_ally(faction)
-
+            # Сначала пытаемся собрать атакующих юнитов
             attacking_units = self.collect_attacking_units()
+
             if not attacking_units:
-                print("Нет атакующих юнитов.")
+                print("Нет атакующих юнитов. Используются защитные юниты для атаки.")
+                attacking_units = self.collect_defensive_units()
+
+            if not attacking_units:
+                print("Нет подходящих юнитов для атаки.")
                 return
-
-            # Добавляем новую логику после сбора юнитов
-            if is_ally_request:
-                # Получаем фракцию-владельца города
-                self.cursor.execute("""
-                    SELECT faction FROM cities WHERE name = ?
-                """, (city_name,))
-                target_faction = self.cursor.fetchone()[0]
-
-                # Обновляем статус дипломатии на "война"
-                self.update_diplomacy_status(target_faction, "война")
-
-                # Обнуляем отношения в таблице relations
-                self.cursor.execute("""
-                    UPDATE relations
-                    SET relationship = 0
-                    WHERE faction1 = ? AND faction2 = ?
-                """, (self.faction, target_faction))
-                self.db_connection.commit()
-
-                print(f"Фракция {self.faction} объявила войну фракции {target_faction} по запросу союзника.")
 
             total_units = sum(unit["unit_count"] for unit in attacking_units)
             units_to_attack = int(total_units * 0.6)
             remaining_units = units_to_attack
-
             attack_army = []
+
             for unit in attacking_units:
                 if remaining_units <= 0:
                     break
-                # Берем все доступные юниты из города, если нужно
                 take_units = min(unit["unit_count"], remaining_units)
                 attack_army.append({
                     "city_id": unit["city_id"],
@@ -1438,7 +1424,7 @@ class AIController:
                 })
                 remaining_units -= take_units
 
-            # Передислоцируем все собранные юниты в союзный город
+            # Передислоцируем все собранные юниты в ближайший союзный город
             allied_city = self.find_nearest_allied_city(self.faction)
             if not allied_city:
                 print("Союзный город не найден.")
@@ -1454,7 +1440,8 @@ class AIController:
                 )
 
             # Атакуем город
-            self.attack_city(city_name, faction)
+            self.attack_city(city_name, target_faction)
+
         except Exception as e:
             print(f"Ошибка при атаке: {e}")
 
@@ -1840,7 +1827,13 @@ class AIController:
                     self.cursor.execute("""
                         SELECT faction FROM cities WHERE name = ?
                     """, (attack_city,))
-                    target_faction = self.cursor.fetchone()[0]
+                    target_faction_row = self.cursor.fetchone()
+
+                    if not target_faction_row:
+                        print(f"Город {attack_city} не найден.")
+                        continue
+
+                    target_faction = target_faction_row[0]
 
                     # Обновляем статус дипломатии на "война"
                     self.update_diplomacy_status(target_faction, "война")
@@ -1855,8 +1848,8 @@ class AIController:
 
                     print(f"Фракция {self.faction} объявила войну фракции {target_faction} по запросу союзника.")
 
-                    # Выполняем атаку на город
-                    self.launch_attack_on_city(attack_city, faction)
+                    # Выполняем атаку на город — теперь вторым параметром передаётся target_faction
+                    self.launch_attack_on_city(attack_city, target_faction)  # ← Здесь изменение!
 
             # Очищаем таблицу queries, только если был ход союзника
             if is_ally_turn:
@@ -1864,6 +1857,9 @@ class AIController:
                 print("Обработка запросов завершена. Таблица queries очищена.")
             else:
                 print("Обработка запросов завершена. Таблица queries не очищена, так как ходили не союзники.")
+
+        except sqlite3.Error as e:
+            print(f"Ошибка при обработке запросов: {e}")
 
         except sqlite3.Error as e:
             print(f"Ошибка при обработке запросов: {e}")

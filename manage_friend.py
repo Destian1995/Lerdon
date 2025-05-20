@@ -300,6 +300,7 @@ class ManageFriend(Popup):
 
     def _create_table(self):
         allies = self._get_allies_from_db()
+
         main_container = BoxLayout(
             orientation='vertical',
             spacing=dp(15),
@@ -321,6 +322,7 @@ class ManageFriend(Popup):
             scroll.add_widget(main_container)
             return scroll
 
+        ally_name = allies[0]
         # === Блок экономики ===
         economic_header = Label(
             text="Экономическая помощь",
