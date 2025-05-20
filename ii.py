@@ -1403,10 +1403,6 @@ class AIController:
                 print("Нет атакующих юнитов. Используются защитные юниты для атаки.")
                 attacking_units = self.collect_defensive_units()
 
-            if not attacking_units:
-                print("Нет подходящих юнитов для атаки.")
-                return
-
             total_units = sum(unit["unit_count"] for unit in attacking_units)
             units_to_attack = int(total_units * 0.6)
             remaining_units = units_to_attack
@@ -1492,8 +1488,8 @@ class AIController:
             # Собираем все атакующие юниты из всех городов
             attacking_units = self.collect_attacking_units()
             if not attacking_units:
-                print("Нет подходящих юнитов для атаки.")
-                return
+                print("Нет атакующих юнитов. Используются защитные юниты для атаки.")
+                attacking_units = self.collect_defensive_units()
 
             # Передислоцируем юниты в ближайший союзный город
             for unit in attacking_units:
@@ -2001,36 +1997,28 @@ class AIController:
             print(f"Ошибка при усилении обороны: {e}")
 
     def collect_defensive_units(self):
-        """
-        Собирает защитные юниты из всех городов текущей фракции.
-        :return: Список защитных юнитов с информацией о городе отправления
-        """
         try:
             query = """
-                SELECT g.city_id, g.unit_name, g.unit_count, u.defense, g.unit_image
-                FROM garrisons g
-                JOIN units u ON g.unit_name = u.unit_name
-                WHERE u.faction = ? AND u.defense > u.attack
-            """
+                        SELECT g.city_id, g.unit_name, g.unit_count, u.attack, g.unit_image
+                        FROM garrisons g
+                        JOIN units u ON g.unit_name = u.unit_name
+                        WHERE u.faction = ? AND u.defense > u.attack
+                    """
             self.cursor.execute(query, (self.faction,))
             rows = self.cursor.fetchall()
-
-            defensive_units = []
+            attacking_units = []
             for row in rows:
-                city_id, unit_name, unit_count, defense, unit_image = row
-                defensive_units.append({
+                city_id, unit_name, unit_count, attack, unit_image = row
+                print(f"Собран защитный юнит для атаки: {unit_name}, Количество: {unit_count}, Атака: {attack}")
+                attacking_units.append({
                     "city_id": city_id,
                     "unit_name": unit_name,
                     "unit_count": unit_count,
-                    "unit_image": unit_image
+                    "unit_image": unit_image,
                 })
-
-            return defensive_units
+            return attacking_units
         except sqlite3.Error as e:
-            print(f"Ошибка при сборе защитных юнитов: {e}")
-            return []
-        except ValueError as ve:
-            print(f"Ошибка при обработке данных: {ve}")
+            print(f"Ошибка при сборе защитных юнитов для атаки: {e}")
             return []
 
 
