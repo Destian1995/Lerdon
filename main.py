@@ -465,6 +465,7 @@ class RoundedButton(Button):
             else:
                 btn.deactivate()
 
+
 class MenuWidget(FloatLayout):
     def __init__(self, **kwargs):
         super(MenuWidget, self).__init__(**kwargs)
@@ -595,7 +596,7 @@ class MenuWidget(FloatLayout):
     def exit_game(self, instance):
         App.get_running_app().stop()
 
-# Вкладка обучения
+
 class HowToPlayScreen(FloatLayout):
     def __init__(self, **kwargs):
         super(HowToPlayScreen, self).__init__(**kwargs)
@@ -887,7 +888,7 @@ class KingdomSelectionWidget(FloatLayout):
         # Информация о фракции
         self.faction_info_container = BoxLayout(
             orientation='vertical',
-            size_hint=(0.2, None),
+            size_hint=(0.15, None),
             height=dp(120),
             pos_hint={'center_x': 0.73, 'center_y': 0.4},
             spacing=dp(8)
@@ -895,7 +896,7 @@ class KingdomSelectionWidget(FloatLayout):
         self.add_widget(self.faction_info_container)
 
         # Советник
-        advisor_size = (0.3, 0.3) if is_android else (0.25, 0.25)
+        advisor_size = (0.3, 0.3) if is_android else (0.3, 0.3)
         self.advisor_image = Image(
             source='files/null.png',
             size_hint=advisor_size,
@@ -925,7 +926,7 @@ class KingdomSelectionWidget(FloatLayout):
             spacing=spacing_val,
             size_hint=(panel_width, None),
             height=self.calculate_panel_height(button_height, spacing_val, padding),
-            pos=(-Window.width * 0.6, self.center_y * 2.62)
+            pos=(-Window.width * 0.7, self.center_y * 2.5)
         )
 
         for kingdom in self.kingdom_data.keys():
@@ -982,8 +983,8 @@ class KingdomSelectionWidget(FloatLayout):
         window_center_y = Window.height * 0.5
 
         # === Анимация панели фракций: выезжает слева ===
-        target_x_panel = window_center_x - self.kingdom_buttons.width / 1.4
-        target_y_panel = window_center_y - self.kingdom_buttons.height / 2  # Центрируем вертикально
+        target_x_panel = window_center_x - self.kingdom_buttons.width / 0.8
+        target_y_panel = window_center_y - self.kingdom_buttons.height / 2.9  # Центрируем вертикально
 
         anim_panel = Animation(
             x=target_x_panel,
@@ -1157,7 +1158,7 @@ class KingdomSelectionWidget(FloatLayout):
         app.root.add_widget(map_widget)
         app.root.add_widget(game_screen)
 
-# Основное приложение
+
 class EmpireApp(App):
     def __init__(self, **kwargs):
         super(EmpireApp, self).__init__(**kwargs)
