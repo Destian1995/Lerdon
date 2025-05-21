@@ -295,6 +295,7 @@ class GameScreen(Screen):
         self.save_selected_faction_to_db()
         # Инициализация политических данных
         self.initialize_political_data()
+        self.prev_diplomacy_state = {}
         # Инициализация AI-контроллеров
         self.ai_controllers = {}
         # Инициализация EventManager
@@ -503,6 +504,132 @@ class GameScreen(Screen):
             self.game_area.pos_hint = {'x': 0.25, 'y': 0}
             self.end_turn_button.pos_hint = {'x': 0.02, 'y': 0.02}
 
+    def check_diplomacy_changes(self):
+        """
+        Проверяет изменения в дипломатических отношениях между текущей фракцией и другими.
+        Если статус меняется, отображается соответствующее сообщение.
+        """
+
+        current_faction = self.selected_faction
+
+        # Сохраняем предыдущее состояние, если оно еще не было загружено
+        if not hasattr(self, 'prev_diplomacy_state'):
+            self.prev_diplomacy_state = {}
+        message = "фракци"
+        try:
+            # Получаем текущие отношения для текущей фракции
+            self.cursor.execute("""
+                SELECT faction2, relationship FROM diplomacies
+                WHERE faction1 = ?
+            """, (current_faction,))
+            current_records = dict(self.cursor.fetchall())
+
+            # Словарь для хранения изменений по типам
+            changes = {
+                "война": [],
+                "нейтралитет": [],
+                "союз": [],
+                "уничтожена": []
+            }
+
+            # Проверяем изменения по сравнению с предыдущим ходом
+            for faction, status in current_records.items():
+                prev_status = self.prev_diplomacy_state.get(faction)
+                if prev_status is None:
+                    continue  # Пропускаем первоначальную инициализацию
+                if prev_status != status:
+                    changes[status].append(faction)
+
+            # Отправляем уведомления на основе изменений
+            for status_type, factions_list in changes.items():
+                if not factions_list:
+                    continue
+
+                if status_type == "война":
+                    message_prefix = f"Война с {message}ей"
+                    if len(factions_list) > 1:
+                        message = f"Война с {message}ями: {', '.join(factions_list)}"
+                    else:
+                        message = f"{message_prefix} {factions_list[0]}"
+                elif status_type == "нейтралитет":
+                    message_prefix = f"Заключён мир с {message}ей"
+                    if len(factions_list) > 1:
+                        message = f"Заключён мир с {message}ями: {', '.join(factions_list)}"
+                    else:
+                        message = f"{message_prefix} {factions_list[0]}"
+                elif status_type == "союз":
+                    message_prefix = f"Заключён союз с {message}ей"
+                    if len(factions_list) > 1:
+                        message = f"Заключён союз с {message}ями: {', '.join(factions_list)}"
+                    else:
+                        message = f"{message_prefix} {factions_list[0]}"
+                elif status_type == "уничтожена":
+                    message_prefix = "фракци"
+                    if len(factions_list) > 1:
+                        message = f"{message_prefix}и: {', '.join(factions_list)} уничтожены"
+                    else:
+                        message = f"{message_prefix}я {factions_list[0]} уничтожена"
+
+                self.show_notification(message)
+
+            # Обновляем предыдущее состояние
+            self.prev_diplomacy_state = current_records.copy()
+
+        except sqlite3.Error as e:
+            print(f"Ошибка при проверке дипломатических отношений: {e}")
+
+    def show_notification(self, message, title="Уведомление"):
+
+        # === Цветовая схема и стили ===
+        background_color = (0.1, 0.1, 0.1, 0.95)  # Тёмный фон (Material-стиль)
+        button_color = (0.2, 0.6, 0.8, 1)  # Акцентный цвет кнопки
+        text_color = (1, 1, 1, 1)
+
+        # === Основной контент ===
+        content = BoxLayout(orientation='vertical', padding=dp(15), spacing=dp(10))
+
+        # === Метка с текстом ===
+        label = Label(
+            text=message,
+            font_size=sp(18),
+            halign='center',
+            valign='middle',
+            color=text_color,
+            size_hint_y=0.7
+        )
+        label.bind(size=label.setter('text_size'))  # Центрирование текста
+
+        # === Кнопка закрытия ===
+        close_button = Button(
+            text="ОК",
+            size_hint=(1, 0.3),
+            background_color=button_color,
+            font_size=sp(16),
+            bold=True,
+            color=(1, 1, 1, 1)
+        )
+
+        # === Добавляем элементы ===
+        content.add_widget(label)
+        content.add_widget(close_button)
+
+        # === Создаём попап ===
+        popup = Popup(
+            title=title,
+            title_size=sp(20),
+            title_color=text_color,
+            content=content,
+            size_hint=(0.8, None),
+            height=dp(250),
+            background_color=background_color,
+            separator_color=(0.3, 0.3, 0.3, 1)
+        )
+
+        # Привязываем кнопку к закрытию
+        close_button.bind(on_press=popup.dismiss)
+
+        # Открываем
+        popup.open()
 
     def process_turn(self, instance=None):
         """
@@ -522,7 +649,7 @@ class GameScreen(Screen):
         # Обновляем ресурсы игрока
         self.faction.update_resources()
         self.resource_box.update_resources()
-
+        self.check_diplomacy_changes()
         # Проверяем условие завершения игры
         game_continues, reason = self.faction.end_game()  # Получаем статус и причину завершения
         if not game_continues:
