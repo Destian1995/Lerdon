@@ -208,7 +208,7 @@ class FortressInfoPopup(Popup):
                 text="Зданий нет",
                 size_hint_y=None,
                 height=40,
-                font_size='18sp',  # Увеличиваем размер шрифта
+                font_size='16sp',  # Увеличиваем размер шрифта
                 color=(1, 0, 0, 1),  # Ярко-красный цвет текста
                 halign='center',
                 valign='middle'
@@ -281,7 +281,7 @@ class FortressInfoPopup(Popup):
                 unit_image_widget = Image(
                     source=unit_image,
                     size_hint=(None, None),
-                    size=(110, 110)  # Увеличиваем размер изображения
+                    size=(120, 120)  # Увеличиваем размер изображения
                 )
                 unit_layout.add_widget(unit_image_widget)
 
@@ -303,7 +303,7 @@ class FortressInfoPopup(Popup):
                 unit_text = f"{unit_name}\nКоличество: {format_number(unit_count)}"
                 text_label = Label(
                     text=unit_text,
-                    font_size='16sp',  # Увеличиваем размер шрифта
+                    font_size='17sp',  # Увеличиваем размер шрифта
                     color=(1, 1, 1, 1),  # Белый текст
                     halign='left',
                     valign='middle'
@@ -367,94 +367,6 @@ class FortressInfoPopup(Popup):
         # Устанавливаем содержимое окна и открываем его
         popup.content = layout
         popup.open()
-
-    def select_troops(self, selected_data):
-        """
-        Обрабатывает выбор войск для перемещения и выполняет обновление данных в базе данных.
-        :param selected_data: Кортеж с данными о выбранном юните (город, название юнита, количество).
-        """
-        try:
-            # Распаковываем данные о выбранном юните
-            source_city_id, unit_name, unit_count = selected_data
-
-            # Запрос у пользователя количества юнитов для переноса
-            popup = Popup(title="Выберите количество", size_hint=(0.6, 0.4))
-            layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
-
-            input_label = Label(text=f"{unit_name} доступно:{format_number(unit_count)}")
-            count_input = TextInput(multiline=False, input_filter='int')  # Разрешаем только целые числа
-            layout.add_widget(input_label)
-            layout.add_widget(count_input)
-
-            # Добавляем метку для отображения ошибок
-            error_label = Label(
-                text="",
-                color=(1, 0, 0, 1),  # Красный цвет текста
-                size_hint_y=None,
-                height=30
-            )
-            layout.add_widget(error_label)
-
-            # Кнопки подтверждения и отмены
-            button_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=50, spacing=10)
-            confirm_button = Button(text="Подтвердить", background_color=(0.6, 0.8, 0.6, 1))
-            cancel_button = Button(text="Отмена", background_color=(0.8, 0.6, 0.6, 1))
-
-            def confirm_action(btn):
-                try:
-                    # Получаем введенное количество
-                    taken_count = int(count_input.text)
-                    if 0 < taken_count <= unit_count:
-                        # Проверяем принадлежность города
-                        destination_city_owner = self.get_city_owner(self.city_name)  # Владелец целевого города
-                        current_player_kingdom = self.player_fraction  # Текущая фракция игрока
-
-                        if destination_city_owner == current_player_kingdom:
-                            # Свой город — разрешено перемещение
-                            pass
-                        elif self.is_ally(current_player_kingdom, destination_city_owner):
-                            # Союзник — разрешено перемещение
-                            pass
-                        elif self.is_enemy(current_player_kingdom, destination_city_owner):
-                            # Враг — разрешено нападение
-                            pass
-                        else:
-                            # Нейтральный город — запрещено перемещение
-                            error_label.text = "Нельзя перемещать войска в нейтральный город."
-                            return
-
-                        # Выполняем перенос войск
-                        self.transfer_troops_between_cities(source_city_id, self.city_name, unit_name, taken_count)
-
-                        # Закрываем окно ввода
-                        popup.dismiss()
-
-                        # Обновляем интерфейс гарнизона
-                        self.update_garrison()
-
-                        # Закрываем текущее окно выбора войск
-                        self.close_current_popup()  # <--- ЗАКРЫВАЕМ ОКНО show_troops_selection
-
-                    else:
-                        # Показываем ошибку, если количество некорректно
-                        error_label.text = "Ошибка: некорректное количество."
-
-                except ValueError:
-                    # Обработка случая, если ввод не является числом
-                    error_label.text = "Ошибка: введите число."
-
-            confirm_button.bind(on_press=confirm_action)
-            cancel_button.bind(on_press=popup.dismiss)
-            button_layout.add_widget(confirm_button)
-            button_layout.add_widget(cancel_button)
-            layout.add_widget(button_layout)
-
-            popup.content = layout
-            popup.open()
-
-        except Exception as e:
-            print(f"Ошибка при выборе войск: {e}")
-
 
     def load_troops_by_type(self, troop_type, previous_popup):
         """
@@ -548,7 +460,7 @@ class FortressInfoPopup(Popup):
         for header in headers:
             label = Label(
                 text=header,
-                font_size='16sp',
+                font_size='18sp',
                 bold=True,
                 size_hint_y=None,
                 height=60,
@@ -567,9 +479,9 @@ class FortressInfoPopup(Popup):
             # Город
             city_label = Label(
                 text=city_id,
-                font_size='16sp',
+                font_size='18sp',
                 size_hint_y=None,
-                height=80,
+                height=90,
                 color=(1, 1, 1, 1)  # Черный текст
             )
             table_layout.add_widget(city_label)
@@ -577,9 +489,9 @@ class FortressInfoPopup(Popup):
             # Юнит
             unit_label = Label(
                 text=unit_name,
-                font_size='16sp',
+                font_size='18sp',
                 size_hint_y=None,
-                height=80,
+                height=90,
                 color=(1, 1, 1, 1)  # Черный текст
             )
             table_layout.add_widget(unit_label)
@@ -587,9 +499,9 @@ class FortressInfoPopup(Popup):
             # Количество
             count_label = Label(
                 text=str(format_number(unit_count)),
-                font_size='16sp',
+                font_size='18sp',
                 size_hint_y=None,
-                height=80,
+                height=90,
                 color=(1, 1, 1, 1)  # Черный текст
             )
             table_layout.add_widget(count_label)
@@ -599,7 +511,7 @@ class FortressInfoPopup(Popup):
             unit_image_widget = Image(
                 source=unit_image,
                 size_hint=(None, None),
-                size=(60, 60)
+                size=(80, 80)
             )
             image_container.add_widget(unit_image_widget)
             table_layout.add_widget(image_container)
@@ -607,9 +519,9 @@ class FortressInfoPopup(Popup):
             # Кнопка действия
             action_button = Button(
                 text="Добавить",
-                font_size='16sp',
+                font_size='18sp',
                 size_hint_y=None,
-                height=60,
+                height=80,
                 background_color=(0.6, 0.8, 0.6, 1)
             )
             action_button.bind(on_press=lambda btn, data=(city_id, unit_name, unit_count, unit_image):
@@ -632,9 +544,9 @@ class FortressInfoPopup(Popup):
         # Кнопка "Отправить группу в город"
         send_group_button = Button(
             text="Отправить группу в город",
-            font_size='16sp',
+            font_size='17sp',
             size_hint_y=None,
-            height=80,
+            height=90,
             background_color=(0.6, 0.8, 0.6, 1),
             disabled=True  # Кнопка изначально неактивна
         )
@@ -672,38 +584,31 @@ class FortressInfoPopup(Popup):
         popup = Popup(title=f"Добавление {unit_name} в группу", size_hint=(0.8, 0.7))
         layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
-        # Информация о юните
-        info_label = Label(
-            text=f"{unit_name}\nДоступно: {format_number(unit_count)}",
-            font_size='16sp',
-            size_hint_y=None,
-            height=70,
-            color=(1, 1, 1, 1)  # Черный текст
-        )
-        layout.add_widget(info_label)
+        # Контейнер для изображения и количества
+        top_section = BoxLayout(orientation='vertical', size_hint_y=None, height=120, spacing=10)
 
-        # Изображение юнита
-        image_container = BoxLayout(size_hint_y=None, height=80)
-        unit_image_widget = Image(
-            source=unit_image,
-            size_hint=(None, None),
-            size=(70, 70)
+        # Метка количества
+        selected_count_label = Label(
+            text="Выбрано: 0",
+            font_size='18sp',
+            color=(1, 1, 1, 1),
+            size_hint_y=None,
+            height=30
         )
-        image_container.add_widget(unit_image_widget)
-        layout.add_widget(image_container)
+
+        # Добавляем изображение и метку количества в вертикальный контейнер
+        top_section.add_widget(selected_count_label)
+        layout.add_widget(top_section)
 
         # Слайдер для выбора количества
         slider_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=70, spacing=10)
-        slider_label = Label(
-            text="Количество: 0",
-            font_size='16sp',
-            size_hint_x=None,
-            width=100,
-            color=(1, 1, 1, 1)
-        )
         slider = Slider(min=0, max=unit_count, value=0, step=1)
-        slider.bind(value=lambda instance, value: setattr(slider_label, 'text', f"Количество: {int(value)}"))
-        slider_layout.add_widget(slider_label)
+
+        # Обновляем метки при изменении значения слайдера
+        def update_labels(instance, value):
+            selected_count_label.text = f"Выбрано: {int(value)}"
+
+        slider.bind(value=update_labels)
         slider_layout.add_widget(slider)
         layout.add_widget(slider_layout)
 
@@ -717,7 +622,7 @@ class FortressInfoPopup(Popup):
         layout.add_widget(error_label)
 
         # Кнопки подтверждения и отмены
-        button_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=50, spacing=10)
+        button_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=60, spacing=10)
         confirm_button = Button(text="Подтвердить", background_color=(0.6, 0.8, 0.6, 1))
         cancel_button = Button(text="Отмена", background_color=(0.8, 0.6, 0.6, 1))
 
@@ -736,7 +641,7 @@ class FortressInfoPopup(Popup):
                     popup.dismiss()  # Закрываем окно
                     print(f"Добавлено в группу: {unit_name} x {selected_count}")
 
-                    # Активируем кнопку "Отправить группу в город", если группа не пуста
+                    # Активируем кнопку отправки группы
                     if self.selected_group and hasattr(self, "send_group_button") and self.send_group_button:
                         self.send_group_button.disabled = False
 
@@ -744,24 +649,21 @@ class FortressInfoPopup(Popup):
                     unique_id = f"{city_id}_{unit_name}"
                     if unique_id in self.table_widgets:
                         widgets = self.table_widgets[unique_id]
-                        table_layout = city_label.parent  # Получаем родительский контейнер
+                        table_layout = city_label.parent
 
-                        # Проверяем, что table_layout существует и виджеты находятся в нем
-                        if table_layout and all(
-                                widget in table_layout.children for widget in [
-                                    widgets["city_label"],
-                                    widgets["unit_label"],
-                                    widgets["count_label"],
-                                    widgets["image_container"],
-                                    widgets["action_button"]
-                                ]
-                        ):
+                        if table_layout and all(widget in table_layout.children for widget in [
+                            widgets["city_label"],
+                            widgets["unit_label"],
+                            widgets["count_label"],
+                            widgets["image_container"],
+                            widgets["action_button"]
+                        ]):
                             table_layout.remove_widget(widgets["city_label"])
                             table_layout.remove_widget(widgets["unit_label"])
                             table_layout.remove_widget(widgets["count_label"])
                             table_layout.remove_widget(widgets["image_container"])
                             table_layout.remove_widget(widgets["action_button"])
-                            del self.table_widgets[unique_id]  # Удаляем запись из словаря
+                            del self.table_widgets[unique_id]
                         else:
                             print("Ошибка: Некоторые виджеты отсутствуют в table_layout.")
                 else:
@@ -792,8 +694,7 @@ class FortressInfoPopup(Popup):
             cursor = self.cursor
 
             # Проверка возможности перемещения (один раз на группу)
-            cursor.execute("SELECT can_move FROM turn_check_move WHERE faction = ?",
-                           (current_player_kingdom,))
+            cursor.execute("SELECT can_move FROM turn_check_move WHERE faction = ?", (current_player_kingdom,))
             move_data = cursor.fetchone()
 
             if not move_data:
@@ -807,27 +708,51 @@ class FortressInfoPopup(Popup):
                 show_popup_message("Ошибка", "Вы уже использовали своё перемещение на этом ходу.")
                 return
 
-            for unit in self.selected_group:
-                city_id = unit["city_id"]
-                unit_name = unit["unit_name"]
-                unit_count = unit["unit_count"]
+            # === НОВАЯ ЛОГИКА: сначала проверяем возможность, потом выполняем ===
+            from collections import defaultdict
 
-                # Выполняем перенос юнитов
-                self.transfer_troops_between_cities(
-                    source_fortress_name=city_id,
-                    destination_fortress_name=self.city_name,
-                    unit_name=unit_name,
-                    taken_count=unit_count
-                )
+            # Группируем юниты по исходным городам для проверки
+            grouped_units = defaultdict(list)
+            for unit in self.selected_group:
+                grouped_units[unit["city_id"]].append(unit)
+
+            # Проверяем каждую группу
+            for source_city, units in grouped_units.items():
+                for unit in units:
+                    result = self.transfer_troops_between_cities(
+                        source_fortress_name=source_city,
+                        destination_fortress_name=self.city_name,
+                        unit_name=unit["unit_name"],
+                        taken_count=unit["unit_count"],
+                        dry_run=True  # Только проверка, без изменений в БД
+                    )
+                    if not result:
+                        # Если хотя бы одна проверка провалена — отменяем всё
+                        return
+
+            # Если все проверки пройдены — начинаем реальное выполнение
+            for source_city, units in grouped_units.items():
+                for unit in units:
+                    self.transfer_troops_between_cities(
+                        source_fortress_name=source_city,
+                        destination_fortress_name=self.city_name,
+                        unit_name=unit["unit_name"],
+                        taken_count=unit["unit_count"],
+                        dry_run=False
+                    )
+
+            # Теперь тратим право на перемещение
             cursor.execute("""
-                        UPDATE turn_check_move 
-                        SET can_move = ? 
-                        WHERE faction = ?
-                    """, (False, current_player_kingdom))
+                UPDATE turn_check_move 
+                SET can_move = ? 
+                WHERE faction = ?
+            """, (False, current_player_kingdom))
             self.conn.commit()
+
             # Очищаем группу после перемещения
             self.selected_group.clear()
             self.update_garrison()  # Обновляем интерфейс гарнизона
+
         except Exception as e:
             show_popup_message("Ошибка", f"Произошла ошибка при перемещении группы: {e}")
 
@@ -1283,39 +1208,41 @@ class FortressInfoPopup(Popup):
         except sqlite3.Error as e:
             print(f"Ошибка при инициализации turn_check_move: {e}")
 
-    def transfer_troops_between_cities(self, source_fortress_name, destination_fortress_name, unit_name, taken_count):
+    def transfer_troops_between_cities(self, source_fortress_name, destination_fortress_name, unit_name, taken_count,
+                                       dry_run=False):
         """
         Переносит войска из одного города в другой с проверкой расстояния по координатам.
         :param source_fortress_name: Название исходного города/крепости.
         :param destination_fortress_name: Название целевого города/крепости.
         :param unit_name: Название юнита.
         :param taken_count: Количество юнитов для переноса.
+        :param dry_run: Если True — только проверяет возможность, не меняет данные.
+        :return: True, если действие возможно, иначе False.
         """
         try:
             cursor = self.cursor
-
             # Получаем владельцев городов
             source_owner = self.get_city_owner(source_fortress_name)
             destination_owner = self.get_city_owner(destination_fortress_name)
 
             if not source_owner or not destination_owner:
                 show_popup_message("Ошибка", "Один из городов не существует.")
-                return
+                return False
 
             current_player_kingdom = self.player_fraction
 
             # Проверяем, что исходный город принадлежит текущему игроку
             if source_owner != current_player_kingdom:
                 show_popup_message("Ошибка", "Вы можете перемещать только свои войска.")
-                return
+                return False
 
             # Получаем координаты городов
             source_coords = self.get_city_coordinates(source_fortress_name)
             destination_coords = self.get_city_coordinates(destination_fortress_name)
-
             x_diff = abs(source_coords[0] - destination_coords[0])
             y_diff = abs(source_coords[1] - destination_coords[1])
             total_diff = x_diff + y_diff
+
             print('total_diff:', total_diff)
 
             # Проверка на возможность перемещения (один раз за ход)
@@ -1332,18 +1259,23 @@ class FortressInfoPopup(Popup):
                 move_data = (True,)
             elif not move_data[0]:
                 show_popup_message("Ошибка", "Вы уже использовали своё перемещение на этом ходу.")
-                return
+                return False
 
             # Статус города назначения
             if destination_owner == current_player_kingdom:
                 # Свой город — перемещение разрешено
-                self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
+                if not dry_run:
+                    self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
+                return True
+
             elif self.is_ally(current_player_kingdom, destination_owner):
                 if total_diff < 300:
-                    self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
-
+                    if not dry_run:
+                        self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
+                    return True
                 else:
                     show_popup_message("Логистика не выдержит", "Слишком далеко. Найдите ближайший населенный пункт")
+                    return False
 
             elif self.is_enemy(current_player_kingdom, destination_owner):
                 if total_diff < 225:
@@ -1351,35 +1283,48 @@ class FortressInfoPopup(Popup):
                     cursor.execute("SELECT check_attack FROM turn_check_attack_faction WHERE faction = ?",
                                    (destination_owner,))
                     attack_data = cursor.fetchone()
-
                     if attack_data and attack_data[0]:
                         show_popup_message("Ошибка", f"Фракция '{destination_owner}' уже была атакована на этом ходу.")
-                        return
+                        return False
 
-                    # Устанавливаем флаг атаки
-                    cursor.execute(
-                        "INSERT OR REPLACE INTO turn_check_attack_faction (faction, check_attack) VALUES (?, ?)",
-                        (destination_owner, True)
-                    )
-                    self.conn.commit()
+                    if not dry_run:
+                        # Устанавливаем флаг атаки
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO turn_check_attack_faction (faction, check_attack) VALUES (?, ?)",
+                            (destination_owner, True)
+                        )
+                        self.conn.commit()
 
-                    # Запускаем бой
-                    self.start_battle_group(
-                        source_fortress_name=source_fortress_name,
-                        destination_fortress_name=destination_fortress_name,
-                        attacking_units=self.selected_group
-                    )
+                        # Тратим право на движение
+                        cursor.execute("""
+                            UPDATE turn_check_move 
+                            SET can_move = ? 
+                            WHERE faction = ?
+                        """, (False, current_player_kingdom))
+                        self.conn.commit()
 
+                        # Запускаем бой
+                        self.start_battle_group(
+                            source_fortress_name=source_fortress_name,
+                            destination_fortress_name=destination_fortress_name,
+                            attacking_units=self.selected_group
+                        )
+
+                    return True
                 else:
                     show_popup_message("Логистика не выдержит", "Слишком далеко. Найдите ближайший населенный пункт")
-                    return
+                    return False
+
             else:
                 show_popup_message("Ошибка", "Нельзя нападать на нейтральный город.")
-                return
+                return False
+
         except sqlite3.Error as e:
             show_popup_message("Ошибка", f"Произошла ошибка при работе с базой данных(transfer): {e}")
+            return False
         except Exception as e:
             show_popup_message("Ошибка", f"Произошла ошибка при переносе войск: {e}")
+            return False
 
     def start_battle_group(self, source_fortress_name, destination_fortress_name, attacking_units):
         """

@@ -558,9 +558,9 @@ class GameScreen(Screen):
                     else:
                         message = f"{message_prefix} {factions_list[0]}"
                 elif status_type == "союз":
-                    message_prefix = f"Заключён союз с {message}ей"
+                    message_prefix = f"Теперь дружим с {message}ей"
                     if len(factions_list) > 1:
-                        message = f"Заключён союз с {message}ями: {', '.join(factions_list)}"
+                        message = f"Теперь дружим с {message}ями: {', '.join(factions_list)}"
                     else:
                         message = f"{message_prefix} {factions_list[0]}"
                 elif status_type == "уничтожена":
@@ -578,7 +578,7 @@ class GameScreen(Screen):
         except sqlite3.Error as e:
             print(f"Ошибка при проверке дипломатических отношений: {e}")
 
-    def show_notification(self, message, title="Уведомление"):
+    def show_notification(self, message, title="Новость дня"):
 
         # === Цветовая схема и стили ===
         background_color = (0.1, 0.1, 0.1, 0.95)  # Тёмный фон (Material-стиль)
@@ -601,7 +601,7 @@ class GameScreen(Screen):
 
         # === Кнопка закрытия ===
         close_button = Button(
-            text="ОК",
+            text="Ну что теперь поделать...",
             size_hint=(1, 0.3),
             background_color=button_color,
             font_size=sp(16),
