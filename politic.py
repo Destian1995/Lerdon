@@ -641,7 +641,7 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
     # Описание
     description_label = Label(
         text="Обмен культурными ценностями повышает доверие между фракциями (+7% к отношениям).\n"
-             "Стоимость: от 100 тыс. крон.",
+             "Стоимость: от 25 млн. крон.",
         size_hint=(1, None),
         height=font_size * 4,
         font_size=font_size,
@@ -721,7 +721,7 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
             target_city_count = cursor.fetchone()[0]
 
             # Рассчитываем стоимость
-            cost = 100_000 + (50_000 * target_city_count)
+            cost = 20_000_000 + (5_000_000 * target_city_count)
 
             # Получаем текущий баланс крон игрока через PoliticalCash
             current_balance = political_cash.resources["Кроны"]
@@ -1213,7 +1213,7 @@ def show_alliance_form(faction, game_area, class_faction):
         target_city_count = cursor.fetchone()[0]
 
         # Рассчитываем стоимость альянса
-        alliance_cost = 1_000_000 + (150_000 * target_city_count)
+        alliance_cost = 100_000_000 + (15_000_000 * target_city_count)
 
         # Получаем текущий баланс фракции
         political_cash = PoliticalCash(faction, class_faction)

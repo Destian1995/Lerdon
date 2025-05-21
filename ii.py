@@ -1910,7 +1910,7 @@ class AIController:
 
     def transfer_resource_to_ally(self, faction, resource_type):
         """
-        Передает 40% ресурса указанного типа союзной фракции.
+        Передает 15% ресурса указанного типа союзной фракции.
         Данные о передаче записываются в таблицу trade_agreements.
         :param faction: Название союзной фракции (target_faction)
         :param resource_type: Тип ресурса (initiator_type_resource и target_type_resource)
@@ -1922,8 +1922,8 @@ class AIController:
                 print(f"Нет доступных ресурсов типа {resource_type} для передачи.")
                 return
 
-            # Вычисляем 40% от текущего количества ресурса
-            amount_to_transfer = int(current_amount * 0.4)
+            # Вычисляем 15% от текущего количества ресурса
+            amount_to_transfer = int(current_amount * 0.15)
 
             # Уменьшаем количество ресурса у текущей фракции
             self.resources[resource_type] -= amount_to_transfer
