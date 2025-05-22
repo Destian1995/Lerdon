@@ -3,7 +3,7 @@ from game_process import GameScreen
 from ui import *
 
 # Размеры окна
-screen_width, screen_height = 1200, 800
+#screen_width, screen_height = 1200, 800
 
 # Путь к БД
 # === Настройка пути к базе данных ===
@@ -867,6 +867,7 @@ class KingdomSelectionWidget(FloatLayout):
         self.bg_video.size = Window.size
         self.bg_video.bind(on_eos=self.loop_video)  # Ловим конец видео
         self.add_widget(self.bg_video)
+        self.start_video = None
 
         # Заголовок
         label_size = '20sp' if is_android else '36sp'
@@ -1139,24 +1140,82 @@ class KingdomSelectionWidget(FloatLayout):
         self.faction_info_container.add_widget(army_row)
 
     def start_game(self, instance):
-        conn = sqlite3.connect(db_path)
-        clear_tables(conn)
-        conn.close()
-        restore_from_backup()
-        app = App.get_running_app()
-        selected_kingdom = app.selected_kingdom
-        if not selected_kingdom:
+        if not self.selected_button:
             print("Фракция не выбрана.")
             return
-        cities = load_cities_from_db(selected_kingdom)
-        if not cities:
-            print("Города не найдены.")
-            return
-        game_screen = GameScreen(selected_kingdom, cities, db_path=db_path)
-        app.root.clear_widgets()
-        map_widget = MapWidget(selected_kingdom=selected_kingdom, player_kingdom=selected_kingdom)
-        app.root.add_widget(map_widget)
-        app.root.add_widget(game_screen)
+
+        # === Блокируем все кнопки ===
+        self.disable_all_buttons(True)
+
+        # === Создаем Overlay для видео ===
+        overlay = FloatLayout(size=Window.size)
+        self.overlay = overlay
+        self.add_widget(overlay)
+
+        # === Виджет видео ===
+        self.start_video = Video(
+            source='files/menu/start_game.mp4',
+            state='play',
+            options={'eos': 'stop'}
+        )
+        self.start_video.allow_stretch = True
+        self.start_video.keep_ratio = False
+        self.start_video.size = Window.size
+        self.start_video.pos = (0, 0)
+        overlay.add_widget(self.start_video)
+
+        # === Ловим конец видео ===
+        self.start_video.bind(on_eos=self.on_start_video_end)
+
+        # === Резервный таймер на 6 секунд (если on_eos не сработал) ===
+        Clock.schedule_once(self.force_start_game, 6)
+
+    def on_start_video_end(self, instance, value):
+        if value or (self.start_video and self.start_video.state == 'stop'):
+            print("Видео завершено (on_eos), начинаем игру...")
+            self.cleanup_and_start_game()
+
+    def force_start_game(self, dt):
+        print("Резервный таймер сработал — видео, возможно, не вызвало on_eos")
+        if self.start_video:
+            self.start_video.state = 'stop'
+        self.cleanup_and_start_game()
+
+    def cleanup_and_start_game(self):
+        # Убираем видео
+        if self.overlay in self.children:
+            self.remove_widget(self.overlay)
+        self.overlay = None
+        self.start_video = None
+
+        self.disable_all_buttons(False)
+
+        # === Основной процесс игры ===
+        try:
+            conn = sqlite3.connect(db_path)
+            clear_tables(conn)
+            conn.close()
+            restore_from_backup()
+
+            app = App.get_running_app()
+            selected_kingdom = app.selected_kingdom
+            cities = load_cities_from_db(selected_kingdom)
+            if not cities:
+                print("Города не найдены.")
+                return
+
+            game_screen = GameScreen(selected_kingdom, cities, db_path=db_path)
+            app.root.clear_widgets()
+            map_widget = MapWidget(selected_kingdom=selected_kingdom, player_kingdom=selected_kingdom)
+            app.root.add_widget(map_widget)
+            app.root.add_widget(game_screen)
+        except Exception as e:
+            print(f"Ошибка при запуске игры: {e}")
+
+    def disable_all_buttons(self, disabled=True):
+        for child in self.buttons_container.walk():
+            if isinstance(child, RoundedButton):
+                child.disabled = disabled
 
 
 class EmpireApp(App):
