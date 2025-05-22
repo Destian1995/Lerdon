@@ -1167,8 +1167,8 @@ class KingdomSelectionWidget(FloatLayout):
         # === Ловим конец видео ===
         self.start_video.bind(on_eos=self.on_start_video_end)
 
-        # === Резервный таймер на 6 секунд (если on_eos не сработал) ===
-        Clock.schedule_once(self.force_start_game, 6)
+        # === Резервный таймер на 4 секунд (если on_eos не сработал) ===
+        Clock.schedule_once(self.force_start_game, 4)
 
     def on_start_video_end(self, instance, value):
         if value or (self.start_video and self.start_video.state == 'stop'):
