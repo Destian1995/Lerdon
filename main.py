@@ -839,12 +839,26 @@ class DossierScreen(Screen):
         try:
             cursor.execute("DELETE FROM dossier")
             conn.commit()
+            print("✅ Все записи успешно удалены.")
         except sqlite3.Error as e:
-            print(f"Ошибка удаления: {e}")
+            print(f"❌ Ошибка удаления: {e}")
         finally:
             conn.close()
-        self.tabs.clear_tabs()
+
+        Clock.schedule_once(lambda dt: self.refresh_tabs(), 0)
+
+    def refresh_tabs(self):
+        # Полная очистка вкладок
+        for tab in self.tabs.get_tab_list():
+            self.tabs.remove_widget(tab)
+
+        # Перезагрузка данных
         self.load_dossier_data()
+
+        # Принудительное обновление UI
+        self.tabs.do_layout()
+        if self.tabs.parent:
+            self.tabs.parent.do_layout()
 
     def go_back(self, instance):
         app = App.get_running_app()
@@ -1455,8 +1469,8 @@ class KingdomSelectionWidget(FloatLayout):
         # === Ловим конец видео ===
         self.start_video.bind(on_eos=self.on_start_video_end)
 
-        # === Резервный таймер на 4 секунд (если on_eos не сработал) ===
-        Clock.schedule_once(self.force_start_game, 4)
+        # === Резервный таймер на 3 секунды (если on_eos не сработал) ===
+        Clock.schedule_once(self.force_start_game, 3)
 
     def on_start_video_end(self, instance, value):
         if value or (self.start_video and self.start_video.state == 'stop'):

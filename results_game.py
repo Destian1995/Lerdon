@@ -89,9 +89,40 @@ class ResultsGame:
 
         return calculated_results
 
+    def update_dossier_stats(self):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Получаем статистику по фракциям
+        calculated_results = self.calculate_results()
+
+        for data in calculated_results:
+            faction = data["faction"]
+            rating = data["army_efficiency_ratio"]
+
+            # Предположим, что каждая запись в results = 1 победа или поражение
+            # Можно изменить на более точную логику
+            victories = 1 if self.game_status == "win" and faction == self.current_faction else 0
+            defeats = 1 if self.game_status == "lose" and faction == self.current_faction else 0
+
+            # Обновляем dossier
+            cursor.execute('''
+                UPDATE dossier SET 
+                    avg_military_rating_per_faction = ?,
+                    matches_won = matches_won + ?,
+                    matches_lost = matches_lost + ?
+                WHERE faction = ?
+            ''', (rating, victories, defeats, faction))
+
+        conn.commit()
+        conn.close()
+
     def show_results(self, faction_name, status, reason):
         self.game_status = status
         self.reason = reason
+        self.current_faction = faction_name
+        self.update_dossier_stats()  # ← ОБНОВЛЯЕМ СТАТИСТИКУ
+        self.calculate_military_rank()  # ← ТЕПЕРЬ РАСЧЁТ ЗВАНИЙ РАБОТАЕТ
 
         calculated_results = self.calculate_results()
 
