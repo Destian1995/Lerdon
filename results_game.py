@@ -110,7 +110,61 @@ class ResultsGame:
             message = "Неизвестный статус завершения игры.\n\n"
 
         # Отображаем результаты в графическом интерфейсе
+        self.calculate_military_rank()
         self.show_results_popup(title, message, calculated_results, color)
+
+    def calculate_military_rank(self):
+        """
+        Обновляет military_rank для всех фракций в таблице dossier
+        на основе текущих значений avg_military_rating_per_faction,
+        avg_soldiers_starving и соотношения battle_victories / battle_defeats.
+        """
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Получаем все записи из dossier
+        cursor.execute(
+            'SELECT faction, avg_military_rating_per_faction, avg_soldiers_starving, battle_victories, battle_defeats FROM dossier')
+        factions = cursor.fetchall()
+
+        rank_table = [
+            ("Главнокомандующий", 4.6, float('inf'), 0, 5.0),
+            ("Верховный маршал", 4.2, 4.6, 100, 4.0),
+            ("Генерал-фельдмаршал", 3.8, 4.2, 200, 3.5),
+            ("Генерал армии", 3.5, 3.8, 500, 3.0),
+            ("Генерал-полковник", 3.2, 3.5, 1000, 2.8),
+            ("Генерал-лейтенант", 2.9, 3.2, 1500, 2.6),
+            ("Генерал-майор", 2.6, 2.9, 2000, 2.4),
+            ("Бригадный генерал", 2.3, 2.6, 3000, 2.2),
+            ("Коммандер", 2.0, 2.3, 4000, 2.0),
+            ("Полковник", 1.7, 2.0, 5000, 1.8),
+            ("Подполковник", 1.5, 1.7, 6000, 1.6),
+            #("Капитан-лейтенант", 1.3, 1.5, 8000, 1.5),
+            ("Капитан", 1.1, 1.3, 10000, 1.3),
+            ("Платиновый лейтенант", 0.9, 1.1, 15000, 1.2),
+            ("Серебряный лейтенант", 0.7, 0.9, 20000, 1.0),
+            ("Сержант", 0.5, 0.7, 30000, 1.0),
+            ("Прапорщик", 0.03, 0.5, 40000, 0.3),
+            ("Рядовой", 0, 0.03, float('inf'), 0),
+        ]
+
+        for faction_data in factions:
+            faction, rating, starving, victories, defeats = faction_data
+            if rating is None:
+                continue
+
+            ratio = victories / defeats if defeats != 0 else float('inf')
+
+            for rank_name, max_rating, min_rating, max_starving, min_ratio in rank_table:
+                if (rating > min_rating and rating <= max_rating and
+                        starving <= max_starving and ratio >= min_ratio):
+                    cursor.execute('''
+                        UPDATE dossier SET military_rank = ? WHERE faction = ?
+                    ''', (rank_name, faction))
+                    break
+
+        conn.commit()
+        conn.close()
 
     def show_results_popup(self, title, message, results, text_color):
         # Создаем основной контейнер

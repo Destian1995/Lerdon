@@ -1,0 +1,62 @@
+#:import get_color_from_hex kivy.utils.get_color_from_hex
+#:import ScrollEffect kivy.effects.scroll.ScrollEffect
+
+<StyledLabel@MDLabel>:
+    halign: "center"
+    valign: "middle"
+    theme_text_color: "Custom"
+    font_size: "16sp"
+
+<DossierTab@TabbedPanelItem>:
+    background_color: app.theme_cls.primary_dark
+
+<DossierCard@MDCard>:
+    orientation: "vertical"
+    padding: "10dp"
+    spacing: "10dp"
+    size_hint_y: None
+    height: "120dp"
+    elevation: 5
+
+<DossierScreen>:
+    name: "dossier"
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: "10dp"
+        spacing: "10dp"
+
+        MDLabel:
+            text: "Досье"
+            font_style: "H5"
+            halign: "center"
+            size_hint_y: None
+            height: "40dp"
+
+        TabbedPanel:
+            id: tabs
+            do_default_tab: False
+
+        BoxLayout:
+            size_hint_y: None
+            height: "60dp"
+            spacing: "10dp"
+
+            MDButton:
+                on_press: root.go_back()
+                theme_bg_color: "Custom"
+                md_bg_color: get_color_from_hex("#007ACC")
+                pos_hint: {"center_x": .5}
+                text: "Назад в главное меню"
+
+            MDButton:
+                on_press: root.clear_dossier()
+                theme_bg_color: "Custom"
+                md_bg_color: get_color_from_hex("#E74C3C")
+                pos_hint: {"center_x": .5}
+                text: "Очистить досье"
+
+            MDToggleButton:
+                id: auto_clear_toggle
+                text: "Авто-очистка"
+                pos_hint: {"center_x": .5}

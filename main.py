@@ -502,10 +502,20 @@ class MenuWidget(FloatLayout):
             color=(1, 1, 1, 1),
             font_size='20sp'
         )
+        self.btn_dossier = RoundedButton(
+            text="Личное дело",
+            size_hint=(0.4, 0.08),
+            pos=(-400, Window.height * 0.53),
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
+            font_size='20sp'
+        )
+
         self.btn_how_to_play = RoundedButton(
             text="Как играть",
             size_hint=(0.4, 0.08),
-            pos=(-400, Window.height * 0.53),
+            pos=(-400, Window.height * 0.38),
             background_normal='',
             background_color=(0, 0, 0, 0),
             color=(1, 1, 1, 1),
@@ -514,7 +524,7 @@ class MenuWidget(FloatLayout):
         self.btn_exit = RoundedButton(
             text="Выход",
             size_hint=(0.4, 0.08),
-            pos=(-400, Window.height * 0.38),
+            pos=(-400, Window.height * 0.23),
             background_normal='',
             background_color=(0, 0, 0, 0),
             color=(1, 1, 1, 1),
@@ -523,11 +533,13 @@ class MenuWidget(FloatLayout):
 
         # Привязываем действия
         self.btn_start_game.bind(on_press=self.start_game)
+        self.btn_dossier.bind(on_press=self.open_dossier)
         self.btn_how_to_play.bind(on_press=self.open_how_to_play)
         self.btn_exit.bind(on_press=self.exit_game)
 
         # Добавляем кнопки на экран
         self.add_widget(self.btn_start_game)
+        self.add_widget(self.btn_dossier)
         self.add_widget(self.btn_how_to_play)
         self.add_widget(self.btn_exit)
 
@@ -542,23 +554,27 @@ class MenuWidget(FloatLayout):
     def animate_buttons_in(self, dt):
         # Сначала перемещаем кнопки за левую границу экрана (скрываем их)
         self.btn_start_game.x = -self.btn_start_game.width
+        self.btn_dossier.x = -self.btn_dossier.width
         self.btn_how_to_play.x = -self.btn_how_to_play.width
         self.btn_exit.x = -self.btn_exit.width
 
         # Целевые координаты для анимации
         target_x1 = Window.width * 0.5 - self.btn_start_game.width / 2
-        target_x2 = Window.width * 0.5 - self.btn_how_to_play.width / 2
-        target_x3 = Window.width * 0.5 - self.btn_exit.width / 2
+        target_x2 = Window.width * 0.5 - self.btn_dossier.width / 2
+        target_x3 = Window.width * 0.5 - self.btn_how_to_play.width / 2
+        target_x4 = Window.width * 0.5 - self.btn_exit.width / 2
 
         # Анимация: кнопки выезжают слева в нужные позиции
         anim1 = Animation(x=target_x1, y=Window.height * 0.68, duration=0.6, t='out_back')
         anim2 = Animation(x=target_x2, y=Window.height * 0.53, duration=0.6, t='out_back')
         anim3 = Animation(x=target_x3, y=Window.height * 0.38, duration=0.6, t='out_back')
+        anim4 = Animation(x=target_x4, y=Window.height * 0.23, duration=0.6, t='out_back')
 
         # Запуск анимаций
         anim1.start(self.btn_start_game)
-        anim2.start(self.btn_how_to_play)
-        anim3.start(self.btn_exit)
+        anim2.start(self.btn_dossier)
+        anim3.start(self.btn_how_to_play)
+        anim4.start(self.btn_exit)
 
     def animate_background(self, dt):
         new_source = random.choice([
@@ -583,6 +599,11 @@ class MenuWidget(FloatLayout):
         fade_in.start(self.next_image)
         self.current_image, self.next_image = self.next_image, self.current_image
 
+    def open_dossier(self, instance):
+        app = App.get_running_app()
+        app.root.clear_widgets()
+        app.root.add_widget(DossierScreen())
+
     def open_how_to_play(self, instance):
         app = App.get_running_app()
         app.root.clear_widgets()
@@ -595,6 +616,273 @@ class MenuWidget(FloatLayout):
 
     def exit_game(self, instance):
         App.get_running_app().stop()
+
+
+class DossierScreen(Screen):
+    def __init__(self, **kwargs):
+        super(DossierScreen, self).__init__(**kwargs)
+        self.build_ui()
+
+    def build_ui(self):
+        layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+
+        # === Красивый заголовок "Личное дело" ===
+        title_layout = BoxLayout(
+            size_hint_y=None,
+            height=60,
+            padding=10
+        )
+
+        with title_layout.canvas.before:
+            Color(0.1, 0.1, 0.1, 0.95)  # Темный фон
+            bg_rect = Rectangle(size=title_layout.size, pos=title_layout.pos)
+            Color(0, 0.7, 1, 1)  # Голубая рамка
+            border_line = Line(
+                rectangle=(title_layout.x + 1, title_layout.y + 1, title_layout.width - 2, title_layout.height - 2),
+                width=1.4
+            )
+
+            def update_rect(instance, value):
+                bg_rect.size = instance.size
+                bg_rect.pos = instance.pos
+                border_line.rectangle = (instance.x + 1, instance.y + 1, instance.width - 2, instance.height - 2)
+
+            title_layout.bind(pos=update_rect, size=update_rect)
+
+        title_label = Label(
+            text="[b]Личное дело[/b]",
+            markup=True,
+            font_size='24sp',
+            color=get_color_from_hex('#FFD700'),  # Темно-желтый (золото)
+            halign='center',
+            valign='middle'
+        )
+
+        title_layout.add_widget(title_label)
+        layout.add_widget(title_layout)
+
+        # Табы
+        self.tabs = TabbedPanel(do_default_tab=False)
+        self.load_dossier_data()
+        layout.add_widget(self.tabs)
+
+        # Нижний блок
+        bottom_layout = BoxLayout(size_hint_y=None, height=60, spacing=10)
+
+        back_btn = RoundedButton(text="Назад в главное меню", background_color=(0, 0.7, 1, 1))
+        back_btn.bind(on_press=self.go_back)
+        bottom_layout.add_widget(back_btn)
+
+        clear_btn = RoundedButton(text="Очистить данные", background_color=(0.9, 0.2, 0.2, 1))
+        clear_btn.bind(on_press=self.clear_dossier)
+        bottom_layout.add_widget(clear_btn)
+
+        auto_clear_toggle = ToggleButton(text="Авто-очистка", state='normal')
+        bottom_layout.add_widget(auto_clear_toggle)
+
+        layout.add_widget(bottom_layout)
+
+        self.add_widget(layout)
+
+    def load_dossier_data(self):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("SELECT * FROM dossier")
+            rows = cursor.fetchall()
+        except sqlite3.Error as e:
+            print(f"Ошибка базы данных: {e}")
+            rows = []
+
+        if not rows:
+            no_data_label = Label(
+                text="Девственно чисто",
+                font_size='18sp',
+                color=get_color_from_hex('#FFFFFF'),
+                halign='center'
+            )
+            self.tabs.add_widget(no_data_label)
+        else:
+            factions = {}
+            for row in rows:
+                faction = row[1]
+                data = {
+                    'military_rank': row[2],
+                    'avg_military_rating': row[3],
+                    'avg_soldiers_starving': row[4],
+                    'victories': row[5],
+                    'defeats': row[6],
+                    'matches_won': row[7],
+                    'matches_lost': row[8],
+                    'last_data': row[9]
+                }
+                if faction not in factions:
+                    factions[faction] = []
+                factions[faction].append(data)
+
+            for faction, data_list in factions.items():
+                tab = TabbedPanelItem(text=faction)
+                scroll = ScrollView()
+                grid = GridLayout(cols=2, size_hint_y=None, spacing=10, padding=[10, 10])
+                grid.bind(minimum_height=grid.setter('height'))
+
+                for data in data_list:
+                    # === Блок информации о персонаже ===
+                    character_box = BoxLayout(
+                        orientation='vertical',
+                        size_hint_y=None,
+                        spacing=5
+                    )
+
+                    # --- Вычисляем высоту контента ---
+                    total_height = 0
+
+                    def add_widget_with_height(widget, height):
+                        widget.size_hint_y = None
+                        widget.height = height
+                        character_box.add_widget(widget)
+                        nonlocal total_height
+                        total_height += height
+
+                    # --- Имя ---
+                    name_label = Label(
+                        text=f"",
+                        markup=True,
+                        color=(1, 1, 1, 1),
+                        halign='center',
+                        valign='middle',
+                        font_size='20sp'
+                    )
+                    add_widget_with_height(name_label, 30)
+
+                    # --- Звание ---
+                    rank = data['military_rank'] or "Рядовой"
+                    rank_label = Label(
+                        text=f"[b]Звание:[/b] {rank}",
+                        markup=True,
+                        color=(1, 1, 1, 1),
+                        halign='center',
+                        valign='middle',
+                        font_size='18sp'
+                    )
+                    add_widget_with_height(rank_label, 30)
+
+                    # --- Изображение ---
+                    image_path = f'files/menu/dossier/{rank}.png'
+                    image_layout = AnchorLayout(
+                        anchor_x='center',
+                        anchor_y='center',
+                        size_hint_y=None,
+                        height=90
+                    )
+
+                    if os.path.exists(image_path):
+                        rank_image = Image(source=image_path, size_hint=(None, None), width=90, height=90)
+                    else:
+                        rank_image = Label(text="?", font_size='30sp', color=(1, 1, 1, 0.5))
+
+                    image_layout.add_widget(rank_image)
+                    add_widget_with_height(image_layout, 90)
+
+                    # --- Воен. рейтинг и голод ===
+                    left_label = Label(
+                        text=f"[b]Военный рейтинг:[/b] {data['avg_military_rating']}\n"
+                             f"[b]Умерло войск от голода:[/b] {data['avg_soldiers_starving']}",
+                        markup=True,
+                        color=get_color_from_hex('#FFFFFF'),
+                        halign='center',
+                        valign='middle',
+                        font_size='16sp'
+                    )
+                    add_widget_with_height(left_label, 60)
+
+                    # --- Победы/поражения ===
+                    right_label = Label(
+                        text=f"[b]Сражения (В/П):[/b]\n"
+                             f"[color=#00FF00]{data['victories']}[/color]/"
+                             f"[color=#FF0000]{data['defeats']}[/color]\n"
+                             f"[b]Матчи (В/П):[/b]\n"
+                             f"[color=#00FF00]{data['matches_won']}[/color]/"
+                             f"[color=#FF0000]{data['matches_lost']}[/color]",
+                        markup=True,
+                        halign='center',
+                        valign='middle',
+                        font_size='16sp'
+                    )
+                    add_widget_with_height(right_label, 80)
+
+                    # === Дата ===
+                    date_label = Label(
+                        text=f"Последняя игра: {data['last_data']}",
+                        color=get_color_from_hex('#AAAAAA'),
+                        font_size='14sp',
+                        halign='center'
+                    )
+                    add_widget_with_height(date_label, 30)
+
+                    # --- Устанавливаем общую высоту блока ---
+                    character_box.height = total_height
+
+                    # === Добавление в сетку ===
+                    grid.add_widget(character_box)
+
+                scroll.add_widget(grid)
+                tab.add_widget(scroll)
+                self.tabs.add_widget(tab)
+
+        conn.close()
+
+    def clear_dossier(self, instance):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM dossier")
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"Ошибка удаления: {e}")
+        finally:
+            conn.close()
+        self.tabs.clear_tabs()
+        self.load_dossier_data()
+
+    def go_back(self, instance):
+        app = App.get_running_app()
+        app.root.clear_widgets()
+        app.root.add_widget(MenuWidget())
+
+    def on_enter(self, *args):
+        """Вызывается при переходе на экран"""
+        self.auto_clear_event = Clock.schedule_interval(self.check_auto_clear, 300)  # Каждые 5 минут
+
+    def on_leave(self, *args):
+        """Вызывается при уходе с экрана"""
+        if hasattr(self, 'auto_clear_event'):
+            self.auto_clear_event.cancel()
+
+    def check_auto_clear(self, dt):
+        if self.auto_clear_toggle.state == 'down':
+            self.clear_old_records()
+
+    def clear_old_records(self):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        try:
+            # Текущая дата минус 30 дней
+            cutoff_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
+
+            # Удаление записей старше 30 дней
+            cursor.execute("DELETE FROM dossier WHERE last_data < ?", (cutoff_date,))
+            conn.commit()
+
+            # Если были удалены данные — обновляем отображение
+            if cursor.rowcount > 0:
+                self.tabs.clear_tabs()
+                self.load_dossier_data()
+        except Exception as e:
+            print(f"Ошибка при автоматической очистке: {e}")
+        finally:
+            conn.close()
 
 
 class HowToPlayScreen(FloatLayout):

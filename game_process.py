@@ -276,6 +276,68 @@ class ImageButton(ButtonBehavior, Image):
     pass
 
 
+class CircularProgressButton(Button):
+    progress = NumericProperty(0)
+
+    def __init__(self, duration=1.5, **kwargs):
+        super().__init__(**kwargs)
+        self.duration = duration
+        self.anim = None
+        self.bind(size=self.draw_circle, pos=self.draw_circle)
+
+    def draw_circle(self, *args):
+        self.canvas.after.clear()
+        with self.canvas.after:
+            Color(1, 1, 1, 0.3)  # Цвет индикатора
+            self.circle = Line(
+                circle=(self.center_x, self.center_y, min(self.width, self.height) / 2 - dp(8), 0, 0),
+                width=dp(4),
+                cap='round'
+            )
+
+    def start_progress(self):
+        if self.anim:
+            return
+        self.progress = 0
+        self.disabled = True
+        self.canvas.after.clear()
+
+        with self.canvas.after:
+            Color(1, 1, 1, 0.3)
+            self.circle = Line(
+                circle=(self.center_x, self.center_y, min(self.width, self.height)/2 - dp(8), 0, 0),
+                width=dp(4),
+                cap='round'
+            )
+
+        anim = Animation(progress=360, duration=self.duration, t='linear')
+        anim.bind(on_progress=self.update_arc)
+        anim.bind(on_complete=self.reset_button)
+        self.anim = anim
+        anim.start(self)
+
+    def update_arc(self, animation, instance, value):
+        self.canvas.after.clear()
+        with self.canvas.after:
+            Color(1, 1, 1, 0.3)
+            self.circle = Line(
+                circle=(
+                    self.center_x,
+                    self.center_y,
+                    min(self.width, self.height)/2 - dp(8),
+                    0,
+                    self.progress
+                ),
+                width=dp(4),
+                cap='round'
+            )
+
+    def reset_button(self, *args):
+        self.disabled = False
+        self.anim = None
+        self.canvas.after.clear()
+
+
 class GameScreen(Screen):
     def __init__(self, selected_faction, cities, db_path=None, **kwargs):
         super(GameScreen, self).__init__(**kwargs)
@@ -324,6 +386,7 @@ class GameScreen(Screen):
             pos_hint={'x': 0, 'y': 0.2},
             padding=dp(5)
         )
+
         with end_turn_container.canvas.before:
             Color(1, 0.2, 0.2, 0.9)  # Цвет фона кнопки
             RoundedRectangle(pos=end_turn_container.pos, size=end_turn_container.size, radius=[15])
@@ -336,18 +399,23 @@ class GameScreen(Screen):
 
         end_turn_container.bind(pos=update_end_turn_rect, size=update_end_turn_rect)
 
-        # === Сама кнопка внутри контейнера ===
-        self.end_turn_button = Button(
+        # === Кнопка с анимацией заполнения ===
+        self.end_turn_button = CircularProgressButton(
             text="Завершить ход",
-            size_hint=(1, 1),
-            background_color=(0, 0, 0, 0),  # Отключаем стандартный фон кнопки
             font_size=sp(20),
             bold=True,
-            color=(1, 1, 1, 1)
+            color=(1, 1, 1, 1),
+            background_color=(0, 0, 0, 0),
+            size_hint=(1, 1),
+            duration=1.5  # Время анимации в секундах
         )
-        self.end_turn_button.bind(on_press=self.process_turn)
-        end_turn_container.add_widget(self.end_turn_button)
 
+        def on_end_turn(instance):
+            instance.start_progress()
+            Clock.schedule_once(lambda dt: self.process_turn(None), 1.5)
+
+        self.end_turn_button.bind(on_press=on_end_turn)
+        end_turn_container.add_widget(self.end_turn_button)
         self.add_widget(end_turn_container)
 
         # === Контейнер для названия фракции ===
@@ -446,7 +514,6 @@ class GameScreen(Screen):
         turn_counter_container.add_widget(self.turn_label)
         self.add_widget(turn_counter_container)
 
-
         # === Контейнер для кнопки выхода ===
         exit_container = BoxLayout(
             orientation='vertical',
@@ -478,6 +545,7 @@ class GameScreen(Screen):
         self.exit_button.bind(on_press=lambda x: self.confirm_exit())
         exit_container.add_widget(self.exit_button)
         self.add_widget(exit_container)
+
         # === ResourceBox ===
         self.resource_box = ResourceBox(resource_manager=self.faction)
         self.resource_box.size_hint = (0.2, 0.7)

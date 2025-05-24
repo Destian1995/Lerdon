@@ -899,106 +899,107 @@ class Faction:
         """
         try:
             self.current_consumption = 0
-            # Шаг 1: Выгрузка всех гарнизонов из таблицы garrisons
-            self.cursor.execute("""
-                SELECT city_id, unit_name, unit_count 
-                FROM garrisons
-            """)
+            # Шаг 1: Выгрузка всех гарнизонов
+            self.cursor.execute("SELECT city_id, unit_name, unit_count FROM garrisons")
             garrisons = self.cursor.fetchall()
 
-            # Шаг 2: Для каждого гарнизона находим соответствующий юнит в таблице units
+            # Шаг 2: Для каждого гарнизона получаем данные юнита
             faction_units = {}
             for garrison in garrisons:
                 city_id, unit_name, unit_count = garrison
 
-                # Проверяем, к какой фракции принадлежит юнит
                 if unit_name not in faction_units:
-                    self.cursor.execute("""
-                        SELECT consumption, faction 
-                        FROM units 
-                        WHERE unit_name = ?
-                    """, (unit_name,))
+                    self.cursor.execute("SELECT consumption, faction FROM units WHERE unit_name = ?", (unit_name,))
                     unit_data = self.cursor.fetchone()
-
                     if unit_data:
                         consumption, unit_faction = unit_data
-                        faction_units[unit_name] = {
-                            'consumption': consumption,
-                            'faction': unit_faction
-                        }
+                        faction_units[unit_name] = {'consumption': consumption, 'faction': unit_faction}
                     else:
                         continue
 
-                # Учитываем только юниты текущей фракции
                 if faction_units[unit_name]['faction'] == self.faction:
-                    # Расчет потребления для данного типа юнита
                     self.current_consumption += faction_units[unit_name]['consumption'] * unit_count
 
-            # Шаг 4: Проверка превышения лимита
+            starving_units = []
             if self.current_consumption > self.max_army_limit:
                 excess_consumption = self.current_consumption - self.max_army_limit
-                starving_units = []  # Список юнитов, которые голодают
 
-                # Логика сокращения армии на 15% от числа юнитов
                 for garrison in garrisons:
                     city_id, unit_name, unit_count = garrison
 
-                    if unit_count > 0 and faction_units[unit_name]['faction'] == self.faction:
-                        # Сокращаем не более 15% от текущего количества юнитов
-                        reduction = max(1, int(unit_count * 0.15))  # Минимум 1 юнит
+                    if unit_count <= 0 or faction_units[unit_name]['faction'] != self.faction:
+                        continue
 
-                        # Обновляем данные в базе
-                        self.cursor.execute("""
-                            UPDATE garrisons
-                            SET unit_count = unit_count - ?
-                            WHERE city_id = ? AND unit_name = ?
-                        """, (reduction, city_id, unit_name))
+                    reduction = max(1, int(unit_count * 0.15))
 
-                        # Обновляем переменные
-                        new_unit_count = unit_count - reduction
-                        starving_units.append((unit_name, reduction))  # Добавляем в список голодающих юнитов
+                    self.cursor.execute("""
+                        UPDATE garrisons
+                        SET unit_count = unit_count - ?
+                        WHERE city_id = ? AND unit_name = ?
+                    """, (reduction, city_id, unit_name))
 
-                        # Если количество юнитов стало <= 0, удаляем запись
-                        if new_unit_count <= 0:
-                            self.cursor.execute("""
-                                DELETE FROM garrisons
-                                WHERE city_id = ? AND unit_name = ?
-                            """, (city_id, unit_name))
-                        else:
-                            # Пересчитываем потребление для оставшихся юнитов
-                            self.current_consumption -= faction_units[unit_name]['consumption'] * reduction
+                    new_unit_count = unit_count - reduction
+                    starving_units.append((unit_name, reduction))
 
-                        # Уменьшаем избыточное потребление
+                    if new_unit_count <= 0:
+                        self.cursor.execute("DELETE FROM garrisons WHERE city_id = ? AND unit_name = ?",
+                                            (city_id, unit_name))
+                    else:
+                        self.current_consumption -= faction_units[unit_name]['consumption'] * reduction
                         excess_consumption -= faction_units[unit_name]['consumption'] * reduction
 
-                        # Если избыточное потребление устранено, завершаем цикл
-                        if excess_consumption <= 0:
-                            break
+                    if excess_consumption <= 0:
+                        break
 
-                # Выводим уведомление о голоде
-                if starving_units:
-                    message = "Армия голодает и будет сокращаться:\n"
-                    for unit_name, reduction in starving_units:
-                        message += f"- {unit_name}: умерло {reduction} юнитов\n"
-                    show_message("Голод в армии", message)
+            # Шаг 3: Обновляем досье
+            total_starved = sum(reduction for _, reduction in starving_units)
 
+            if total_starved > 0:
+                try:
+                    self.cursor.execute("SELECT avg_soldiers_starving FROM dossier WHERE faction = ?", (self.faction,))
+                    result = self.cursor.fetchone()
+
+                    if result and result[0] is not None:
+                        new_avg = (result[0] + total_starved) / 2
+                    else:
+                        new_avg = total_starved
+
+                    # Округление в меньшую сторону
+                    new_avg = math.floor(new_avg)
+
+                    self.cursor.execute("""
+                        INSERT INTO dossier (faction, avg_soldiers_starving, last_data)
+                        VALUES (?, ?, datetime('now'))
+                        ON CONFLICT(faction) DO UPDATE SET
+                            avg_soldiers_starving = ?,
+                            last_data = datetime('now')
+                    """, (self.faction, new_avg, new_avg))
+
+                except Exception as e:
+                    print(f"[Ошибка] Не удалось обновить досье: {e}")
+                    self.conn.rollback()
+
+            # Шаг 4: Вывод сообщения о голодании
+            if starving_units:
+                message = "Армия голодает и будет сокращаться:\n"
+                for unit_name, reduction in starving_units:
+                    message += f"- {unit_name}: умерло {reduction} юнитов\n"
+                show_message("Голод в армии", message)
                 print(f"Армия сокращена до допустимого лимита.")
 
-            # Шаг 5: Вычитание общего потребления из сырья фракции
+            # Шаг 5: Обновление ресурсов
             self.raw_material -= self.current_consumption
             print(f"Общее потребление сырья: {self.current_consumption}")
             print(f"Остаток сырья у фракции: {self.raw_material}")
 
-            # Обновляем потребление в ресурсах
             self.resources['Потребление'] = self.current_consumption
-
-            # Сохраняем ресурсы в базу данных
             self.save_resources_to_db()
 
-        except Exception as e:
-            print(f"Произошла ошибка: {e}")
+            self.conn.commit()
 
-            # Обновляем потребление в ресурсах
+        except Exception as e:
+            print(f"[Ошибка] Произошла ошибка: {e}")
+            self.conn.rollback()
             self.resources['Потребление'] = self.current_consumption
 
     def update_average_net_profit(self, coins_profit, raw_profit):

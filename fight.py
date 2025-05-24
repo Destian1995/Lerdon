@@ -144,10 +144,12 @@ def calculate_experience(losing_side, db_connection):
             db_connection.rollback()
             print(f"Ошибка при обновлении таблицы experience: {e}")
 
-def show_battle_report(report_data):
+def show_battle_report(report_data, is_user_involved=False, user_faction=None):
     """
     Отображает красивый отчет о бое с использованием возможностей Kivy.
     :param report_data: Данные отчета о бое.
+    :param is_user_involved: Участвовал ли пользователь в бою.
+    :param user_faction: Фракция пользователя (если участвовал).
     """
     if not report_data:
         print("Нет данных для отображения.")
@@ -204,7 +206,7 @@ def show_battle_report(report_data):
         table_layout = GridLayout(
             cols=4,
             size_hint_y=None,
-            spacing=dp(10),  # <-- Увеличенное расстояние между ячейками
+            spacing=dp(10),
             padding=dp(10)
         )
         table_layout.bind(minimum_height=table_layout.setter('height'))
@@ -214,7 +216,7 @@ def show_battle_report(report_data):
             text=f"[b]{title}[/b]",
             markup=True,
             size_hint_y=None,
-            height=dp(40),  # <-- Высота заголовка
+            height=dp(40),
             font_size=sp(15),
             color=(1, 1, 1, 1)
         )
@@ -227,7 +229,7 @@ def show_battle_report(report_data):
                 text=f"[b]{header_text}[/b]",
                 markup=True,
                 size_hint_y=None,
-                height=dp(40),  # <-- Увеличили высоту заголовков
+                height=dp(40),
                 font_size=sp(14),
                 color=(0.8, 0.8, 0.8, 1)
             )
@@ -245,7 +247,7 @@ def show_battle_report(report_data):
                     text=value,
                     font_size=sp(14),
                     size_hint_y=None,
-                    height=dp(40)  # <-- Увеличили высоту строк с данными
+                    height=dp(40)
                 )
                 table_layout.add_widget(cell)
 
@@ -255,7 +257,6 @@ def show_battle_report(report_data):
     attacking_data = [item for item in report_data if item['side'] == 'attacking']
     defending_data = [item for item in report_data if item['side'] == 'defending']
 
-    # Создаем таблицы без заголовков "Атакующая сторона" и "Обороняющаяся сторона"
     create_table(attacking_data, "Атакующие силы")
     create_table(defending_data, "Оборонительные силы")
 
@@ -276,6 +277,16 @@ def show_battle_report(report_data):
 
     content.add_widget(scroll_view)
     content.add_widget(close_button)
+
+    # === Обновление досье только если игрок участвовал ===
+    if is_user_involved and user_faction and report_data:
+        is_victory = any(item['result'] == "Победа" for item in report_data)
+        try:
+            conn = sqlite3.connect(db_path)
+            update_dossier_battle_stats(conn, user_faction, is_victory)
+            conn.close()
+        except Exception as e:
+            print(f"[Ошибка] Не удалось обновить досье: {e}")
 
     # Всплывающее окно
     popup = Popup(
@@ -425,7 +436,7 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
             user_faction=user_faction,
             city=defending_city
         )
-        show_battle_report(report_data)
+        show_battle_report(report_data, is_user_involved=is_user_involved, user_faction=user_faction)
 
     return {
         "winner": winner,
@@ -787,3 +798,53 @@ def show_damage_info_infrastructure(damage_info):
 
     popup = Popup(title="Результат удара по инфраструктуре", content=content, size_hint=(0.7, 0.7))
     popup.open()
+
+def update_dossier_battle_stats(db_connection, user_faction, is_victory):
+    """
+    Обновляет статистику по боям в таблице dossier для текущей фракции пользователя.
+
+    :param db_connection: Соединение с базой данных.
+    :param user_faction: Название фракции игрока.
+    :param is_victory: True, если игрок победил, False — если проиграл.
+    """
+    try:
+        cursor = db_connection.cursor()
+        # Проверяем, существует ли запись для этой фракции
+        cursor.execute("SELECT battle_victories, battle_defeats FROM dossier WHERE faction = ?", (user_faction,))
+        result = cursor.fetchone()
+
+        if result:
+            # Если запись есть — обновляем нужное поле
+            if is_victory:
+                cursor.execute("""
+                    UPDATE dossier
+                    SET battle_victories = battle_victories + 1,
+                        last_data = datetime('now')
+                    WHERE faction = ?
+                """, (user_faction,))
+            else:
+                cursor.execute("""
+                    UPDATE dossier
+                    SET battle_defeats = battle_defeats + 1,
+                        last_data = datetime('now')
+                    WHERE faction = ?
+                """, (user_faction,))
+        else:
+            # Если записи нет — создаём новую
+            if is_victory:
+                cursor.execute("""
+                    INSERT INTO dossier (
+                        faction, battle_victories, battle_defeats, last_data
+                    ) VALUES (?, 1, 0, datetime('now'))
+                """, (user_faction,))
+            else:
+                cursor.execute("""
+                    INSERT INTO dossier (
+                        faction, battle_victories, battle_defeats, last_data
+                    ) VALUES (?, 0, 1, datetime('now'))
+                """, (user_faction,))
+        db_connection.commit()
+        print(f"[Досье] Обновлены данные для фракции '{user_faction}'")
+    except Exception as e:
+        db_connection.rollback()
+        print(f"[Ошибка] Не удалось обновить досье: {e}")
