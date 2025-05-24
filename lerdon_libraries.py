@@ -67,7 +67,4 @@ from kivy.graphics import Color, Rectangle, Line
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
 from kivy.utils import get_color_from_hex
-
-import sqlite3
-import os
-from datetime import datetime, timedelta
+from kivy.resources import resource_find

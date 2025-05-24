@@ -771,7 +771,7 @@ class DossierScreen(Screen):
         if not rows:
             # Если записей нет
             info_label = Label(
-                text="Девственно чисто",
+                text="Ваше личное дело не найдено в архиве",
                 font_size=sp(18),
                 color=get_color_from_hex('#FFFFFF'),
                 halign='center'
@@ -817,6 +817,7 @@ class DossierScreen(Screen):
             tab.add_widget(scroll)
             self.tabs.add_widget(tab)
 
+
     def _create_character_card(self, data: dict) -> BoxLayout:
         """
         Создаёт одну карточку «персонажа»:
@@ -831,7 +832,7 @@ class DossierScreen(Screen):
         # Корневой контейнер карточки
         card = BoxLayout(
             orientation='vertical',
-            size_hint_y=None,       # Т.к. высоту будем задавать вручную
+            size_hint_y=None,  # Т.к. высоту будем задавать вручную
             spacing=dp(5),
             padding=dp(5)
         )
@@ -863,15 +864,20 @@ class DossierScreen(Screen):
         rank = data.get('military_rank') or "Рядовой"
         image_height = dp(90)
         image_container = BoxLayout(size_hint_y=None, height=image_height, padding=dp(5))
-        image_path = os.path.join('files', 'menu', 'dossier', f"{rank}.png")
-        if os.path.exists(image_path):
+
+        # Используем resource_find, чтобы корректно находить файл внутри APK
+        asset_path = f"files/menu/dossier/{rank}.png"
+        real_path = resource_find(asset_path)
+        if real_path:
             rank_img = Image(
-                source=image_path,
+                source=real_path,
                 size_hint=(None, None),
                 size=(dp(60), dp(60))
             )
         else:
+            # Если картинка не найдена, показываем заглушку
             rank_img = Label(text="?", font_size=sp(30), color=(1, 1, 1, 0.5))
+
         # Центрируем картинку внутри контейнера
         img_anchor = AnchorLayout(anchor_x='center', anchor_y='center')
         img_anchor.add_widget(rank_img)
@@ -948,7 +954,7 @@ class DossierScreen(Screen):
         # === 5. Дата последней игры ===
         date_label_height = dp(20)
         date_label = Label(
-            text=f"Последняя игра: {data.get('last_data', '-')}",
+            text=f"Последняя игра: {data.get('last_data', '-')} ",
             font_size=sp(12),
             color=get_color_from_hex('#AAAAAA'),
             halign='center',
@@ -959,7 +965,7 @@ class DossierScreen(Screen):
         card.add_widget(date_label)
         total_height += date_label_height
 
-        card.height = total_height + dp(10)  # + маленький запас
+        card.height = total_height + dp(10)  # + небольшой запас
 
         return card
 

@@ -146,25 +146,50 @@ class ResultsGame:
 
     def calculate_military_rank(self):
         """
-        Обновляет military_rank для всех фракций в таблице dossier
-        на основе расчёта общего количества очков,
-        учитывающих avg_military_rating_per_faction,
-        avg_soldiers_starving и battle_victories / battle_defeats.
-
-        Если поражений нет, то используется просто количество побед.
+        Обновляет military_rank только для фракции self.current_faction
+        в таблице dossier на основе расчёта итоговых очков.
         """
+        if not hasattr(self, 'current_faction') or self.current_faction is None:
+            # Если current_faction не задан, ничего не делаем
+            return
 
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # Получаем все записи из dossier
+        # Получаем данные по фракции игрока
         cursor.execute('''
-            SELECT faction, avg_military_rating_per_faction, avg_soldiers_starving, 
+            SELECT avg_military_rating_per_faction, avg_soldiers_starving, 
                    battle_victories, battle_defeats 
             FROM dossier
-        ''')
-        factions = cursor.fetchall()
+            WHERE faction = ?
+        ''', (self.current_faction,))
+        row = cursor.fetchone()
 
+        if row is None:
+            # Если фракции нет в таблице dossier, ничего не делаем
+            conn.close()
+            return
+
+        rating, starving, victories, defeats = row
+
+        # Защита от None
+        rating = rating or 0
+        starving = starving or 0
+        victories = victories or 0
+        defeats = defeats or 0
+
+        rait_score = int((rating / 0.5) * 500)
+        starving_penalty = int((starving / 100) * 125)
+
+        # Если defeats = 0, используем просто victories, иначе victories/defeats
+        if defeats == 0:
+            b = victories
+        else:
+            b = victories / defeats
+
+        final_score = max((int(rait_score - starving_penalty) * b), 0)
+
+        # Таблица званий с минимальными порогами баллов
         rank_table = [
             ("Главнокомандующий", 15000),
             ("Верховный маршал", 12000),
@@ -185,42 +210,19 @@ class ResultsGame:
             ("Рядовой", -float('inf')),
         ]
 
-        for faction_data in factions:
-            faction, rating, starving, victories, defeats = faction_data
-            print(f"-----------------------Расчёт для фракции: {faction}")
-            print(f"Очки: {rating}, Число потерь: {starving}, Побед: {victories}, Поражений: {defeats}")
+        # Определяем звание по итоговым баллам
+        assigned_rank = "Рядовой"
+        for rank_name, min_score in rank_table:
+            if final_score >= min_score:
+                assigned_rank = rank_name
+                break
 
-            if rating is None:
-                rating = 0
-            if starving is None:
-                starving = 0
-            if victories is None:
-                victories = 0
-            if defeats is None:
-                defeats = 0
-
-            # === Расчёт по новой формуле ===
-            rait_score = int((rating / 0.5) * 500)
-            starving_penalty = int((starving / 100) * 25)
-
-            if defeats == 0:
-                b = victories
-            else:
-                b = victories / defeats
-
-            final_score = max((int(rait_score - starving_penalty) * b), 0)
-
-            # === Определяем звание по итоговым баллам ===
-            assigned_rank = "Рядовой"
-            for rank_name, min_score in rank_table:
-                if final_score >= min_score:
-                    assigned_rank = rank_name
-                    break
-
-            # === Обновляем ранг в базе ===
-            cursor.execute('''
-                UPDATE dossier SET military_rank = ? WHERE faction = ?
-            ''', (assigned_rank, faction))
+        # Обновляем ранг только для текущей фракции
+        cursor.execute('''
+            UPDATE dossier 
+            SET military_rank = ?
+            WHERE faction = ?
+        ''', (assigned_rank, self.current_faction))
 
         conn.commit()
         conn.close()
