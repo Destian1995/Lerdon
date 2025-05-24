@@ -112,7 +112,7 @@ class ResultsGame:
                     matches_won = matches_won + ?,
                     matches_lost = matches_lost + ?
                 WHERE faction = ?
-            ''', (rating, victories, defeats, faction))
+            ''', (rating, victories, defeats, self.current_faction))
 
         conn.commit()
         conn.close()
