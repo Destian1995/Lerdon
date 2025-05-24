@@ -15,8 +15,14 @@ source.dir = .
 # Include files (расширения файлов для включения)
 source.include_exts = py,png,jpg,ttf,mp3,mp4,db,sqlite3,json,txt
 
+android.add_assets = files/menu/dossier
 # Include patterns (шаблоны для включения файлов)
-source.include_patterns = assets/*, files/*, game_data.db, *.py
+source.include_patterns = \
+    assets/*, \
+    files/*, \
+    files/menu/dossier/*.png, \
+    game_data.db, \
+    *.py
 
 # Main source file
 source.main = main.py
@@ -28,7 +34,7 @@ p4a.whitelist = python3.11
 
 
 # Application version
-version = 0.90.37
+version = 0.99.70
 
 # Application author
 author = Vladislav Lerdon Team
