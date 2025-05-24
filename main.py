@@ -912,8 +912,8 @@ class DossierScreen(Screen):
         # === 3. Левый текст: военный рейтинг и голод ===
         left_label_height = dp(50)
         left_text = (
-            f"[b]Военный рейтинг:[/b] {data.get('avg_military_rating', 0)}\n"
-            f"[b]Умерло от голода:[/b] {data.get('avg_soldiers_starving', 0)}"
+            f"[b]Военный рейтинг(ср.):[/b] {data.get('avg_military_rating', 0)}\n"
+            f"[b]Умерло войск от голода(ср.):[/b] {data.get('avg_soldiers_starving', 0)}"
         )
         left_label = Label(
             text=left_text,
