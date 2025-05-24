@@ -620,223 +620,358 @@ class MenuWidget(FloatLayout):
 
 class DossierScreen(Screen):
     def __init__(self, **kwargs):
-        super(DossierScreen, self).__init__(**kwargs)
+        super().__init__(**kwargs)
+        self.auto_clear_event = None
+        self.auto_clear_toggle = None
+        self.tabs = None
+        # Построение UI делаем в on_kv_post или прямо в __init__.
         self.build_ui()
 
     def build_ui(self):
-        layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        """
+        Основной метод, собирающий весь интерфейс:
+        - Заголовок
+        - TabbedPanel, растягивающийся по оставшемуся пространству
+        - Нижняя панель кнопок
+        """
+        root_layout = BoxLayout(orientation='vertical')
 
-        # === Красивый заголовок "Личное дело" ===
-        title_layout = BoxLayout(
-            size_hint_y=None,
-            height=60,
-            padding=10
-        )
+        # === Заголовок "Личное дело" ===
+        title_widget = self._create_title_bar()
+        root_layout.add_widget(title_widget)
 
-        with title_layout.canvas.before:
-            Color(0.1, 0.1, 0.1, 0.95)  # Темный фон
-            bg_rect = Rectangle(size=title_layout.size, pos=title_layout.pos)
-            Color(0, 0.7, 1, 1)  # Голубая рамка
+        # === TabbedPanel ===
+        # Убираем size_hint_y=None и фиксированную высоту. Вместо этого делаем size_hint=(1, 1)
+        self.tabs = TabbedPanel(do_default_tab=False, size_hint=(1, 1))
+        # Сразу загружаем данные — внутри load_dossier_data() каждая вкладка будет содержать ScrollView
+        self.load_dossier_data()
+        root_layout.add_widget(self.tabs)
+
+        # === Нижняя панель кнопок ===
+        bottom_panel = self._create_bottom_panel()
+        # Нижняя панель остаётся фиксированной по высоте
+        root_layout.add_widget(bottom_panel)
+
+        self.add_widget(root_layout)
+
+    def _create_title_bar(self):
+        """
+        Создаёт BoxLayout с заливкой фона и границами, а внутри Label.
+        Возвращает готовый виджет.
+        """
+        title_box = BoxLayout(size_hint_y=None, height=dp(60))
+        with title_box.canvas.before:
+            Color(0.1, 0.1, 0.1, 0.95)
+            bg_rect = Rectangle(size=title_box.size, pos=title_box.pos)
+            Color(0, 0.7, 1, 1)
             border_line = Line(
-                rectangle=(title_layout.x + 1, title_layout.y + 1, title_layout.width - 2, title_layout.height - 2),
+                rectangle=(title_box.x + 1, title_box.y + 1, title_box.width - 2, title_box.height - 2),
                 width=1.4
             )
 
-            def update_rect(instance, value):
-                bg_rect.size = instance.size
-                bg_rect.pos = instance.pos
-                border_line.rectangle = (instance.x + 1, instance.y + 1, instance.width - 2, instance.height - 2)
+        # При изменении размеров/позиции обновляем Rect и Line
+        def _update_title_canvas(instance, _):
+            bg_rect.size = instance.size
+            bg_rect.pos = instance.pos
+            border_line.rectangle = (
+                instance.x + 1,
+                instance.y + 1,
+                instance.width - 2,
+                instance.height - 2
+            )
 
-            title_layout.bind(pos=update_rect, size=update_rect)
+        title_box.bind(pos=_update_title_canvas, size=_update_title_canvas)
 
         title_label = Label(
             text="[b]Личное дело[/b]",
             markup=True,
-            font_size='24sp',
-            color=get_color_from_hex('#FFD700'),  # Темно-желтый (золото)
+            font_size=sp(24),
+            color=get_color_from_hex('#FFD700'),
             halign='center',
             valign='middle'
         )
+        title_box.add_widget(title_label)
+        return title_box
 
-        title_layout.add_widget(title_label)
-        layout.add_widget(title_layout)
+    def _create_bottom_panel(self):
+        """
+        Создаёт нижнюю панель с тремя кнопками:
+        - «Назад»
+        - «Очистить»
+        - «Авто-очистка» (ToggleButton)
+        """
+        bottom = BoxLayout(size_hint_y=None, height=dp(60), spacing=dp(10))
 
-        # Табы
-        self.tabs = TabbedPanel(do_default_tab=False)
-        self.load_dossier_data()
-        layout.add_widget(self.tabs)
-
-        # Нижний блок
-        bottom_layout = BoxLayout(size_hint_y=None, height=60, spacing=10)
-
-        back_btn = RoundedButton(text="Назад в главное меню", background_color=(0, 0.7, 1, 1))
+        # Кнопка «Назад»
+        back_btn = Button(
+            text="Назад в главное меню",
+            background_color=(0, 0.7, 1, 1),
+            size_hint_y=None,
+            height=dp(48),
+            font_size=sp(16)
+        )
         back_btn.bind(on_press=self.go_back)
-        bottom_layout.add_widget(back_btn)
+        bottom.add_widget(back_btn)
 
-        clear_btn = RoundedButton(text="Очистить данные", background_color=(0.9, 0.2, 0.2, 1))
+        # Кнопка «Очистить данные»
+        clear_btn = Button(
+            text="Очистить данные",
+            background_color=(0.9, 0.2, 0.2, 1),
+            size_hint_y=None,
+            height=dp(48),
+            font_size=sp(16)
+        )
         clear_btn.bind(on_press=self.clear_dossier)
-        bottom_layout.add_widget(clear_btn)
+        bottom.add_widget(clear_btn)
 
-        auto_clear_toggle = ToggleButton(text="Авто-очистка", state='normal')
-        bottom_layout.add_widget(auto_clear_toggle)
+        # ToggleButton «Авто-очистка»
+        self.auto_clear_toggle = ToggleButton(
+            text="Авто-очистка",
+            state='normal',
+            size_hint_y=None,
+            height=dp(48),
+            background_color=(0.3, 0.3, 0.3, 1),
+            font_size=sp(16)
+        )
+        self.auto_clear_toggle.bind(state=self.update_auto_clear_button_state)
+        bottom.add_widget(self.auto_clear_toggle)
 
-        layout.add_widget(bottom_layout)
+        return bottom
 
-        self.add_widget(layout)
+    def update_auto_clear_button_state(self, instance, value):
+        """
+        Меняем цвет ToggleButton, когда он нажат/отжат
+        """
+        if value == 'down':
+            instance.background_color = (0.5, 0.5, 0.5, 1)
+        else:
+            instance.background_color = (0.3, 0.3, 0.3, 1)
 
     def load_dossier_data(self):
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-
+        """
+        Читает данные из SQLite и наполняет TabbedPanel.
+        Если данных нет — выводит таб «Информация» с надписью «Девственно чисто».
+        Если данные есть — группирует по фракциям и создаёт для каждой фракции вкладку.
+        """
+        # Очищаем предыдущие вкладки, если они уже были
+        if self.tabs.get_tab_list():
+            for tab in list(self.tabs.get_tab_list()):
+                self.tabs.remove_widget(tab)
         try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
             cursor.execute("SELECT * FROM dossier")
             rows = cursor.fetchall()
         except sqlite3.Error as e:
             print(f"Ошибка базы данных: {e}")
             rows = []
+        finally:
+            conn.close()
 
         if not rows:
-            no_data_label = Label(
+            # Если записей нет
+            info_label = Label(
                 text="Девственно чисто",
-                font_size='18sp',
+                font_size=sp(18),
                 color=get_color_from_hex('#FFFFFF'),
                 halign='center'
             )
-            self.tabs.add_widget(no_data_label)
+            tab = TabbedPanelItem(text="Информация")
+            tab.add_widget(info_label)
+            self.tabs.add_widget(tab)
+            return
+
+        # Группируем по фракциям (предполагаем, что row[1] — это фракция)
+        factions = {}
+        for row in rows:
+            faction = row[1]
+            data = {
+                'military_rank': row[2],
+                'avg_military_rating': row[3],
+                'avg_soldiers_starving': row[4],
+                'victories': row[5],
+                'defeats': row[6],
+                'matches_won': row[7],
+                'matches_lost': row[8],
+                'last_data': row[9]
+            }
+            factions.setdefault(faction, []).append(data)
+
+        # Для каждой фракции создаём новую вкладку
+        for faction, data_list in factions.items():
+            tab = TabbedPanelItem(text=faction)
+            scroll = ScrollView()
+            grid = GridLayout(
+                cols=2,
+                spacing=dp(10),
+                padding=dp(10),
+                size_hint_y=None
+            )
+            grid.bind(minimum_height=grid.setter('height'))
+
+            for data in data_list:
+                card = self._create_character_card(data)
+                grid.add_widget(card)
+
+            scroll.add_widget(grid)
+            tab.add_widget(scroll)
+            self.tabs.add_widget(tab)
+
+    def _create_character_card(self, data: dict) -> BoxLayout:
+        """
+        Создаёт одну карточку «персонажа»:
+        - Сначала отображается изображение,
+        - под ним — звание (по центру),
+        - далее вся остальная текстовая статистика.
+        При этом высота card высчитывается автоматически под содержимое.
+        """
+        # Сначала инициализируем суммарную высоту
+        total_height = 0
+
+        # Корневой контейнер карточки
+        card = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,       # Т.к. высоту будем задавать вручную
+            spacing=dp(5),
+            padding=dp(5)
+        )
+
+        # Canvas: фон и рамка
+        with card.canvas.before:
+            Color(0.15, 0.15, 0.15, 1)
+            bg_rect = Rectangle(size=card.size, pos=card.pos)
+            Color(0.3, 0.3, 0.3, 1)
+            border_line = Line(
+                rectangle=(card.x + 1, card.y + 1, card.width - 2, card.height - 2),
+                width=1
+            )
+
+        # При изменении размеров/позиции обновляем Rect и Line
+        def _update_card_canvas(instance, _):
+            bg_rect.size = instance.size
+            bg_rect.pos = instance.pos
+            border_line.rectangle = (
+                instance.x + 1,
+                instance.y + 1,
+                instance.width - 2,
+                instance.height - 2
+            )
+
+        card.bind(pos=_update_card_canvas, size=_update_card_canvas)
+
+        # === 1. Изображение звания ===
+        rank = data.get('military_rank') or "Рядовой"
+        image_height = dp(90)
+        image_container = BoxLayout(size_hint_y=None, height=image_height, padding=dp(5))
+        image_path = os.path.join('files', 'menu', 'dossier', f"{rank}.png")
+        if os.path.exists(image_path):
+            rank_img = Image(
+                source=image_path,
+                size_hint=(None, None),
+                size=(dp(60), dp(60))
+            )
         else:
-            factions = {}
-            for row in rows:
-                faction = row[1]
-                data = {
-                    'military_rank': row[2],
-                    'avg_military_rating': row[3],
-                    'avg_soldiers_starving': row[4],
-                    'victories': row[5],
-                    'defeats': row[6],
-                    'matches_won': row[7],
-                    'matches_lost': row[8],
-                    'last_data': row[9]
-                }
-                if faction not in factions:
-                    factions[faction] = []
-                factions[faction].append(data)
+            rank_img = Label(text="?", font_size=sp(30), color=(1, 1, 1, 0.5))
+        # Центрируем картинку внутри контейнера
+        img_anchor = AnchorLayout(anchor_x='center', anchor_y='center')
+        img_anchor.add_widget(rank_img)
+        image_container.add_widget(img_anchor)
+        card.add_widget(image_container)
 
-            for faction, data_list in factions.items():
-                tab = TabbedPanelItem(text=faction)
-                scroll = ScrollView()
-                grid = GridLayout(cols=2, size_hint_y=None, spacing=10, padding=[10, 10])
-                grid.bind(minimum_height=grid.setter('height'))
+        total_height += image_height  # учитываем высоту контейнера с изображением
 
-                for data in data_list:
-                    # === Блок информации о персонаже ===
-                    character_box = BoxLayout(
-                        orientation='vertical',
-                        size_hint_y=None,
-                        spacing=5
-                    )
+        # === 2. Звание под изображением (по центру) ===
+        rank_label_height = dp(30)
+        rank_label = Label(
+            text=f"[b]{rank}[/b]",
+            markup=True,
+            font_size=sp(18),
+            color=(1, 1, 1, 1),
+            halign='center',
+            valign='middle',
+            size_hint=(None, None),
+            size=(self.width, rank_label_height)  # Ширина не критична, лишь бы было None
+        )
+        rank_anchor = AnchorLayout(
+            anchor_x='center',
+            anchor_y='top',
+            size_hint_y=None,
+            height=rank_label_height
+        )
+        rank_anchor.add_widget(rank_label)
+        card.add_widget(rank_anchor)
 
-                    # --- Вычисляем высоту контента ---
-                    total_height = 0
+        total_height += rank_label_height
 
-                    def add_widget_with_height(widget, height):
-                        widget.size_hint_y = None
-                        widget.height = height
-                        character_box.add_widget(widget)
-                        nonlocal total_height
-                        total_height += height
+        # === 3. Левый текст: военный рейтинг и голод ===
+        left_label_height = dp(50)
+        left_text = (
+            f"[b]Военный рейтинг:[/b] {data.get('avg_military_rating', 0)}\n"
+            f"[b]Умерло от голода:[/b] {data.get('avg_soldiers_starving', 0)}"
+        )
+        left_label = Label(
+            text=left_text,
+            markup=True,
+            font_size=sp(14),
+            color=(1, 1, 1, 1),
+            halign='center',
+            valign='middle',
+            size_hint_y=None,
+            height=left_label_height
+        )
+        card.add_widget(left_label)
+        total_height += left_label_height
 
-                    # --- Имя ---
-                    name_label = Label(
-                        text=f"",
-                        markup=True,
-                        color=(1, 1, 1, 1),
-                        halign='center',
-                        valign='middle',
-                        font_size='20sp'
-                    )
-                    add_widget_with_height(name_label, 30)
+        # === 4. Правый текст: сражения и матчи ===
+        right_label_height = dp(50)
+        right_text = (
+            f"[b]Сражения (В/П):[/b]\n"
+            f"[color=#00FF00]{data.get('victories', 0)}[/color]/"
+            f"[color=#FF0000]{data.get('defeats', 0)}[/color]\n"
+            f"[b]Матчи (В/П):[/b]\n"
+            f"[color=#00FF00]{data.get('matches_won', 0)}[/color]/"
+            f"[color=#FF0000]{data.get('matches_lost', 0)}[/color]"
+        )
+        right_label = Label(
+            text=right_text,
+            markup=True,
+            font_size=sp(14),
+            color=(1, 1, 1, 1),
+            halign='center',
+            valign='middle',
+            size_hint_y=None,
+            height=right_label_height
+        )
+        card.add_widget(right_label)
+        total_height += right_label_height
 
-                    # --- Звание ---
-                    rank = data['military_rank'] or "Рядовой"
-                    rank_label = Label(
-                        text=f"[b]Звание:[/b] {rank}",
-                        markup=True,
-                        color=(1, 1, 1, 1),
-                        halign='center',
-                        valign='middle',
-                        font_size='18sp'
-                    )
-                    add_widget_with_height(rank_label, 30)
+        # === 5. Дата последней игры ===
+        date_label_height = dp(20)
+        date_label = Label(
+            text=f"Последняя игра: {data.get('last_data', '-')}",
+            font_size=sp(12),
+            color=get_color_from_hex('#AAAAAA'),
+            halign='center',
+            valign='middle',
+            size_hint_y=None,
+            height=date_label_height
+        )
+        card.add_widget(date_label)
+        total_height += date_label_height
 
-                    # --- Изображение ---
-                    image_path = f'files/menu/dossier/{rank}.png'
-                    image_layout = AnchorLayout(
-                        anchor_x='center',
-                        anchor_y='center',
-                        size_hint_y=None,
-                        height=90
-                    )
+        card.height = total_height + dp(10)  # + маленький запас
 
-                    if os.path.exists(image_path):
-                        rank_image = Image(source=image_path, size_hint=(None, None), width=90, height=90)
-                    else:
-                        rank_image = Label(text="?", font_size='30sp', color=(1, 1, 1, 0.5))
-
-                    image_layout.add_widget(rank_image)
-                    add_widget_with_height(image_layout, 90)
-
-                    # --- Воен. рейтинг и голод ===
-                    left_label = Label(
-                        text=f"[b]Военный рейтинг:[/b] {data['avg_military_rating']}\n"
-                             f"[b]Умерло войск от голода:[/b] {data['avg_soldiers_starving']}",
-                        markup=True,
-                        color=get_color_from_hex('#FFFFFF'),
-                        halign='center',
-                        valign='middle',
-                        font_size='16sp'
-                    )
-                    add_widget_with_height(left_label, 60)
-
-                    # --- Победы/поражения ===
-                    right_label = Label(
-                        text=f"[b]Сражения (В/П):[/b]\n"
-                             f"[color=#00FF00]{data['victories']}[/color]/"
-                             f"[color=#FF0000]{data['defeats']}[/color]\n"
-                             f"[b]Матчи (В/П):[/b]\n"
-                             f"[color=#00FF00]{data['matches_won']}[/color]/"
-                             f"[color=#FF0000]{data['matches_lost']}[/color]",
-                        markup=True,
-                        halign='center',
-                        valign='middle',
-                        font_size='16sp'
-                    )
-                    add_widget_with_height(right_label, 80)
-
-                    # === Дата ===
-                    date_label = Label(
-                        text=f"Последняя игра: {data['last_data']}",
-                        color=get_color_from_hex('#AAAAAA'),
-                        font_size='14sp',
-                        halign='center'
-                    )
-                    add_widget_with_height(date_label, 30)
-
-                    # --- Устанавливаем общую высоту блока ---
-                    character_box.height = total_height
-
-                    # === Добавление в сетку ===
-                    grid.add_widget(character_box)
-
-                scroll.add_widget(grid)
-                tab.add_widget(scroll)
-                self.tabs.add_widget(tab)
-
-        conn.close()
+        return card
 
     def clear_dossier(self, instance):
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        """
+        Полная очистка всех записей в таблице dossier.
+        После успеха — обновляем вкладки.
+        """
+        from main import db_path
         try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
             cursor.execute("DELETE FROM dossier")
             conn.commit()
             print("✅ Все записи успешно удалены.")
@@ -844,56 +979,57 @@ class DossierScreen(Screen):
             print(f"❌ Ошибка удаления: {e}")
         finally:
             conn.close()
-
-        Clock.schedule_once(lambda dt: self.refresh_tabs(), 0)
-
-    def refresh_tabs(self):
-        # Полная очистка вкладок
-        for tab in self.tabs.get_tab_list():
-            self.tabs.remove_widget(tab)
-
-        # Перезагрузка данных
-        self.load_dossier_data()
-
-        # Принудительное обновление UI
-        self.tabs.do_layout()
-        if self.tabs.parent:
-            self.tabs.parent.do_layout()
+        # Обновляем табы через одну «итерацию» Clock,
+        # чтобы UI успел отреагировать
+        Clock.schedule_once(lambda dt: self.load_dossier_data(), 0)
 
     def go_back(self, instance):
+        """
+        Переход обратно в главное меню: удаляем все виджеты корня и добавляем MenuWidget.
+        """
         app = App.get_running_app()
-        app.root.clear_widgets()
-        app.root.add_widget(MenuWidget())
+        root = app.root
+        root.clear_widgets()
+        root.add_widget(MenuWidget())
 
     def on_enter(self, *args):
-        """Вызывается при переходе на экран"""
-        self.auto_clear_event = Clock.schedule_interval(self.check_auto_clear, 300)  # Каждые 5 минут
+        """
+        Когда экран показан — запускаем таймер для авто-очистки.
+        """
+        # Срабатывает каждые 300 сек (5 мин)
+        self.auto_clear_event = Clock.schedule_interval(self.check_auto_clear, 300)
 
     def on_leave(self, *args):
-        """Вызывается при уходе с экрана"""
-        if hasattr(self, 'auto_clear_event'):
+        """
+        Когда экран скрыт — отменяем таймер.
+        """
+        if self.auto_clear_event:
             self.auto_clear_event.cancel()
+            self.auto_clear_event = None
 
     def check_auto_clear(self, dt):
+        """
+        Если ToggleButton «Авто-очистка» в состоянии 'down' — очищаем старые записи.
+        """
         if self.auto_clear_toggle.state == 'down':
             self.clear_old_records()
 
     def clear_old_records(self):
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        """
+        Удаляем записи старше 30 дней (last_data < текущая дата минус 30 дней).
+        После удаления хотя бы одной записи — обновляем вкладки.
+        """
+        from main import db_path
         try:
-            # Текущая дата минус 30 дней
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
             cutoff_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
-
-            # Удаление записей старше 30 дней
             cursor.execute("DELETE FROM dossier WHERE last_data < ?", (cutoff_date,))
+            deleted = cursor.rowcount
             conn.commit()
-
-            # Если были удалены данные — обновляем отображение
-            if cursor.rowcount > 0:
-                self.tabs.clear_tabs()
-                self.load_dossier_data()
-        except Exception as e:
+            if deleted > 0:
+                Clock.schedule_once(lambda dt: self.load_dossier_data(), 0)
+        except sqlite3.Error as e:
             print(f"Ошибка при автоматической очистке: {e}")
         finally:
             conn.close()

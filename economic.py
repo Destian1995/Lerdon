@@ -1381,13 +1381,13 @@ class Faction:
 
         # Генерация новой цены
         if current_turn == 1:  # Если это первый ход
-            self.current_raw_material_price = random.randint(4000, 48000)
+            self.current_raw_material_price = random.randint(4000, 52000)
             self.raw_material_price_history.append(self.current_raw_material_price)
         else:
             # Генерация новой цены на основе текущей
             self.current_raw_material_price = self.raw_material_price_history[-1] + random.randint(-3450, 3450)
             self.current_raw_material_price = max(
-                4000, min(48000, self.current_raw_material_price)  # Ограничиваем диапазон
+                4000, min(52000, self.current_raw_material_price)  # Ограничиваем диапазон
             )
             self.raw_material_price_history.append(self.current_raw_material_price)
 
