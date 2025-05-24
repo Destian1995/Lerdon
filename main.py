@@ -817,7 +817,6 @@ class DossierScreen(Screen):
             tab.add_widget(scroll)
             self.tabs.add_widget(tab)
 
-
     def _create_character_card(self, data: dict) -> BoxLayout:
         """
         Создаёт одну карточку «персонажа»:
@@ -826,7 +825,6 @@ class DossierScreen(Screen):
         - далее вся остальная текстовая статистика.
         При этом высота card высчитывается автоматически под содержимое.
         """
-        # Сначала инициализируем суммарную высоту
         total_height = 0
 
         # Корневой контейнер карточки
@@ -847,7 +845,6 @@ class DossierScreen(Screen):
                 width=1
             )
 
-        # При изменении размеров/позиции обновляем Rect и Line
         def _update_card_canvas(instance, _):
             bg_rect.size = instance.size
             bg_rect.pos = instance.pos
@@ -883,8 +880,7 @@ class DossierScreen(Screen):
         img_anchor.add_widget(rank_img)
         image_container.add_widget(img_anchor)
         card.add_widget(image_container)
-
-        total_height += image_height  # учитываем высоту контейнера с изображением
+        total_height += image_height
 
         # === 2. Звание под изображением (по центру) ===
         rank_label_height = dp(30)
@@ -896,7 +892,7 @@ class DossierScreen(Screen):
             halign='center',
             valign='middle',
             size_hint=(None, None),
-            size=(self.width, rank_label_height)  # Ширина не критична, лишь бы было None
+            size=(self.width, rank_label_height)
         )
         rank_anchor = AnchorLayout(
             anchor_x='center',
@@ -906,7 +902,6 @@ class DossierScreen(Screen):
         )
         rank_anchor.add_widget(rank_label)
         card.add_widget(rank_anchor)
-
         total_height += rank_label_height
 
         # === 3. Левый текст: военный рейтинг и голод ===
