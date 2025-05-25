@@ -410,14 +410,6 @@ class GameScreen(Screen):
             duration=1.5  # Время анимации в секундах
         )
 
-        def on_end_turn(instance):
-            instance.start_progress()
-            Clock.schedule_once(lambda dt: self.process_turn(None), 1.5)
-
-        self.end_turn_button.bind(on_press=on_end_turn)
-        end_turn_container.add_widget(self.end_turn_button)
-        self.add_widget(end_turn_container)
-
         # === Контейнер для названия фракции ===
         fraction_container = BoxLayout(
             orientation='vertical',
@@ -555,6 +547,15 @@ class GameScreen(Screen):
 
         # === Инициализация ИИ ===
         self.init_ai_controllers()
+
+        def on_end_turn(instance):
+            instance.start_progress()
+            Clock.schedule_once(lambda dt: self.process_turn(None), 1.5)
+
+        self.end_turn_button.bind(on_press=on_end_turn)
+        end_turn_container.add_widget(self.end_turn_button)
+        self.add_widget(end_turn_container)
+
 
     def on_window_resize(self, instance, width, height):
         is_landscape = width > height

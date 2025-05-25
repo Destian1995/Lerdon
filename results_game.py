@@ -93,26 +93,31 @@ class ResultsGame:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # Получаем статистику по фракциям
+        # Получаем последний результат (или можно передавать как параметр)
         calculated_results = self.calculate_results()
 
+        # Находим запись с текущей фракцией
         for data in calculated_results:
-            faction = data["faction"]
-            rating = data["army_efficiency_ratio"]
+            if data["faction"] == self.current_faction:
+                rating = data["army_efficiency_ratio"]
+                break
+        else:
+            # Если не нашли данных по фракции — выходим
+            conn.close()
+            return
 
-            # Предположим, что каждая запись в results = 1 победа или поражение
-            # Можно изменить на более точную логику
-            victories = 1 if self.game_status == "win" and faction == self.current_faction else 0
-            defeats = 1 if self.game_status == "lose" and faction == self.current_faction else 0
+        # Определяем, победа или поражение
+        victories = 1 if self.game_status == "win" else 0
+        defeats = 1 if self.game_status == "lose" else 0
 
-            # Обновляем dossier
-            cursor.execute('''
-                UPDATE dossier SET 
-                    avg_military_rating_per_faction = ?,
-                    matches_won = matches_won + ?,
-                    matches_lost = matches_lost + ?
-                WHERE faction = ?
-            ''', (rating, victories, defeats, self.current_faction))
+        # Обновляем dossier ТОЛЬКО для текущей фракции
+        cursor.execute('''
+            UPDATE dossier SET 
+                avg_military_rating_per_faction = ?,
+                matches_won = matches_won + ?,
+                matches_lost = matches_lost + ?
+            WHERE faction = ?
+        ''', (rating, victories, defeats, self.current_faction))
 
         conn.commit()
         conn.close()

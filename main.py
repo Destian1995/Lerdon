@@ -820,22 +820,22 @@ class DossierScreen(Screen):
     def _create_character_card(self, data: dict) -> BoxLayout:
         """
         Создаёт одну карточку «персонажа»:
-        - Сначала отображается изображение,
-        - под ним — звание (по центру),
-        - далее вся остальная текстовая статистика.
-        При этом высота card высчитывается автоматически под содержимое.
+        1) Загружает иконку звания через resource_find,
+        2) Под картинкой — текст звания,
+        3) Дальше статистика (рейтинг, потери и т.д.).
+        Высота card подгоняется автоматически под содержимое.
         """
         total_height = 0
 
-        # Корневой контейнер карточки
+        # 1) Корневой контейнер карточки
         card = BoxLayout(
             orientation='vertical',
-            size_hint_y=None,  # Т.к. высоту будем задавать вручную
+            size_hint_y=None,  # высоту задаём вручную
             spacing=dp(5),
             padding=dp(5)
         )
 
-        # Canvas: фон и рамка
+        #  Фон и рамка карточки
         with card.canvas.before:
             Color(0.15, 0.15, 0.15, 1)
             bg_rect = Rectangle(size=card.size, pos=card.pos)
@@ -858,13 +858,34 @@ class DossierScreen(Screen):
         card.bind(pos=_update_card_canvas, size=_update_card_canvas)
 
         # === 1. Изображение звания ===
-        rank = data.get('military_rank') or "Рядовой"
+        # Берём “сырое” значение rank из данных
+        raw_rank = data.get('military_rank') or "Рядовой"
+
+        # 1.1) Убираем все ведущие/концевые пробельные символы (включая \n, \t и не-разрывные пробелы)
+        #     + нормализуем unicode (чтобы дефисы были одним и тем же символом)
+        rank = raw_rank.strip()
+        rank = unicodedata.normalize("NFC", rank)
+
+        # 1.2) Если у вас есть риск, что в базе лежит “Генерал-лейтенант” (U+2011)
+        #     или другой похожий дефис, можно явно заменить все варианты на обычный “-”:
+        rank = rank.replace("\u2010", "-") \
+            .replace("\u2011", "-") \
+            .replace("\u2012", "-") \
+            .replace("\u2013", "-") \
+            .replace("\u2014", "-") \
+            .replace("\u2015", "-")
+
+        # 1.3) Формируем путь к картинке относительно assets/
         image_height = dp(90)
         image_container = BoxLayout(size_hint_y=None, height=image_height, padding=dp(5))
-
-        # Используем resource_find, чтобы корректно находить файл внутри APK
         asset_path = f"files/menu/dossier/{rank}.png"
+
+        # 1.4) Дебаг: выводим, что именно ищем и что нашлось
+        print(f"[DEBUG] raw_rank={raw_rank!r}, normalized rank={rank!r}")
+        print(f"[DEBUG] Ищу resource_find({asset_path!r}) →", end=" ")
         real_path = resource_find(asset_path)
+        print(f"{real_path!r}")
+
         if real_path:
             rank_img = Image(
                 source=real_path,
@@ -872,10 +893,8 @@ class DossierScreen(Screen):
                 size=(dp(60), dp(60))
             )
         else:
-            # Если картинка не найдена, показываем заглушку
             rank_img = Label(text="?", font_size=sp(30), color=(1, 1, 1, 0.5))
 
-        # Центрируем картинку внутри контейнера
         img_anchor = AnchorLayout(anchor_x='center', anchor_y='center')
         img_anchor.add_widget(rank_img)
         image_container.add_widget(img_anchor)
