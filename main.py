@@ -3,10 +3,10 @@ from game_process import GameScreen
 from ui import *
 
 RANK_TO_FILENAME = {
-    "Главнокомандующий":        "commander_in_chief.png",
+    "Главнокомандующий":        "supreme_commander.png",
     "Верховный маршал":          "supreme_marshal.png",
     "Генерал-фельдмаршал":       "field_marshal.png",
-    "Генерал армии":             "general_of_army.png",
+    "Генерал армии":             "general.png",
     "Генерал-полковник":         "colonel_general.png",
     "Генерал-лейтенант":         "lieutenant_general.png",
     "Генерал-майор":             "major_general.png",
@@ -14,6 +14,7 @@ RANK_TO_FILENAME = {
     "Коммандер":                 "commander.png",
     "Полковник":                 "colonel.png",
     "Подполковник":              "lieutenant_colonel.png",
+    "Капитан-лейтенант":         "captain_lieutenant.png",
     "Капитан":                   "captain.png",
     "Платиновый лейтенант":      "platinum_lieutenant.png",
     "Серебряный лейтенант":      "silver_lieutenant.png",
