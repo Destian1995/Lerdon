@@ -53,7 +53,7 @@ from kivy.graphics import RoundedRectangle, Color, Rectangle as KvRect
 from kivy.uix.video import Video
 from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
 from kivy.uix.togglebutton import ToggleButton
-
+from kivy.logger import Logger
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.scrollview import ScrollView
