@@ -2,8 +2,25 @@ from lerdon_libraries import *
 from game_process import GameScreen
 from ui import *
 
-# Размеры окна
-#screen_width, screen_height = 1200, 800
+RANK_TO_FILENAME = {
+    "Главнокомандующий":        "commander_in_chief.png",
+    "Верховный маршал":          "supreme_marshal.png",
+    "Генерал-фельдмаршал":       "field_marshal.png",
+    "Генерал армии":             "general_of_army.png",
+    "Генерал-полковник":         "colonel_general.png",
+    "Генерал-лейтенант":         "lieutenant_general.png",
+    "Генерал-майор":             "major_general.png",
+    "Бригадный генерал":         "brigadier_general.png",
+    "Коммандер":                 "commander.png",
+    "Полковник":                 "colonel.png",
+    "Подполковник":              "lieutenant_colonel.png",
+    "Капитан":                   "captain.png",
+    "Платиновый лейтенант":      "platinum_lieutenant.png",
+    "Серебряный лейтенант":      "silver_lieutenant.png",
+    "Сержант":                   "sergeant.png",
+    "Прапорщик":                 "warrant_officer.png",
+    "Рядовой":                   "private.png",
+}
 
 # Путь к БД
 # === Настройка пути к базе данных ===
@@ -820,14 +837,14 @@ class DossierScreen(Screen):
     def _create_character_card(self, data: dict) -> BoxLayout:
         """
         Создаёт одну карточку «персонажа»:
-        1) Загружает иконку звания через resource_find,
-        2) Под картинкой — текст звания,
-        3) Дальше статистика (рейтинг, потери и т.д.).
+        1) Загружает иконку звания через resource_find, переводя русское звание в английское имя файла,
+        2) Под картинкой — текст звания (по-прежнему на русском),
+        3) Дальше — статистика (военный рейтинг, голод, результаты и т.д.).
         Высота card подгоняется автоматически под содержимое.
         """
         total_height = 0
 
-        # 1) Корневой контейнер карточки
+        # --- 1. Корневой контейнер карточки ---
         card = BoxLayout(
             orientation='vertical',
             size_hint_y=None,  # высоту задаём вручную
@@ -835,7 +852,7 @@ class DossierScreen(Screen):
             padding=dp(5)
         )
 
-        #  Фон и рамка карточки
+        # Фон и рамка у карточки
         with card.canvas.before:
             Color(0.15, 0.15, 0.15, 1)
             bg_rect = Rectangle(size=card.size, pos=card.pos)
@@ -857,34 +874,36 @@ class DossierScreen(Screen):
 
         card.bind(pos=_update_card_canvas, size=_update_card_canvas)
 
-        # === 1. Изображение звания ===
-        # Берём “сырое” значение rank из данных
+        # === 2. Собираем "сырой" rank и нормализуем только для отладки/поиска файла ===
         raw_rank = data.get('military_rank') or "Рядовой"
-
-        # 1.1) Убираем все ведущие/концевые пробельные символы (включая \n, \t и не-разрывные пробелы)
-        #     + нормализуем unicode (чтобы дефисы были одним и тем же символом)
         rank = raw_rank.strip()
         rank = unicodedata.normalize("NFC", rank)
-
-        # 1.2) Если у вас есть риск, что в базе лежит “Генерал-лейтенант” (U+2011)
-        #     или другой похожий дефис, можно явно заменить все варианты на обычный “-”:
-        rank = rank.replace("\u2010", "-") \
-            .replace("\u2011", "-") \
-            .replace("\u2012", "-") \
-            .replace("\u2013", "-") \
-            .replace("\u2014", "-") \
+        # Заменяем все возможные тире/дефисы на обычный ASCII-дефис,
+        # чтобы ключ точно совпал с RANK_TO_FILENAME
+        rank = (
+            rank
+            .replace("\u2010", "-")
+            .replace("\u2011", "-")
+            .replace("\u2012", "-")
+            .replace("\u2013", "-")
+            .replace("\u2014", "-")
             .replace("\u2015", "-")
+        )
 
-        # 1.3) Формируем путь к картинке относительно assets/
+        # --- 3. Выбираем английское имя файла из словаря, если нет — fallback на 'private.png' ---
+        filename = RANK_TO_FILENAME.get(rank, "private.png")
+        asset_path = f"files/menu/dossier/{filename}"
+
+        # Логируем, что ищем и что нашли
+        Logger.debug(f"myapp: raw_rank={raw_rank!r}, normalized rank={rank!r}")
+        Logger.debug(f"myapp: Ожидаемое имя файла: {filename!r}")
+        Logger.debug(f"myapp: Ищу resource_find({asset_path!r}) →")
+        real_path = resource_find(asset_path)
+        Logger.debug(f"myapp: resource_find вернул: {real_path!r}")
+
+        # === 4. Рисуем контейнер для иконки ===
         image_height = dp(90)
         image_container = BoxLayout(size_hint_y=None, height=image_height, padding=dp(5))
-        asset_path = f"files/menu/dossier/{rank}.png"
-
-        # 1.4) Дебаг: выводим, что именно ищем и что нашлось
-        print(f"[DEBUG] raw_rank={raw_rank!r}, normalized rank={rank!r}")
-        print(f"[DEBUG] Ищу resource_find({asset_path!r}) →", end=" ")
-        real_path = resource_find(asset_path)
-        print(f"{real_path!r}")
 
         if real_path:
             rank_img = Image(
@@ -893,6 +912,7 @@ class DossierScreen(Screen):
                 size=(dp(60), dp(60))
             )
         else:
+            # Если иконка не найдена (на всякий случай), показываем знак вопроса
             rank_img = Label(text="?", font_size=sp(30), color=(1, 1, 1, 0.5))
 
         img_anchor = AnchorLayout(anchor_x='center', anchor_y='center')
@@ -901,10 +921,10 @@ class DossierScreen(Screen):
         card.add_widget(image_container)
         total_height += image_height
 
-        # === 2. Звание под изображением (по центру) ===
+        # === 5. Текстовое (русское) звание под иконкой ===
         rank_label_height = dp(30)
         rank_label = Label(
-            text=f"[b]{rank}[/b]",
+            text=f"[b]{raw_rank}[/b]",  # <-- отображаем именно raw_rank, без перевода
             markup=True,
             font_size=sp(18),
             color=(1, 1, 1, 1),
@@ -923,7 +943,7 @@ class DossierScreen(Screen):
         card.add_widget(rank_anchor)
         total_height += rank_label_height
 
-        # === 3. Левый текст: военный рейтинг и голод ===
+        # === 6. Левый блок: военный рейтинг и голод ===
         left_label_height = dp(50)
         left_text = (
             f"[b]Военный рейтинг(ср.):[/b] {data.get('avg_military_rating', 0)}\n"
@@ -942,7 +962,7 @@ class DossierScreen(Screen):
         card.add_widget(left_label)
         total_height += left_label_height
 
-        # === 4. Правый текст: сражения и матчи ===
+        # === 7. Правый блок: сражения и матчи ===
         right_label_height = dp(50)
         right_text = (
             f"[b]Сражения (В/П):[/b]\n"
@@ -965,7 +985,7 @@ class DossierScreen(Screen):
         card.add_widget(right_label)
         total_height += right_label_height
 
-        # === 5. Дата последней игры ===
+        # === 8. Дата последней игры ===
         date_label_height = dp(20)
         date_label = Label(
             text=f"Последняя игра: {data.get('last_data', '-')} ",
@@ -979,8 +999,8 @@ class DossierScreen(Screen):
         card.add_widget(date_label)
         total_height += date_label_height
 
-        card.height = total_height + dp(10)  # + небольшой запас
-
+        # Устанавливаем итоговую высоту карточки
+        card.height = total_height + dp(10)
         return card
 
     def clear_dossier(self, instance):
