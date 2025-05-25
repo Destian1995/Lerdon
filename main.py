@@ -1736,10 +1736,6 @@ class EmpireApp(App):
             if hasattr(child, 'conn'):
                 child.conn.close()
 
-        # Очистка устаревших файлов SQLite (.shm, .wal)
-        cleanup_sqlite_cache(copied_db_path)
-
 
 if __name__ == '__main__':
-    cleanup_sqlite_cache(copied_db_path)
     EmpireApp().run()  # Запуск приложения
