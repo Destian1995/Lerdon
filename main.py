@@ -636,6 +636,21 @@ class MenuWidget(FloatLayout):
         App.get_running_app().stop()
 
 
+class CustomTab(TabbedPanelItem):
+    def __init__(self, **kwargs):
+        super(CustomTab, self).__init__(**kwargs)
+        self.active_color = get_color_from_hex('#FF5733')   # например, оранжевый
+        self.inactive_color = get_color_from_hex('#DDDDDD')  # светло-серый
+        self.background_color = self.inactive_color
+        self.bind(state=self.update_background)
+
+    def update_background(self, *args):
+        if self.state == 'down':
+            self.background_color = self.active_color
+        else:
+            self.background_color = self.inactive_color
+
+
 class DossierScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -713,10 +728,9 @@ class DossierScreen(Screen):
 
     def _create_bottom_panel(self):
         """
-        Создаёт нижнюю панель с тремя кнопками:
+        Создаёт нижнюю панель с кнопками:
         - «Назад»
         - «Очистить»
-        - «Авто-очистка» (ToggleButton)
         """
         bottom = BoxLayout(size_hint_y=None, height=dp(60), spacing=dp(10))
 
@@ -742,33 +756,13 @@ class DossierScreen(Screen):
         clear_btn.bind(on_press=self.clear_dossier)
         bottom.add_widget(clear_btn)
 
-        # ToggleButton «Авто-очистка»
-        self.auto_clear_toggle = ToggleButton(
-            text="Авто-очистка",
-            state='normal',
-            size_hint_y=None,
-            height=dp(48),
-            background_color=(0.3, 0.3, 0.3, 1),
-            font_size=sp(16)
-        )
-        self.auto_clear_toggle.bind(state=self.update_auto_clear_button_state)
-        bottom.add_widget(self.auto_clear_toggle)
-
         return bottom
 
-    def update_auto_clear_button_state(self, instance, value):
-        """
-        Меняем цвет ToggleButton, когда он нажат/отжат
-        """
-        if value == 'down':
-            instance.background_color = (0.5, 0.5, 0.5, 1)
-        else:
-            instance.background_color = (0.3, 0.3, 0.3, 1)
 
     def load_dossier_data(self):
         """
         Читает данные из SQLite и наполняет TabbedPanel.
-        Если данных нет — выводит таб «Информация» с надписью «Девственно чисто».
+        Если данных нет — выводит таб «Информация» с надписью «Ваше личное дело не найдено в архиве»
         Если данные есть — группирует по фракциям и создаёт для каждой фракции вкладку.
         """
         # Очищаем предыдущие вкладки, если они уже были
@@ -817,7 +811,7 @@ class DossierScreen(Screen):
 
         # Для каждой фракции создаём новую вкладку
         for faction, data_list in factions.items():
-            tab = TabbedPanelItem(text=faction)
+            tab = CustomTab(text=faction)
             scroll = ScrollView()
             grid = GridLayout(
                 cols=2,

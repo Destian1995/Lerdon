@@ -10,6 +10,7 @@ import json
 import time
 import threading
 from datetime import datetime, timedelta
+import unicodedata
 
 # kivy libraries
 from kivy.animation import Animation
@@ -62,6 +63,6 @@ from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
 from kivy.graphics import Color, Rectangle, Line
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
-from kivy.utils import get_color_from_hex
 from kivy.resources import resource_find
-import unicodedata
+from kivy.uix.togglebutton import ToggleButtonBehavior
+from kivy.properties import ListProperty
