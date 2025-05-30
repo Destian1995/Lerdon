@@ -2,6 +2,87 @@ from lerdon_libraries import *
 from game_process import GameScreen
 from ui import *
 
+class LoadingScreen(FloatLayout):
+    def __init__(self, **kwargs):
+        super(LoadingScreen, self).__init__(**kwargs)
+        self.background = Image(source='files/menu/loading_bg.jpg', allow_stretch=True, keep_ratio=False)
+        self.add_widget(self.background)
+
+        # === Прогресс-бар ===
+        self.progress_bar = ProgressBar(max=100, value=0, size_hint=(0.6, 0.05), pos_hint={'center_x': 0.5, 'center_y': 0.2})
+        self.add_widget(self.progress_bar)
+
+        # === Надпись ===
+        self.label = Label(
+            text="Загрузка игры...",
+            font_size='24sp',
+            color=(1, 1, 1, 1),
+            pos_hint={'center_x': 0.5, 'center_y': 0.15},
+            size_hint=(1, None),
+            halign='center'
+        )
+        self.add_widget(self.label)
+
+        # Запуск фоновой загрузки
+        Clock.schedule_once(self.start_loading)
+
+    def start_loading(self, dt):
+        self.current_progress = 0
+        self.loading_steps = [
+            self.step_check_db,
+            self.step_cleanup_cache,
+            self.step_restore_backup,
+            self.step_load_assets,
+            self.step_complete
+        ]
+        self.run_next_step()
+
+    def run_next_step(self, *args):
+        if self.loading_steps:
+            step = self.loading_steps.pop(0)
+            step()
+        else:
+            self.progress_bar.value = 100
+            self.label.text = "Готово!"
+
+    def update_progress(self, delta):
+        self.current_progress += delta
+        self.progress_bar.value = self.current_progress
+        self.label.text = f"Загрузка... {int(self.current_progress)}%"
+
+    def step_check_db(self):
+        print("Шаг 1: Проверка базы данных...")
+        self.update_progress(20)
+        Clock.schedule_once(self.run_next_step, 0.3)  # Переход к следующему шагу
+
+    def step_cleanup_cache(self):
+        print("Шаг 2: Очистка кэша...")
+        cleanup_sqlite_cache(db_path)
+        self.update_progress(20)
+        Clock.schedule_once(self.run_next_step, 0)
+
+    def step_restore_backup(self):
+        print("Шаг 3: Восстановление из бэкапа...")
+        restore_from_backup()
+        self.update_progress(20)
+        Clock.schedule_once(self.run_next_step, 0)
+
+    def step_load_assets(self):
+        print("Шаг 4: Подготовка ресурсов...")
+        time.sleep(0.5)  # эмуляция задержки
+        self.update_progress(20)
+        Clock.schedule_once(self.run_next_step, 0)
+
+    def step_complete(self):
+        print("Шаг 5: Переход в главное меню...")
+        self.update_progress(20)
+        Clock.schedule_once(self.switch_to_menu, 0.8)
+
+    def switch_to_menu(self, dt):
+        app = App.get_running_app()
+        app.root.clear_widgets()
+        app.root.add_widget(MenuWidget())
+
 RANK_TO_FILENAME = {
     "Главнокомандующий":        "supreme_commander.png",
     "Верховный маршал":          "supreme_marshal.png",
@@ -1700,7 +1781,7 @@ class EmpireApp(App):
         self.selected_kingdom = None  # Атрибут для хранения выбранного королевства
 
     def build(self):
-        return MenuWidget()  # Возвращаем виджет главного меню
+        return LoadingScreen() # Возвращаем виджет главного меню
 
     def restart_app(self):
         # Явное закрытие всех соединений с базой данных
