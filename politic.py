@@ -972,7 +972,7 @@ def show_peace_form(player_faction):
                 return
 
             # Условие: если нет армий, заключаем мир
-            if enemy_points == 0 and player_points == 0:
+            if enemy_points == 0 and player_points >= enemy_points:
                 response = "Мы согласны на мир! Нам пока и воевать то нечем..."
                 cursor.execute(
                     "UPDATE diplomacies SET relationship = ? WHERE faction1 = ? AND faction2 = ?",

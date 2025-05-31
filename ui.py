@@ -1245,22 +1245,6 @@ class FortressInfoPopup(Popup):
 
             print('total_diff:', total_diff)
 
-            # Проверка на возможность перемещения (один раз за ход)
-            cursor.execute("SELECT can_move FROM turn_check_move WHERE faction = ?", (current_player_kingdom,))
-            move_data = cursor.fetchone()
-
-            if not move_data:
-                # Если записи нет, создаём с can_move=True
-                cursor.execute("""
-                    INSERT INTO turn_check_move (faction, can_move)
-                    VALUES (?, ?)
-                """, (current_player_kingdom, True))
-                self.conn.commit()
-                move_data = (True,)
-            elif not move_data[0]:
-                show_popup_message("Ошибка", "Вы уже использовали своё перемещение на этом ходу.")
-                return False
-
             # Статус города назначения
             if destination_owner == current_player_kingdom:
                 # Свой город — перемещение разрешено

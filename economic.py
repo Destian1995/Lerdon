@@ -822,8 +822,8 @@ class Faction:
             # Применяем бонусы к ресурсам
             system = self.load_political_system()
             if system == "Капитализм":
-                # +255% Крон от общего прироста
-                crowns_bonus = int(self.money_up * 4.75)
+                # +875% Крон от общего прироста
+                crowns_bonus = int(self.money_up * 8.75)
                 self.money += crowns_bonus
             elif system == "Коммунизм":
                 # +365% Сырья от общего прироста
@@ -1449,17 +1449,56 @@ class Faction:
         return self.raw_material // 10000
 
 def show_message(title, message):
-    layout = BoxLayout(orientation='vertical', padding=10)
-    label = Label(text=message, size_hint=(1, 0.8))
-    close_btn = Button(text="Закрыть", size_hint=(1, 0.2))
+    # === Оценка высоты текста ===
+    lines = message.count('\n') + 1
+    text_height = max(dp(100), dp(lines * 25))  # минимум 100dp, дальше по строкам
+    popup_height = text_height + dp(110)        # + кнопка и отступы
 
+    # === Стилизованный Label с переносом текста и выравниванием по центру ===
+    label = Label(
+        text=message,
+        size_hint_y=None,
+        height=text_height,
+        text_size=(None, None),
+        halign='center',
+        valign='middle',
+        font_size='16sp',
+        padding=(dp(10), dp(10))
+    )
+
+    # Обновляем текстуру после изменения размера
+    def update_label_width(instance, width):
+        instance.text_size = (instance.width * 0.9, None)
+        instance.texture_update()
+
+    label.bind(width=update_label_width)
+
+    # === Кнопка "Закрыть" с минимальной высотой и стилем ===
+    close_btn = Button(
+        text="Закрыть",
+        size_hint=(1, None),
+        height=dp(48),
+        background_color=(0.2, 0.6, 0.8, 1),
+        background_normal='',
+        font_size='16sp'
+    )
+
+    # === Основной макет ===
+    layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
     layout.add_widget(label)
     layout.add_widget(close_btn)
 
-    popup = Popup(title=title, content=layout, size_hint=(0.6, 0.4))
+    # === Всплывающее окно ===
+    popup = Popup(
+        title=title,
+        content=layout,
+        size_hint=(0.7, None),
+        height=popup_height,
+        auto_dismiss=False
+    )
     close_btn.bind(on_press=popup.dismiss)
-    popup.open()
 
+    popup.open()
 
 # Логика для отображения сообщения об ошибке средств
 def show_error_message(message):

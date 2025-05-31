@@ -1,7 +1,5 @@
 from lerdon_libraries import *
 
-
-
 # === Настройка пути к базе данных ===
 if platform == 'android':
     from android.storage import app_storage_path
@@ -47,6 +45,92 @@ STYLE_LABEL_HEADER = {
 STYLE_LABEL_TEXT = {
     'color': (0.8, 0.8, 0.8, 1),
 }
+
+
+class NonBlockingProgress(FloatLayout):
+    def __init__(self, duration=6, callback=None, **kwargs):
+        super().__init__(**kwargs)
+        self.duration = duration
+        self.callback = callback
+        self.remaining = duration
+        self.opacity = 0.9
+        self.size_hint = (0.7, None)
+        self.height = dp(120)
+        self.pos_hint = {'center_x': 0.5, 'top': 0.9}
+
+        # Фон
+        with self.canvas.before:
+            Color(0, 0, 0, 0.8)
+            self.rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(10)] * 4)
+            self.bind(pos=self._update_rect, size=self._update_rect)
+
+        # Сообщение
+        self.label = Label(
+            text="Ожидание выбора города...",
+            font_size=dp(18),
+            color=(1, 1, 1, 1),
+            halign='center',
+            valign='middle',
+            size_hint=(None, None),
+            size=(self.width, dp(30)),
+            pos_hint={'center_x': 0.5, 'top': 1}
+        )
+        self.label.bind(size=lambda instance, value: setattr(instance, 'text_size', value))
+
+        # Прогресс бар
+        self.progress_bar = ProgressBar(max=100, size_hint=(1, None), height=dp(20))
+        with self.progress_bar.canvas.before:
+            Color(0.3, 0.3, 0.3, 1)
+            self.bg_rect = RoundedRectangle(
+                size=self.progress_bar.size,
+                pos=self.progress_bar.pos,
+                radius=[dp(5)] * 4
+            )
+            Color(0.2, 0.6, 0.8, 1)
+            self.fg_rect = RoundedRectangle(
+                size=(0, self.progress_bar.height),
+                pos=self.progress_bar.pos,
+                radius=[dp(5)] * 4
+            )
+        self.progress_bar.bind(
+            pos=self._update_progress_graphics,
+            size=self._update_progress_graphics,
+            value=self._update_progress_graphics
+        )
+
+        # Расположение виджетов внутри FloatLayout
+        self.add_widget(self.label)
+        self.add_widget(self.progress_bar)
+
+        # Таймеры
+        self.event = Clock.schedule_interval(self.update_progress, 0.05)
+        self.timeout_event = Clock.schedule_once(self.on_timeout, self.duration)
+
+    def _update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+
+    def _update_progress_graphics(self, instance, value):
+        self.bg_rect.pos = instance.pos
+        self.bg_rect.size = instance.size
+        progress_width = instance.width * (instance.value / instance.max)
+        self.fg_rect.size = (progress_width, instance.height)
+        self.fg_rect.pos = instance.pos
+
+    def update_progress(self, dt):
+        self.remaining -= dt
+        if self.remaining <= 0:
+            self.remaining = 0
+        self.progress_bar.value = ((self.duration - self.remaining) / self.duration) * 100
+
+    def on_timeout(self, *args):
+        self.event.cancel()
+        self.timeout_event.cancel()
+        if self.callback:
+            self.callback()
+
+
+
 
 
 class StyledButton(Button):
@@ -124,6 +208,7 @@ class ManageFriend(Popup):
     """
     def __init__(self, faction_name, game_area, **kwargs):
         super().__init__(**kwargs)
+        self.game_area = game_area
         self.faction_name = faction_name
         allies = self._get_allies_from_db()
         ally_name = allies[0] if allies else "Нет союзника"
@@ -139,12 +224,6 @@ class ManageFriend(Popup):
         self.selection_mode = None
         self.selected_ally = None
         self.highlighted_city = None
-        self.status_label = Label(
-            text="",
-            size_hint_y=None,
-            height=dp(30),
-            **STYLE_LABEL_TEXT
-        )
         self._build_content()
 
     def _show_fullscreen_message(self, message):
@@ -184,21 +263,22 @@ class ManageFriend(Popup):
     def _finalize_city_selection(self, city_name, action, ally):
         city_faction = get_city_faction(city_name)
         allies = get_allies_for_faction(self.faction_name)
+
+        final_msg = ""
         if action == "defense":
             if city_faction == self.faction_name:
                 self.save_query_defense_to_db(city_name)
-                self.status_label.text = f"Запрос на защиту города {city_name} отправлен."
-                self._show_fullscreen_message(f"Город для защиты выбран: {city_name}")
+                final_msg = f"Город для защиты выбран: {city_name}"
             else:
-                self.status_label.text = "Нельзя защищать чужие города."
+                final_msg = "Нельзя защищать чужие города."
         elif action == "attack":
             if city_faction != self.faction_name and city_faction not in allies:
                 self.save_query_attack_to_db(city_name)
-                self.status_label.text = f"Запрос на атаку города {city_name} отправлен."
-                self._show_fullscreen_message(f"Город для атаки выбран: {city_name}")
+                final_msg = f"Город для атаки выбран: {city_name}"
             else:
-                self.status_label.text = "Нельзя атаковать дружественные города."
-        self.progress_bar.opacity = 0
+                final_msg = "Нельзя атаковать дружественные города."
+
+        self._show_fullscreen_message(final_msg)
 
     def _build_content(self):
         # Основной контейнер
@@ -225,46 +305,6 @@ class ManageFriend(Popup):
         table_scroll = self._create_table()
         table_scroll.size_hint_y = 1  # ← Теперь займёт всё доступное пространство
 
-        # Прогресс-бар
-        self.progress_bar = ProgressBar(
-            max=100,
-            size_hint_y=None,
-            height=dp(20)
-        )
-        self.progress_bar.opacity = 0
-
-        # Графика прогрессбара
-        with self.progress_bar.canvas.before:
-            Color(0.3, 0.3, 0.3, 1)
-            self.progress_bg = RoundedRectangle(
-                size=self.progress_bar.size,
-                pos=self.progress_bar.pos,
-                radius=[dp(5)] * 4
-            )
-            Color(0.2, 0.6, 0.8, 1)
-            self.progress_rect = RoundedRectangle(
-                size=(0, self.progress_bar.height),
-                pos=self.progress_bar.pos,
-                radius=[dp(5)] * 4
-            )
-
-        self.progress_bar.bind(
-            pos=self.update_progress_graphics,
-            size=self.update_progress_graphics,
-            value=self.update_progress_graphics
-        )
-
-        # Статус бар
-        status_content = BoxLayout(orientation='vertical', spacing=dp(5))
-        status_content.add_widget(self.status_label)
-        status_content.add_widget(self.progress_bar)
-
-        status_box = BoxLayout(
-            size_hint_y=None,
-            height=dp(70)
-        )
-        status_box.add_widget(status_content)
-
         # Кнопки управления
         button_box = BoxLayout(
             size_hint_y=None,
@@ -282,21 +322,9 @@ class ManageFriend(Popup):
 
         # Добавляем всё в main_container
         main_container.add_widget(table_scroll)  # ← size_hint_y=1
-        main_container.add_widget(status_box)  # ← фиксированная высота
         main_container.add_widget(button_box)  # ← фиксированная высота
 
         self.content = main_container
-
-    def update_progress_graphics(self, *args):
-        self.progress_bg.pos = self.progress_bar.pos
-        self.progress_bg.size = self.progress_bar.size
-        self.progress_rect.pos = self.progress_bar.pos
-        self.progress_rect.size = (
-            self.progress_bar.value_normalized * self.progress_bar.width,
-            self.progress_bar.height
-        )
-
-        self.progress_rect.pos = self.progress_bar.pos
 
     def _create_table(self):
         allies = self._get_allies_from_db()
@@ -377,7 +405,7 @@ class ManageFriend(Popup):
             icon='files/pict/friends/military_defense.png',
             text='Защита',
             bg_color=(0.3, 0.7, 0.3, 1),
-            on_press=lambda btn: self._on_action_wrapper('defense', ally_name, btn)
+            on_press=lambda btn: self._on_action('defense', ally_name, btn)
         )
         main_container.add_widget(btn_defense)
 
@@ -385,7 +413,7 @@ class ManageFriend(Popup):
             icon='files/pict/friends/military_attack.png',
             text='Атака',
             bg_color=(0.8, 0.3, 0.3, 1),
-            on_press=lambda btn: self._on_action_wrapper('attack', ally_name, btn)
+            on_press=lambda btn: self._on_action('attack', ally_name, btn)
         )
         main_container.add_widget(btn_attack)
 
@@ -441,9 +469,6 @@ class ManageFriend(Popup):
 
         return btn_layout
 
-    def _on_action_wrapper(self, action, ally, instance):
-        self._on_action(action, ally)
-
 
     def _on_resource_selected(self, ally, resource):
         self._send_request(ally, resource)
@@ -463,103 +488,88 @@ class ManageFriend(Popup):
         conn.close()
         return list(allies)
 
-    def _on_action(self, action, ally):
-        """
-        Обработчик нажатия на кнопки "Защита" или "Атака"
-        """
-        self.progress_bar.opacity = 1
-        self.progress_bar.value = 0
-        self.status_label.text = f"Ожидание выбора города для {'защиты' if action == 'defense' else 'атаки'}..."
+    def _cancel_selection(self, action, ally):
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.progress_bar.value = 100
 
-        # Инициализация переменных для отслеживания выбора города
+            def remove_progress(dt):
+                if self.progress_bar and self.progress_bar in self.game_area.children:
+                    self.game_area.remove_widget(self.progress_bar)
+
+            Clock.schedule_once(remove_progress)
+
+    def _on_action(self, action, ally, btn=None):
+        self.dismiss()  # Закрываем окно союзника сразу
+
+        # === Показываем неблокирующий прогресс-бар на game_area ===
+        self.progress_bar = NonBlockingProgress(
+            duration=6,
+            callback=lambda: self._on_progress_timeout(action, ally)
+        )
+        self.game_area.add_widget(self.progress_bar)
+
+        # === Инициализируем переменные выбора города ===
+        self.city_last_name = None
         self.city_wait_start_time = time.time()
-        self.city_last_name = ""
-        self.city_selection_duration = 2  # Минимальное время для подтверждения выбора
+        self.city_selection_duration = 3
+        self.action_mode = action
+        self.selected_ally = ally
+        self.total_selection_timeout = 5
 
-        # Запуск проверки выбора города
+        # === Проверка выбора города ===
         self.city_check_event = Clock.schedule_interval(
             lambda dt: self._check_city_selection(dt, action, ally), 0.2
         )
 
-        # Запуск прогресс-бара
-        self.progress_event = Clock.schedule_interval(
-            lambda dt: self._update_progress_bar(dt), 0.05
-        )
-
-        # Таймер на 10 секунд для отмены выбора
-        self.cancel_timer = Clock.schedule_once(
-            lambda dt: self._cancel_selection(action, ally), 5
-        )
-
-        self.dismiss()
-
-    def _cancel_selection(self, action, ally):
-        """
-        Отменяет выбор города, если время истекло
-        """
-        # Останавливаем проверку выбора города
-        if hasattr(self, 'city_check_event'):
-            Clock.unschedule(self.city_check_event)
-        if hasattr(self, 'progress_event'):
-            Clock.unschedule(self.progress_event)
-
-        # Сбрасываем интерфейс
-        self.progress_bar.opacity = 0
-        self.status_label.text = "Город не выбран. Выбор отменён."
-
-        # Оповещаем пользователя
-        self._show_fullscreen_message("Выбор города отменён")
+    def _on_progress_timeout(self, action, ally):
+        self._cancel_selection(action, ally)
 
     def _check_city_selection(self, dt, action, ally):
-        """
-        Проверяет, был ли выбран город
-        """
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
         cur.execute("SELECT city_name FROM last_click")
         row = cur.fetchone()
         conn.close()
+        current_city = row[0] if row and row[0] else None
 
-        if row and row[0]:
-            current_city = row[0]
-
-            # Если город только что выбран
-            if not self.city_last_name:
+        if current_city:
+            if not hasattr(self, "city_last_name") or self.city_last_name != current_city:
+                # Город изменился — перезапускаем таймер
                 self.city_last_name = current_city
                 self.city_wait_start_time = time.time()
 
-            # Если город выбран и прошло достаточно времени для подтверждения
-            elif current_city == self.city_last_name:
-                if time.time() - self.city_wait_start_time > self.city_selection_duration:
-                    if self._has_existing_action():
-                        self.status_label.text = "Нельзя отправить более одного запроса за ход."
-                    else:
-                        self._finalize_city_selection(current_city, action, ally)
-                    Clock.unschedule(self.city_check_event)
-                    Clock.unschedule(self.progress_event)
-                    if hasattr(self, 'cancel_timer'):
-                        Clock.unschedule(self.cancel_timer)
+                # === Настройка текста прогресс-бара ===
+                self.progress_bar.label.text = f"Выбран: {current_city}..."
+                self.progress_bar.label.font_size = dp(20)
+                self.progress_bar.label.bold = True  # ← Жирный шрифт
+                self.progress_bar.label.pos_hint = {'center_x': 0.5, 'top': 0.75}  # ← Ниже на экране
+
+                # === Удаляем старую анимацию, если есть ===
+                if hasattr(self, 'blink_animation'):
+                    self.blink_animation.stop(self.progress_bar.label)
+
+                # === Создаем новую плавную анимацию мигания ===
+                self.blink_animation = Animation(opacity=0, duration=0.8, t='in_out_sine') + \
+                                       Animation(opacity=1, duration=0.8, t='in_out_sine')
+                self.blink_animation.repeat = True
+                self.blink_animation.start(self.progress_bar.label)
+
+            elapsed = time.time() - self.city_wait_start_time
+            if elapsed >= self.city_selection_duration:
+                self._finalize_city_selection(current_city, action, ally)
+                Clock.unschedule(self.city_check_event)
+                if hasattr(self, 'cancel_timer'):
+                    Clock.unschedule(self.cancel_timer)
         else:
-            # Если город не выбран и прошло 10 секунд
-            if time.time() - self.city_wait_start_time > 10:
+            elapsed = time.time() - self.city_wait_start_time
+            if elapsed > self.total_selection_timeout:
                 self._cancel_selection(action, ally)
                 Clock.unschedule(self.city_check_event)
-                Clock.unschedule(self.progress_event)
 
-    def _update_progress_bar(self, dt):
-        if self.progress_bar.value < 100:
-            self.progress_bar.value += 2
-        else:
-            self.progress_bar.value = 100
-
-    def _has_existing_action(self):
-        conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM queries")
-        count = cur.fetchone()[0]
-        conn.close()
-        return count > 0
-
+    def _blink_label(self, dt):
+        if hasattr(self, 'progress_bar'):
+            label = self.progress_bar.label
+            label.opacity = 0 if label.opacity == 1 else 1
 
     def save_query_attack_to_db(self, attack_city):
         conn = sqlite3.connect(db_path)
@@ -591,13 +601,8 @@ class ManageFriend(Popup):
         conn.commit()
         conn.close()
 
-    def update_bg(self, *args):
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
-
     def _send_request(self, ally, resource):
         self.save_query_resources_to_db(resource)
-        self.status_label.text = f"Запрос на перевод {resource} нам {ally} отправлен."
 
     def open_popup(self):
         super().open()
