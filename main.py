@@ -1,7 +1,7 @@
 from lerdon_libraries import *
 from game_process import GameScreen
 from ui import *
-
+from db_lerdon_connect import *
 
 class LoadingScreen(FloatLayout):
     def __init__(self, **kwargs):
@@ -162,31 +162,7 @@ RANK_TO_FILENAME = {
     "Рядовой":                   "private.png",
 }
 
-# Путь к БД
-# === Настройка пути к базе данных ===
-if platform == 'android':
-    from android.storage import app_storage_path
 
-    storage_dir = app_storage_path()
-else:
-    storage_dir = os.path.dirname(__file__)
-
-original_db_path = os.path.join(os.path.dirname(__file__), 'game_data.db')
-copied_db_path = os.path.join(storage_dir, 'game_data.db')
-
-# Копируем БД, если её нет в пользовательской директории
-if not os.path.exists(copied_db_path):
-    if os.path.exists(original_db_path):
-        import shutil
-
-        shutil.copy(original_db_path, copied_db_path)
-        print(f"✅ База данных скопирована в {copied_db_path}")
-    else:
-        raise FileNotFoundError(f"❌ game_data.db отсутствует в проекте!")
-
-# Теперь можно подключаться к БД
-db_path = copied_db_path
-print("✅ Используем БД по пути:", db_path)
 
 
 def save_last_clicked_city(city_name: str):
