@@ -1,8 +1,9 @@
 from lerdon_libraries import *
+from db_lerdon_connect import *
+
 
 from fight import fight
 from economic import format_number
-from db_lerdon_connect import *
 
 
 # Установка мягких цветов для фона
