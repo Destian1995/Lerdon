@@ -21,5 +21,5 @@ if not os.path.exists(copied_db):
             raise FileNotFoundError("❌ game_data.db не найден ни в исходниках, ни в рабочей папке приложения!")
 
 
-# Принудительно задаём глобальный db_path
+# Принудительно задаём глобальный db_path - нейминг обязателен именно такой!
 db_path = copied_db  # ← Эта строка делает db_path доступным сразу
