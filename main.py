@@ -16,7 +16,7 @@ class LoadingScreen(FloatLayout):
             )
         self.bind(pos=self._update_bg, size=self._update_bg)
 
-        # === Прогресс-бар с рамкой и фоном ===
+        # === Прогресс-бар ===
         self.progress_bar = ProgressBar(
             max=100,
             value=0,
@@ -33,11 +33,11 @@ class LoadingScreen(FloatLayout):
         self.pb_container.pos_hint = {'center_x': 0.5, 'center_y': 0.2}
 
         with self.pb_container.canvas.before:
-            # Темный фон контейнера
+            # Тёмный фон контейнера прогресс-бара
             Color(0.2, 0.2, 0.2, 1)
             self.pb_rect = Rectangle(size=self.pb_container.size, pos=self.pb_container.pos)
 
-            # Заливка прогресса (меняется вместе с value)
+            # Заливка (синяя) прогресса
             Color(0, 0.7, 1, 1)
             self.pb_fill = Rectangle(size=(0, self.pb_container.height), pos=self.pb_container.pos)
 
@@ -56,15 +56,15 @@ class LoadingScreen(FloatLayout):
         )
         self.add_widget(self.label)
 
-        # Запуск загрузки
+        # Запускаем последовательность загрузки
         Clock.schedule_once(self.start_loading)
 
     def update_pb_canvas(self, *args):
-        # Обновляем фон контейнера
+        # Обновляем фон контейнера прогресс-бара
         self.pb_rect.pos = self.pb_container.pos
         self.pb_rect.size = self.pb_container.size
 
-        # Обновляем заливку согласно прогрессу
+        # Обновляем саму заливку в зависимости от value
         fill_width = self.progress_bar.value / 100 * self.pb_container.width
         self.pb_fill.pos = self.pb_container.pos
         self.pb_fill.size = (fill_width, self.pb_container.height)
@@ -86,15 +86,17 @@ class LoadingScreen(FloatLayout):
             step = self.loading_steps.pop(0)
             step()
         else:
+            # Дошли до 100%
             self.progress_bar.value = 100
             self.update_pb_canvas()
-            self.label.text = "[color=#00ff00]Готово![/color]"
+            self.label.text = "[color=#00ff00]В БОЙ![/color]"
+            Clock.schedule_once(self.switch_to_menu, 0.8)
 
     def update_progress(self, delta):
         self.current_progress += delta
         self.progress_bar.value = self.current_progress
         percent = int(self.current_progress)
-        self.label.text = f"[color=#00ccff]Загрузка... {percent}%[/color]"
+        self.label.text = f"[color=#00ccff]Готовим ресурсы... {percent}%[/color]"
         self.update_pb_canvas()
 
     # === Шаги загрузки ===
@@ -120,18 +122,23 @@ class LoadingScreen(FloatLayout):
         Clock.schedule_once(self.run_next_step, 0)
 
     def step_complete(self):
-        print("Шаг 5: Переход в главное меню...")
+        print("Шаг 5: Подготовка перехода в меню...")
         self.update_progress(20)
-        Clock.schedule_once(self.switch_to_menu, 0.8)
+        Clock.schedule_once(self.run_next_step, 0)
 
     def _update_bg(self, *args):
+        # Делаем так, чтобы фон всегда тянулся на весь экран
         self.bg_rect.pos = self.pos
         self.bg_rect.size = self.size
 
     def switch_to_menu(self, dt):
-        app = App.get_running_app()
-        app.root.clear_widgets()
-        app.root.add_widget(MenuWidget())
+        # --- Сначала меняем фон ---
+        self.bg_rect.source = 'files/menu/main_fon.jpg'
+        self.bg_rect.texture = CoreImage('files/menu/main_fon.jpg').texture
+
+        # --- Убираем все дочерние виджеты (прогресс-бар, подпись и т.д.) ---
+        self.clear_widgets()
+        self.add_widget(MenuWidget())
 
 
 RANK_TO_FILENAME = {
