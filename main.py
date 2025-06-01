@@ -1,3 +1,5 @@
+import os
+os.environ["KIVY_WINDOW"] = "pygame"
 from lerdon_libraries import *
 from game_process import GameScreen
 from ui import *
