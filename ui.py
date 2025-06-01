@@ -5,7 +5,7 @@ from fight import fight
 from economic import format_number
 
 # Установка мягких цветов для фона
-Window.clearcolor = (0.95, 0.95, 0.95, 1)  # Светло-серый фон
+#Window.clearcolor = (0.95, 0.95, 0.95, 1)  # Светло-серый фон
 
 # format_number(unit_count)
 
