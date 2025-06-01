@@ -1,24 +1,19 @@
 from lerdon_libraries import *
 from db_lerdon_connect import *
 
-
 from fight import fight
 from economic import format_number
-
 
 # Установка мягких цветов для фона
 Window.clearcolor = (0.95, 0.95, 0.95, 1)  # Светло-серый фон
 
-
 # format_number(unit_count)
-
 
 def dict_factory(cursor, row):
     d = {}
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx]
     return d
-
 
 class FortressInfoPopup(Popup):
     def __init__(self, ai_fraction, city_coords, player_fraction, **kwargs):
