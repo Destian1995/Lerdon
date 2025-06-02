@@ -49,9 +49,9 @@ class LoadingScreen(FloatLayout):
         # === Подпись с процентами ===
         self.label = Label(
             markup=True,
-            text="[color=#ffffff]Загрузка игры...[/color]",
-            font_size='24sp',
-            pos_hint={'center_x': 0.5, 'center_y': 0.15},
+            text="",
+            font_size='20sp',
+            pos_hint={'center_x': 0.5, 'center_y': 0.13},
             size_hint=(1, None),
             halign='center'
         )
