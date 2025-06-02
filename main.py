@@ -666,10 +666,10 @@ class MenuWidget(FloatLayout):
         )
 
         # Привязываем действия
-        self.btn_start_game.bind(on_press=self.start_game)
-        self.btn_dossier.bind(on_press=self.open_dossier)
-        self.btn_how_to_play.bind(on_press=self.open_how_to_play)
-        self.btn_exit.bind(on_press=self.exit_game)
+        self.btn_start_game.bind(on_release=self.start_game)
+        self.btn_dossier.bind(on_release=self.open_dossier)
+        self.btn_how_to_play.bind(on_release=self.open_how_to_play)
+        self.btn_exit.bind(on_release=self.exit_game)
 
         # Добавляем кнопки на экран
         self.add_widget(self.btn_start_game)
@@ -686,6 +686,7 @@ class MenuWidget(FloatLayout):
         Clock.schedule_interval(self.animate_background, 5)
 
     def animate_buttons_in(self, dt):
+        self.buttons_locked = True
         # Сначала перемещаем кнопки за левую границу экрана (скрываем их)
         self.btn_start_game.x = -self.btn_start_game.width
         self.btn_dossier.x = -self.btn_dossier.width
@@ -709,6 +710,10 @@ class MenuWidget(FloatLayout):
         anim2.start(self.btn_dossier)
         anim3.start(self.btn_how_to_play)
         anim4.start(self.btn_exit)
+        anim4.bind(on_complete=self.unlock_buttons)
+
+    def unlock_buttons(self, *args):
+        self.buttons_locked = False
 
     def animate_background(self, dt):
         new_source = random.choice([
@@ -734,16 +739,22 @@ class MenuWidget(FloatLayout):
         self.current_image, self.next_image = self.next_image, self.current_image
 
     def open_dossier(self, instance):
+        if getattr(self, 'buttons_locked', False):
+            return
         app = App.get_running_app()
         app.root.clear_widgets()
         app.root.add_widget(DossierScreen())
 
     def open_how_to_play(self, instance):
+        if getattr(self, 'buttons_locked', False):
+            return
         app = App.get_running_app()
         app.root.clear_widgets()
         app.root.add_widget(HowToPlayScreen())
 
     def start_game(self, instance):
+        if getattr(self, 'buttons_locked', False):
+            return
         app = App.get_running_app()
         app.root.clear_widgets()
         app.root.add_widget(KingdomSelectionWidget())
@@ -1528,7 +1539,7 @@ class KingdomSelectionWidget(FloatLayout):
                 color=(1, 1, 1, 1),
                 bg_color=(0.1, 0.5, 0.9, 1)
             )
-            btn.bind(on_press=self.select_kingdom)
+            btn.bind(on_release=self.select_kingdom)
             self.kingdom_buttons.add_widget(btn)
 
         self.buttons_container.add_widget(self.kingdom_buttons)
@@ -1544,7 +1555,7 @@ class KingdomSelectionWidget(FloatLayout):
             bg_color=(0.2, 0.8, 0.2, 1),
             pos=(Window.width * 1.2, Window.height * 0.1)
         )
-        self.start_game_button.bind(on_press=self.start_game)
+        self.start_game_button.bind(on_release=self.start_game)
         self.buttons_container.add_widget(self.start_game_button)
 
         # Кнопка "Вернуться в главное меню"
@@ -1556,7 +1567,7 @@ class KingdomSelectionWidget(FloatLayout):
             font_size='16sp',
             bg_color=(0.8, 0.2, 0.2, 1)
         )
-        back_btn.bind(on_press=self.back_to_menu)
+        back_btn.bind(on_release=self.back_to_menu)
         self.buttons_container.add_widget(back_btn)
 
         # Анимация появления только кнопок
