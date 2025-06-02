@@ -1,6 +1,4 @@
-import os
-os.environ["KIVY_GL_BACKEND"] = "angle_sdl2"
-os.environ["KIVY_WINDOW"] = "sdl2"
+
 from lerdon_libraries import *
 from game_process import GameScreen
 from ui import *
