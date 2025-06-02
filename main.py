@@ -50,8 +50,8 @@ class LoadingScreen(FloatLayout):
         self.label = Label(
             markup=True,
             text="",
-            font_size='20sp',
-            pos_hint={'center_x': 0.5, 'center_y': 0.13},
+            font_size='19sp',
+            pos_hint={'center_x': 0.5, 'center_y': 0.11},
             size_hint=(1, None),
             halign='center'
         )
