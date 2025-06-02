@@ -345,7 +345,7 @@ class ManageFriend(Popup):
             icon='files/pict/friends/economic_crowns.png',
             text='Кроны',
             bg_color=(0.2, 0.6, 0.8, 1),
-            on_press=lambda btn: self._on_resource_selected(ally_name, "Кроны")
+            on_release=lambda btn: self._on_resource_selected(ally_name, "Кроны")
         )
         main_container.add_widget(btn_crowns)
 
@@ -353,7 +353,7 @@ class ManageFriend(Popup):
             icon='files/pict/friends/economic_materials.png',
             text='Сырьё',
             bg_color=(0.3, 0.7, 0.3, 1),
-            on_press=lambda btn: self._on_resource_selected(ally_name, "Сырьё")
+            on_release=lambda btn: self._on_resource_selected(ally_name, "Сырьё")
         )
         main_container.add_widget(btn_materials)
 
@@ -361,7 +361,7 @@ class ManageFriend(Popup):
             icon='files/pict/friends/economic_workers.png',
             text='Рабочие',
             bg_color=(0.8, 0.6, 0.2, 1),
-            on_press=lambda btn: self._on_resource_selected(ally_name, "Рабочие")
+            on_release=lambda btn: self._on_resource_selected(ally_name, "Рабочие")
         )
         main_container.add_widget(btn_workers)
 
@@ -384,7 +384,7 @@ class ManageFriend(Popup):
             icon='files/pict/friends/military_defense.png',
             text='Защита',
             bg_color=(0.3, 0.7, 0.3, 1),
-            on_press=lambda btn: self._on_action('defense', ally_name, btn)
+            on_release=lambda btn: self._on_action('defense', ally_name, btn)
         )
         main_container.add_widget(btn_defense)
 
@@ -392,7 +392,7 @@ class ManageFriend(Popup):
             icon='files/pict/friends/military_attack.png',
             text='Атака',
             bg_color=(0.8, 0.3, 0.3, 1),
-            on_press=lambda btn: self._on_action('attack', ally_name, btn)
+            on_release=lambda btn: self._on_action('attack', ally_name, btn)
         )
         main_container.add_widget(btn_attack)
 
@@ -400,7 +400,7 @@ class ManageFriend(Popup):
         scroll.add_widget(main_container)
         return scroll
 
-    def create_action_button(self, icon, text, bg_color, on_press):
+    def create_action_button(self, icon, text, bg_color, on_release):
         btn_layout = BoxLayout(
             orientation='horizontal',
             spacing=dp(15),

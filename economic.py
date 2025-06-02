@@ -1476,7 +1476,7 @@ def show_message(title, message):
         height=popup_height,
         auto_dismiss=False
     )
-    close_btn.bind(on_press=popup.dismiss)
+    close_btn.bind(on_release=popup.dismiss)
 
     popup.open()
 
@@ -1747,8 +1747,8 @@ def open_trade_popup(game_instance):
             handle_trade(game_instance, action, quantity_input.text, popup)
         return handler
 
-    buy_btn.bind(on_press=on_press_wrapper('buy'))
-    sell_btn.bind(on_press=on_press_wrapper('sell'))
+    buy_btn.bind(on_release=on_press_wrapper('buy'))
+    sell_btn.bind(on_release=on_press_wrapper('sell'))
 
     # === АНИМАЦИЯ МИГАНИЯ ===
     def start_blinking(*args):
@@ -1894,7 +1894,7 @@ def open_tax_popup(faction):
         faction.apply_tax_effect(tax_rate)
         tax_popup.dismiss()
 
-    set_tax_button.bind(on_press=set_tax)
+    set_tax_button.bind(on_release=set_tax)
     main_layout.add_widget(set_tax_button)
 
     # === Закрытие попапа по нажатию вне виджета ===
@@ -1998,8 +1998,8 @@ def open_auto_build_popup(faction):
         update_display(slider, saved_index)
 
     slider.bind(value=update_display)
-    left_btn.bind(on_press=lambda _: setattr(slider, 'value', max(slider.value - 1, 0)))
-    right_btn.bind(on_press=lambda _: setattr(slider, 'value', min(slider.value + 1, 8)))
+    left_btn.bind(on_release=lambda _: setattr(slider, 'value', max(slider.value - 1, 0)))
+    right_btn.bind(on_release=lambda _: setattr(slider, 'value', min(slider.value + 1, 8)))
 
     def save_settings(instance):
         idx = int(slider.value)
@@ -2009,8 +2009,8 @@ def open_auto_build_popup(faction):
         auto_popup.dismiss()
         show_message("Сохранено", "Теперь будем строить по-новому!")
 
-    save_btn.bind(on_press=save_settings)
-    cancel_btn.bind(on_press=auto_popup.dismiss)
+    save_btn.bind(on_release=save_settings)
+    cancel_btn.bind(on_release=auto_popup.dismiss)
 
     auto_popup.content = main_layout
     auto_popup.open()
@@ -2058,7 +2058,7 @@ def start_economy_mode(faction, game_area):
             instance.rect.size = instance.size
 
         button.bind(pos=update_rect, size=update_rect)
-        button.bind(on_press=on_press_callback)
+        button.bind(on_release=on_press_callback)
         return button
 
     auto_btn = create_styled_button("Стройка", lambda x: open_auto_build_popup(faction))

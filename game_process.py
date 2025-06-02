@@ -442,13 +442,13 @@ class GameScreen(Screen):
 
         mode_panel_container.bind(pos=update_mode_rect, size=update_mode_rect)
         btn_advisor = ImageButton(source=transform_filename(f'files/sov/sov_{self.selected_faction}.jpg'),
-                                  size_hint=(1, None), height=dp(60), on_press=self.show_advisor)
+                                  size_hint=(1, None), height=dp(60), on_release=self.show_advisor)
         btn_economy = ImageButton(source='files/status/economy.png', size_hint=(1, None), height=dp(60),
-                                  on_press=self.switch_to_economy)
+                                  on_release=self.switch_to_economy)
         btn_army = ImageButton(source='files/status/army.png', size_hint=(1, None), height=dp(60),
-                               on_press=self.switch_to_army)
+                               on_release=self.switch_to_army)
         btn_politics = ImageButton(source='files/status/politic.png', size_hint=(1, None), height=dp(60),
-                                   on_press=self.switch_to_politics)
+                                   on_release=self.switch_to_politics)
         mode_panel_container.add_widget(btn_advisor)
         mode_panel_container.add_widget(btn_economy)
         mode_panel_container.add_widget(btn_army)
@@ -513,7 +513,7 @@ class GameScreen(Screen):
             bold=True,
             color=(1, 1, 1, 1)
         )
-        self.exit_button.bind(on_press=lambda x: self.confirm_exit())
+        self.exit_button.bind(on_release=lambda x: self.confirm_exit())
         exit_container.add_widget(self.exit_button)
         self.add_widget(exit_container)
 
@@ -531,7 +531,7 @@ class GameScreen(Screen):
             instance.start_progress()
             Clock.schedule_once(lambda dt: self.process_turn(None), 1.5)
 
-        self.end_turn_button.bind(on_press=on_end_turn)
+        self.end_turn_button.bind(on_release=on_end_turn)
         end_turn_container.add_widget(self.end_turn_button)
         self.add_widget(end_turn_container)
 
@@ -674,7 +674,7 @@ class GameScreen(Screen):
         )
 
         # Привязываем кнопку к закрытию
-        close_button.bind(on_press=popup.dismiss)
+        close_button.bind(on_release=popup.dismiss)
 
         # Открываем
         popup.open()
@@ -747,8 +747,8 @@ class GameScreen(Screen):
         )
 
         # Назначаем действия кнопкам
-        btn_yes.bind(on_press=lambda x: (popup.dismiss(), App.get_running_app().restart_app()))
-        btn_no.bind(on_press=popup.dismiss)
+        btn_yes.bind(on_release=lambda x: (popup.dismiss(), App.get_running_app().restart_app()))
+        btn_no.bind(on_release=popup.dismiss)
 
         content.add_widget(message)
         content.add_widget(btn_yes)

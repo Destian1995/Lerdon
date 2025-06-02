@@ -360,7 +360,7 @@ class ResultsGame:
             background_color=(0.2, 0.5, 0.8, 1),
             background_normal=''
         )
-        exit_btn.bind(on_press=self.exit_to_main_menu)
+        exit_btn.bind(on_release=self.exit_to_main_menu)
 
         # Добавляем элементы
         layout.add_widget(message_label)

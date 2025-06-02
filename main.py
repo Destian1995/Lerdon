@@ -869,7 +869,7 @@ class DossierScreen(Screen):
             height=dp(48),
             font_size=sp(16)
         )
-        back_btn.bind(on_press=self.go_back)
+        back_btn.bind(on_release=self.go_back)
         bottom.add_widget(back_btn)
 
         # Кнопка «Очистить данные»
@@ -880,7 +880,7 @@ class DossierScreen(Screen):
             height=dp(48),
             font_size=sp(16)
         )
-        clear_btn.bind(on_press=self.clear_dossier)
+        clear_btn.bind(on_release=self.clear_dossier)
         bottom.add_widget(clear_btn)
 
         return bottom

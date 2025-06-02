@@ -282,7 +282,7 @@ def show_new_agreement_window(faction, game_area, class_faction):
             button_color=default_button_color,
             text_color=default_text_color
         )
-        button.bind(on_press=lambda instance, cb=callback: cb(faction, game_area))
+        button.bind(on_release=lambda instance, cb=callback: cb(faction, game_area))
         button_layout.add_widget(button)
 
     # Кнопка "Вернуться"
@@ -292,7 +292,7 @@ def show_new_agreement_window(faction, game_area, class_faction):
         button_color=(0.8, 0.2, 0.2, 1),  # Красный цвет
         text_color=default_text_color
     )
-    back_button.bind(on_press=lambda x: modal.dismiss())
+    back_button.bind(on_release=lambda x: modal.dismiss())
 
     # Добавляем всё в основное окно
     window.add_widget(title)
@@ -522,8 +522,8 @@ def show_trade_agreement_form(faction, game_area):
         finally:
             if conn:
                 conn.close()
-    generate_button.bind(on_press=generate_agreement)
-    send_button.bind(on_press=send_agreement)
+    generate_button.bind(on_release=generate_agreement)
+    send_button.bind(on_release=send_agreement)
     button_layout.add_widget(generate_button)
     button_layout.add_widget(send_button)
     content.add_widget(button_layout)
@@ -534,7 +534,7 @@ def show_trade_agreement_form(faction, game_area):
         height=button_height,
         font_size=font_size * 1.2
     )
-    back_button.bind(on_press=lambda x: popup.dismiss())
+    back_button.bind(on_release=lambda x: popup.dismiss())
     content.add_widget(back_button)
 
     popup = Popup(
@@ -750,7 +750,7 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
         size_hint=(0.5, None),
         height=button_height
     )
-    send_button.bind(on_press=send_proposal)
+    send_button.bind(on_release=send_proposal)
 
     back_button = Button(
         text="Назад",
@@ -767,7 +767,7 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
         size_hint=(0.7, 0.5),
         auto_dismiss=False
     )
-    back_button.bind(on_press=popup.dismiss)
+    back_button.bind(on_release=popup.dismiss)
 
     button_layout.add_widget(send_button)
     button_layout.add_widget(back_button)
@@ -880,7 +880,7 @@ def show_peace_form(player_faction):
                 size_hint=(0.7, 0.3),
                 auto_dismiss=False
             )
-            close_button.bind(on_press=popup.dismiss)
+            close_button.bind(on_release=popup.dismiss)
             popup_content.add_widget(close_button)
             popup.open()
             return
@@ -1022,7 +1022,7 @@ def show_peace_form(player_faction):
             size_hint=(0.5, None),
             height=button_height
         )
-        send_button.bind(on_press=send_proposal)
+        send_button.bind(on_release=send_proposal)
         back_button = Button(
             text="Назад",
             font_size=font_size,
@@ -1039,7 +1039,7 @@ def show_peace_form(player_faction):
             size_hint=(0.7, 0.5),
             auto_dismiss=False
         )
-        back_button.bind(on_press=popup.dismiss)
+        back_button.bind(on_release=popup.dismiss)
 
         button_layout.add_widget(send_button)
         button_layout.add_widget(back_button)
@@ -1259,7 +1259,7 @@ def show_alliance_form(faction, game_area, class_faction):
         size_hint=(0.5, None),
         height=button_height
     )
-    send_button.bind(on_press=send_proposal)
+    send_button.bind(on_release=send_proposal)
     back_button = Button(
         text="Назад",
         font_size=font_size,
@@ -1279,7 +1279,7 @@ def show_alliance_form(faction, game_area, class_faction):
         size_hint=(0.7, 0.5),
         auto_dismiss=False
     )
-    back_button.bind(on_press=popup.dismiss)
+    back_button.bind(on_release=popup.dismiss)
     popup.bind(on_dismiss=close_connection)  # Привязываем функцию close_connection к событию закрытия popup
 
     button_layout.add_widget(send_button)
@@ -1461,7 +1461,7 @@ def show_declare_war_form(faction):
         size_hint=(0.5, None),
         height=button_height
     )
-    declare_button.bind(on_press=declare_war)
+    declare_button.bind(on_release=declare_war)
 
     back_button = Button(
         text="Назад",
@@ -1481,7 +1481,7 @@ def show_declare_war_form(faction):
     )
 
     # Привязываем кнопку "Назад" к закрытию Popup
-    back_button.bind(on_press=popup.dismiss)
+    back_button.bind(on_release=popup.dismiss)
 
     # Добавляем кнопки в макет
     button_layout.add_widget(declare_button)
@@ -1503,7 +1503,7 @@ def show_popup_message(title, message):
     popup_content.add_widget(Label(text=message, color=(1, 1, 1, 1), halign='center'))
     close_button = Button(text="Закрыть", size_hint=(1, 0.3))
     popup = Popup(title=title, content=popup_content, size_hint=(0.6, 0.4), auto_dismiss=False)
-    close_button.bind(on_press=popup.dismiss)
+    close_button.bind(on_release=popup.dismiss)
     popup_content.add_widget(close_button)
     popup.open()
 

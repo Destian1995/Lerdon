@@ -119,7 +119,7 @@ class AdvisorView(FloatLayout):
             bold=True,
             border=(0, 0, 0, 0)
         )
-        political_system_button.bind(on_press=lambda x: self.show_political_systems())
+        political_system_button.bind(on_release=lambda x: self.show_political_systems())
 
         relations_button = Button(
             text="Отношения",
@@ -131,7 +131,7 @@ class AdvisorView(FloatLayout):
             bold=True,
             border=(0, 0, 0, 0)
         )
-        relations_button.bind(on_press=lambda x: self.show_relations("Состояние отношений"))
+        relations_button.bind(on_release=lambda x: self.show_relations("Состояние отношений"))
 
         progress_button = Button(
             text="Опыт",
@@ -143,7 +143,7 @@ class AdvisorView(FloatLayout):
             bold=True,
             border=(0, 0, 0, 0)
         )
-        progress_button.bind(on_press=lambda x: self.show_progress())
+        progress_button.bind(on_release=lambda x: self.show_progress())
 
         bottom_panel.add_widget(progress_button)
         bottom_panel.add_widget(political_system_button)
@@ -251,8 +251,8 @@ class AdvisorView(FloatLayout):
             size_hint=(0.5, 1)
         )
 
-        capitalism_button.bind(on_press=lambda x: self.update_political_system("Капитализм"))
-        communism_button.bind(on_press=lambda x: self.update_political_system("Коммунизм"))
+        capitalism_button.bind(on_release=lambda x: self.update_political_system("Капитализм"))
+        communism_button.bind(on_release=lambda x: self.update_political_system("Коммунизм"))
 
         system_layout.add_widget(capitalism_button)
         system_layout.add_widget(communism_button)
@@ -948,7 +948,7 @@ class AdvisorView(FloatLayout):
             background_color=(0, 0.7, 0.3, 1),
             size_hint=(0.2, 1)
         )
-        self.attack_upgrade_button.bind(on_press=self.upgrade_attack)
+        self.attack_upgrade_button.bind(on_release=self.upgrade_attack)
         attack_layout.add_widget(self.attack_upgrade_button)
 
         # Плашка для атаки
@@ -984,7 +984,7 @@ class AdvisorView(FloatLayout):
             background_color=(0, 0.7, 0.3, 1),
             size_hint=(0.2, 1)
         )
-        self.defense_upgrade_button.bind(on_press=self.upgrade_defense)
+        self.defense_upgrade_button.bind(on_release=self.upgrade_defense)
         defense_layout.add_widget(self.defense_upgrade_button)
 
         # Плашка для защиты

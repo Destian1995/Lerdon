@@ -140,13 +140,13 @@ class FortressInfoPopup(Popup):
         # Ввести войска
         send_troops_button = create_styled_button("Ввести войска", (0.2, 0.8, 0.2, 1), height=dp(40) if is_android else 30)
         send_troops_button.size_hint_x = 1
-        send_troops_button.bind(on_press=self.select_troop_type)
+        send_troops_button.bind(on_release=self.select_troop_type)
         button_layout.add_widget(send_troops_button)
 
         # Разместить армию
         place_army_button = create_styled_button("Разместить армию", (0.2, 0.6, 0.9, 1), height=dp(40) if is_android else 30)
         place_army_button.size_hint_x = 1
-        place_army_button.bind(on_press=self.place_army)
+        place_army_button.bind(on_release=self.place_army)
         button_layout.add_widget(place_army_button)
 
         main_layout.add_widget(button_layout)
@@ -154,7 +154,7 @@ class FortressInfoPopup(Popup):
         # === Кнопка "Закрыть" ===
         close_button = create_styled_button("Закрыть", (0.9, 0.3, 0.3, 1), height=dp(40) if is_android else 30)
         close_button.size_hint_x = 1
-        close_button.bind(on_press=self.dismiss)
+        close_button.bind(on_release=self.dismiss)
         main_layout.add_widget(close_button)
 
         self.content = main_layout
@@ -326,9 +326,9 @@ class FortressInfoPopup(Popup):
         any_button = Button(text="Любые", background_color=(0.6, 0.6, 0.8, 1))
 
         # Привязка действий к кнопкам
-        defensive_button.bind(on_press=lambda btn: self.load_troops_by_type("Защитных", popup))
-        offensive_button.bind(on_press=lambda btn: self.load_troops_by_type("Атакующих", popup))
-        any_button.bind(on_press=lambda btn: self.load_troops_by_type("Любых", popup))
+        defensive_button.bind(on_release=lambda btn: self.load_troops_by_type("Защитных", popup))
+        offensive_button.bind(on_release=lambda btn: self.load_troops_by_type("Атакующих", popup))
+        any_button.bind(on_release=lambda btn: self.load_troops_by_type("Любых", popup))
 
         # Добавляем кнопки в макет
         layout.add_widget(defensive_button)
@@ -495,7 +495,7 @@ class FortressInfoPopup(Popup):
                 height=80,
                 background_color=(0.6, 0.8, 0.6, 1)
             )
-            action_button.bind(on_press=lambda btn, data=(city_id, unit_name, unit_count, unit_image):
+            action_button.bind(on_release=lambda btn, data=(city_id, unit_name, unit_count, unit_image):
             self.create_troop_group(data, btn, city_label, unit_label, count_label, image_container, action_button))
             table_layout.add_widget(action_button)
 
@@ -521,12 +521,12 @@ class FortressInfoPopup(Popup):
             background_color=(0.6, 0.8, 0.6, 1),
             disabled=True  # Кнопка изначально неактивна
         )
-        send_group_button.bind(on_press=self.move_selected_group_to_city)
+        send_group_button.bind(on_release=self.move_selected_group_to_city)
         self.send_group_button = send_group_button  # Сохраняем ссылку на кнопку
 
         # Кнопка для закрытия окна
         close_button = Button(text="Закрыть", size_hint_y=None, height=80, background_color=(0.8, 0.8, 0.8, 1))
-        close_button.bind(on_press=popup.dismiss)
+        close_button.bind(on_release=popup.dismiss)
 
         # Добавляем кнопки в макет
         buttons_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=90, spacing=10)
@@ -642,8 +642,8 @@ class FortressInfoPopup(Popup):
             except ValueError:
                 error_label.text = "Ошибка: введите корректное число."
 
-        confirm_button.bind(on_press=confirm_action)
-        cancel_button.bind(on_press=popup.dismiss)
+        confirm_button.bind(on_release=confirm_action)
+        cancel_button.bind(on_release=popup.dismiss)
         button_layout.add_widget(confirm_button)
         button_layout.add_widget(cancel_button)
         layout.add_widget(button_layout)
@@ -935,7 +935,7 @@ class FortressInfoPopup(Popup):
                     background_color=(0.2, 0.6, 0.2, 1),
                     background_normal=''
                 )
-                btn.bind(on_press=lambda btn, data=unit_data: self.add_to_garrison_with_slider(data, btn))
+                btn.bind(on_release=lambda btn, data=unit_data: self.add_to_garrison_with_slider(data, btn))
 
                 card.add_widget(image)
                 card.add_widget(info_layout)
@@ -966,7 +966,7 @@ class FortressInfoPopup(Popup):
                 background_color=(0.2, 0.2, 0.2, 1),
                 background_normal=''
             )
-            close_btn.bind(on_press=popup.dismiss)
+            close_btn.bind(on_release=popup.dismiss)
             main_layout.add_widget(close_btn)
 
             popup.content = main_layout
@@ -1083,8 +1083,8 @@ class FortressInfoPopup(Popup):
             except ValueError:
                 show_popup_message("Ошибка", "Введите корректное число")
 
-        confirm_button.bind(on_press=confirm_action)
-        cancel_button.bind(on_press=lambda btn: popup.dismiss())
+        confirm_button.bind(on_release=confirm_action)
+        cancel_button.bind(on_release=lambda btn: popup.dismiss())
         button_layout.add_widget(confirm_button)
         button_layout.add_widget(cancel_button)
         layout.add_widget(button_layout)
@@ -1685,7 +1685,7 @@ def show_popup_message(title, message):
     )
 
     # Привязываем кнопку к закрытию окна
-    close_button.bind(on_press=popup.dismiss)
+    close_button.bind(on_release=popup.dismiss)
 
     # Открываем окно
     popup.open()
