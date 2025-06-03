@@ -1306,13 +1306,13 @@ class Faction:
         if self.faction == 'Аркадия':
             return 150
         if self.faction == 'Селестия':
-            return 200
+            return 180
         if self.faction == 'Хиперион':
-            return 200
+            return 210
         if self.faction == 'Этерия':
-            return 300
+            return 240
         if self.faction == 'Халидон':
-            return 300
+            return 270
 
     def update_economic_efficiency(self, efficiency_value):
         """
@@ -1383,13 +1383,13 @@ class Faction:
 
         # Генерация новой цены
         if current_turn == 1:  # Если это первый ход
-            self.current_raw_material_price = random.randint(4000, 52000)
+            self.current_raw_material_price = random.randint(1000, 49700)
             self.raw_material_price_history.append(self.current_raw_material_price)
         else:
             # Генерация новой цены на основе текущей
-            self.current_raw_material_price = self.raw_material_price_history[-1] + random.randint(-3450, 3450)
+            self.current_raw_material_price = self.raw_material_price_history[-1] + random.randint(-3450, 3550)
             self.current_raw_material_price = max(
-                4000, min(52000, self.current_raw_material_price)  # Ограничиваем диапазон
+                1000, min(49700, self.current_raw_material_price)  # Ограничиваем диапазон
             )
             self.raw_material_price_history.append(self.current_raw_material_price)
 
