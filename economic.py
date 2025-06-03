@@ -623,6 +623,24 @@ class Faction:
 
     def update_trade_resources_from_db(self):
         try:
+            # Проверяем все неподтвержденные сделки (agree = 0)
+            self.cursor.execute('''
+                SELECT id, initiator, target_faction 
+                FROM trade_agreements 
+                WHERE (initiator = ? OR target_faction = ?) AND agree = 0
+            ''', (self.faction, self.faction))
+
+            rejected_rows = self.cursor.fetchall()
+
+            # Выводим сообщение о том, что сделка была отклонена
+            for row in rejected_rows:
+                trade_id, initiator, target_faction = row
+
+                if initiator == self.faction:
+                    show_message("Отказ", f"{target_faction} отказались от сделки.")
+                elif target_faction == self.faction:
+                    show_message("Отказ", f"{initiator} отказались от сделки.")
+
             # Удаляем все неподтвержденные сделки
             self.cursor.execute('''
                 DELETE FROM trade_agreements 
@@ -644,11 +662,14 @@ class Faction:
                 trade_id, initiator, target_faction, initiator_type_resource, \
                     initiator_summ_resource, target_type_resource, target_summ_resource = row
 
+                # Проверяем, была ли сделка одобрена
+                show_message("Сделка", f" {target_faction} одобрили сделку с {target_type_resource}.")
+
                 if initiator == self.faction:
                     # Проверяем наличие ресурсов только если они должны быть отданы
                     if initiator_summ_resource and initiator_type_resource:
                         if not self.check_resource_availability(initiator_type_resource, initiator_summ_resource):
-                            print(f"Недостаточно ресурсов для выполнения сделки ID={trade_id}.")
+                            print(f"Недостаточно ресурсов для выполнения сделки с фракцией {target_faction}.")
                             continue
 
                         # Отнимаем ресурс, который отдает инициатор
@@ -662,7 +683,7 @@ class Faction:
                     # Проверяем наличие ресурсов только если они должны быть отданы
                     if target_summ_resource and target_type_resource:
                         if not self.check_resource_availability(target_type_resource, target_summ_resource):
-                            print(f"Недостаточно ресурсов для выполнения сделки ID={trade_id}.")
+                            print(f"Недостаточно ресурсов для выполнения сделки с фракцией {initiator}.")
                             continue
 
                         # Отнимаем ресурс, который отдает целевая фракция
@@ -684,6 +705,7 @@ class Faction:
                 ''', (trade_id,))
 
             self.save_resources_to_db()
+
         except sqlite3.Error as e:
             print(f"Ошибка при обновлении ресурсов на основе торговых соглашений: {e}")
 

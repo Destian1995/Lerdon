@@ -307,38 +307,35 @@ def show_new_agreement_window(faction, game_area, class_faction):
 # Обновленная функция для создания формы торгового соглашения
 def show_trade_agreement_form(faction, game_area):
     """Окно формы для торгового соглашения"""
-    # Рассчитываем базовый размер шрифта
     font_size = calculate_font_size()
-    button_height = font_size * 3  # Увеличиваем высоту кнопок (в 3 раза от размера шрифта)
-    input_height = font_size * 2.5  # Увеличиваем высоту полей ввода (в 2.5 раза от размера шрифта)
-    padding = font_size // 2  # Отступы
-    spacing = font_size // 4  # Промежутки между элементами
+    button_height = font_size * 3
+    input_height = font_size * 2.5
+    padding = font_size // 2
+    spacing = font_size // 4
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    # Список всех фракций
-    available_factions = all_factions(cursor)  # Получаем активные фракции
-    available_factions = [f for f in available_factions if f != faction]  # Исключаем текущую фракцию
 
-    # Создаем контент для Popup
-    content = BoxLayout(
-        orientation='vertical',
-        padding=padding,
-        spacing=spacing
-    )
+    # Получаем список активных фракций
+    available_factions = all_factions(cursor)
+    available_factions = [f for f in available_factions if f != faction]
+
+    # Формируем контент
+    content = BoxLayout(orientation='vertical', padding=padding, spacing=spacing)
 
     # Заголовок
     title = Label(
         text="Торговое соглашение",
         size_hint=(1, None),
         height=button_height,
-        font_size=font_size * 1.5,  # Заголовок крупнее
+        font_size=font_size * 1.5,
         color=(1, 1, 1, 1),
         bold=True,
         halign='center'
     )
     content.add_widget(title)
 
-    # Спиннеры и поля ввода
+    # Спиннеры
     factions_spinner = Spinner(
         text="С какой фракцией?",
         values=available_factions,
@@ -372,27 +369,32 @@ def show_trade_agreement_form(faction, game_area):
     )
     content.add_widget(their_resource_spinner)
 
-    our_percentage_input = TextInput(
-        hint_text="Сумма отчислений с нашей стороны",
-        multiline=False,
+    # Слайдеры
+    our_slider_label = Label(
+        text="Наш ресурс: 0",
         size_hint=(1, None),
         height=input_height,
-        font_size=font_size,
-        background_color=(0.1, 0.1, 0.1, 1),
-        foreground_color=(1, 1, 1, 1)
+        font_size=font_size
     )
-    content.add_widget(our_percentage_input)
+    content.add_widget(our_slider_label)
 
-    their_percentage_input = TextInput(
-        hint_text="Сумма прихода с их стороны",
-        multiline=False,
+    our_slider = Slider(
+        min=0,
+        max=100,
+        value=0,
+        step=1,
+        size_hint=(1, None),
+        height=input_height
+    )
+    content.add_widget(our_slider)
+
+    their_slider_label = Label(
+        text="Их ресурс: автоматический расчёт",
         size_hint=(1, None),
         height=input_height,
-        font_size=font_size,
-        background_color=(0.1, 0.1, 0.1, 1),
-        foreground_color=(1, 1, 1, 1)
+        font_size=font_size
     )
-    content.add_widget(their_percentage_input)
+    content.add_widget(their_slider_label)
 
     agreement_summary = TextInput(
         readonly=True,
@@ -405,161 +407,153 @@ def show_trade_agreement_form(faction, game_area):
     )
     content.add_widget(agreement_summary)
 
-    # Кнопки
-    button_layout = BoxLayout(
-        orientation='horizontal',
-        size_hint=(1, None),
-        height=button_height,
-        spacing=font_size // 2
-    )
-
-    generate_button = Button(
-        text="Сформировать условия",
-        size_hint=(1, None),
-        height=button_height,
-        font_size=font_size * 1.2  # Увеличиваем размер текста на кнопках
-    )
-
+    # Кнопка отправки
     send_button = Button(
         text="Отправить условия договора",
-        size_hint=(1, None),
-        height=button_height,
         font_size=font_size * 1.2,
         opacity=0
     )
 
-    def generate_agreement(instance):
-        global their_amount, our_amount
-        errors = []
+    def load_resources():
+        """Загружает текущие значения Рабочих, Сырья и Крон для фракции"""
+        cursor.execute("""
+            SELECT resource_type, amount FROM resources 
+            WHERE faction = ? AND resource_type IN ('Рабочие', 'Сырье', 'Кроны')
+        """, (faction,))
 
-        # Проверка выбора фракции
-        if factions_spinner.text == "С какой фракцией?":
-            errors.append("Выберите фракцию")
+        result = {res: 0 for res in ["Рабочие", "Сырье", "Кроны"]}
+        for row in cursor.fetchall():
+            result[row[0]] = int(row[1])
+        return result
 
-        # Проверка выбора ресурсов
-        if our_resource_spinner.text == "Наш ресурс":
-            errors.append("Выберите наш ресурс")
-        if their_resource_spinner.text == "Их ресурс":
-            errors.append("Выберите их ресурс")
+    def get_relation_level(f1, f2):
+        """Получает уровень отношений между двумя фракциями"""
+        cursor.execute("""
+            SELECT relationship FROM relations 
+            WHERE (faction1=? AND faction2=?) OR (faction1=? AND faction2=?)""",
+                       (f1, f2, f2, f1))
+        result = cursor.fetchone()
+        return int(result[0]) if result else 0
 
-        # Проверка вводимых сумм
-        try:
-            our_amount = int(our_percentage_input.text)
-            their_amount = int(their_percentage_input.text)
+    def calculate_coefficient(relation_level):
+        """Рассчитывает коэффициент на основе уровня отношений"""
+        relation_level = int(relation_level)
+        if relation_level < 15:
+            return 0
+        elif 15 <= relation_level < 25:
+            return 0.08
+        elif 25 <= relation_level < 35:
+            return 0.3
+        elif 35 <= relation_level < 50:
+            return 0.8
+        elif 50 <= relation_level < 60:
+            return 1.0
+        elif 60 <= relation_level < 75:
+            return 1.4
+        elif 75 <= relation_level < 90:
+            return 2.0
+        elif 90 <= relation_level <= 100:
+            return 2.9
+        else:
+            return 0
 
-            if our_amount <= 0:
-                errors.append("Наша сумма должна быть > 0")
-            if their_amount <= 0:
-                errors.append("Их сумма должна быть > 0")
-        except ValueError:
-            errors.append("Введите корректные числа")
-
-        if errors:
-            agreement_summary.text = "\n".join(errors)
+    def update_sliders(*args):
+        """Обновляет максимальное значение слайдера и метки"""
+        resource_type = our_resource_spinner.text
+        if resource_type == "Наш ресурс":
             return
 
-        # Если нет ошибок, формируем соглашение
+        resources = load_resources()
+        max_value = resources.get(resource_type, 0)
+        our_slider.max = max_value
+        our_slider.value = 0
+        our_slider_label.text = f"Наш ресурс: {format_number(int(our_slider.value))} / {format_number(max_value)}"
+
+    def on_slider_change(instance, value):
+        our_slider_label.text = f"Наш ресурс: {format_number(int(value))} / {format_number(our_slider.max)}"
+        target_faction = factions_spinner.text
+        our_res = our_resource_spinner.text
+        their_res = their_resource_spinner.text
+
+        if target_faction not in available_factions or our_res == "Наш ресурс" or their_res == "Их ресурс":
+            return
+
+        rel_level = get_relation_level(faction, target_faction)
+        coeff = calculate_coefficient(rel_level)
+
+        if coeff == 0:
+            their_slider_label.text = "Их ресурс: недоступен"
+            agreement_summary.text = "Невозможно заключить соглашение — слишком низкие отношения."
+            send_button.opacity = 0
+            return
+
+        their_amount = int(value * coeff)
+        their_slider_label.text = f"Их ресурс: {format_number(their_amount)}"
+
         agreement_summary.text = (
-            f"Торговое соглашение с фракцией {factions_spinner.text}.\n"
+            f"Торговое соглашение с фракцией {target_faction}.\n"
             f"Инициатор: {faction}.\n"
-            f"Наш ресурс: {our_resource_spinner.text} ({our_amount}).\n"
-            f"Их ресурс: {their_resource_spinner.text} ({their_amount})."
+            f"Наш ресурс: {our_res} ({format_number(int(value))}).\n"
+            f"Их ресурс: {their_res} ({format_number(their_amount)})."
         )
         send_button.opacity = 1
 
+    def check_existing_agreement(initiator, target):
+        """Проверяет существование соглашения между двумя фракциями"""
+        cursor.execute("""
+            SELECT * FROM trade_agreements 
+            WHERE (initiator = ? AND target_faction = ?)
+               OR (initiator = ? AND target_faction = ?)
+        """, (initiator, target, target, initiator))
+
+        result = cursor.fetchone()
+        return result is not None
+
     def send_agreement(instance):
-        global conn
-        faction_selected = factions_spinner.text
+        target_faction = factions_spinner.text
+        our_res = our_resource_spinner.text
+        their_res = their_resource_spinner.text
+        our_amount = int(our_slider.value)
+        their_amount = int(our_amount * calculate_coefficient(get_relation_level(faction, target_faction)))
 
-        # Проверка выбранной фракции
-        if faction_selected == "С какой фракцией?":
-            show_warning("Пожалуйста, выберите фракцию!")
-            return
-
-        # Проверка числовых значений
-        try:
-            our_amount = int(our_percentage_input.text)
-            their_amount = int(their_percentage_input.text)
-
-            if our_amount <= 0 or their_amount <= 0:
-                raise ValueError()
-        except ValueError:
-            show_warning("Введите корректные положительные числа!")
-            return
-
-        # Проверяем существующее соглашение
-        if check_existing_agreement(faction, faction_selected):
+        if check_existing_agreement(faction, target_faction):
             show_warning("Соглашение уже существует!")
             return
 
         try:
-            conn = sqlite3.connect(db_path)
+            conn = connect_to_db()
             cursor = conn.cursor()
-
             cursor.execute("""
                 INSERT INTO trade_agreements 
                 (initiator, target_faction, initiator_type_resource, 
                  target_type_resource, initiator_summ_resource, target_summ_resource)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                faction,
-                faction_selected,
-                our_resource_spinner.text,
-                their_resource_spinner.text,
-                our_amount,
-                their_amount
-            ))
-
+            """, (faction, target_faction, our_res, their_res, our_amount, their_amount))
             conn.commit()
             agreement_summary.text = (
-                f"Условия договора отправлены фракции {faction_selected}.\n"
-                f"Если его примут поставки придут через 1 ход"
+                f"Условия договора отправлены фракции {target_faction}.\n"
+                f"Если его примут, поставки начнутся через 1 ход."
             )
-
         except sqlite3.Error as e:
             show_warning(f"Ошибка базы данных: {e}")
-
         finally:
-            if conn:
-                conn.close()
-    generate_button.bind(on_release=generate_agreement)
-    send_button.bind(on_release=send_agreement)
-    button_layout.add_widget(generate_button)
-    button_layout.add_widget(send_button)
-    content.add_widget(button_layout)
+            conn.close()
 
-    back_button = Button(
-        text="Назад",
-        size_hint=(1, None),
-        height=button_height,
-        font_size=font_size * 1.2
-    )
+    # Привязываем события
+    our_resource_spinner.bind(text=update_sliders)
+    factions_spinner.bind(text=update_sliders)
+    our_slider.bind(value=on_slider_change)
+    send_button.bind(on_release=send_agreement)
+
+    # Добавляем кнопку отправки
+    content.add_widget(send_button)
+
+    back_button = Button(text="Назад", size_hint=(1, None), height=button_height, font_size=font_size * 1.2)
     back_button.bind(on_release=lambda x: popup.dismiss())
     content.add_widget(back_button)
 
-    popup = Popup(
-        title="Торговое соглашение",
-        content=content,
-        size_hint=(0.7, 0.8),
-        auto_dismiss=False
-    )
+    popup = Popup(title="Торговое соглашение", content=content, size_hint=(0.7, 0.8), auto_dismiss=False)
     popup.open()
-
-
-def check_existing_agreement(initiator, target):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT * FROM trade_agreements 
-        WHERE (initiator = ? AND target_faction = ?)
-           OR (initiator = ? AND target_faction = ?)
-    """, (initiator, target, target, initiator))
-
-    result = cursor.fetchone()
-    conn.close()
-
-    return result is not None
 
 # Обработчик изменения размера окна
 def on_window_resize(instance, width, height):
