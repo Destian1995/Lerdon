@@ -864,11 +864,11 @@ class Faction:
             other_system = self.load_political_system_for_faction(faction)
 
             if current_system == other_system:
-                # Улучшаем отношения на +2%
+                # Улучшаем отношения на +3%
                 new_relation = min(relation_level + 3, 100)
                 print(f"Улучшение отношений с {faction}: {relation_level} -> {new_relation}")
             else:
-                # Ухудшаем отношения на -2%
+                # Ухудшаем отношения на -7%
                 new_relation = max(relation_level - 7, 0)
                 print(f"Ухудшение отношений с {faction}: {relation_level} -> {new_relation}")
 
@@ -1065,10 +1065,10 @@ class Faction:
         # Коэффициенты для каждой фракции
         faction_coefficients = {
             'Аркадия': {'money_loss': 150, 'food_loss': 0.4},
-            'Селестия': {'money_loss': 200, 'food_loss': 0.1},
-            'Хиперион': {'money_loss': 200, 'food_loss': 0.09},
-            'Этерия': {'money_loss': 300, 'food_loss': 0.05},
-            'Халидон': {'money_loss': 300, 'food_loss': 0.04},
+            'Селестия': {'money_loss': 180, 'food_loss': 0.1},
+            'Хиперион': {'money_loss': 210, 'food_loss': 0.09},
+            'Этерия': {'money_loss': 240, 'food_loss': 0.05},
+            'Халидон': {'money_loss': 270, 'food_loss': 0.04},
         }
 
         # Получение коэффициентов для текущей фракции
