@@ -215,58 +215,57 @@ class StyledButton(ButtonBehavior, BoxLayout):
 
 
 def show_new_agreement_window(faction, game_area, class_faction):
-    """Создание красивого окна с кнопками"""
+    """Создание окна с кнопками (адаптировано для Android, уменьшенная высота)."""
     game_area.clear_widgets()
 
-    # Создаем модальное окно
+    # Создаем модальное окно и поднимаем его чуть выше центра
+    # Теперь size_hint=(0.8, 0.6) вместо (0.8, 0.8) — окно будет ниже по высоте
     modal = ModalView(
-        size_hint=(0.8, 0.8),
-        pos_hint={'center_x': 0.5, 'center_y': 0.5},
-        background_color=(0, 0, 0, 0)  # Прозрачный фон
+        size_hint=(0.8, 0.6),
+        pos_hint={'center_x': 0.5, 'center_y': 0.55},  # чуть выше по вертикали
+        background_color=(0, 0, 0, 0)
     )
 
-    # Основной контейнер для окна
+    # Основной контейнер для окна: padding по-прежнему минимален сверху
     window = BoxLayout(
         orientation='vertical',
-        padding=20,
-        spacing=15,
+        padding=[20, 5, 20, 10],  # [левый, верхний, правый, нижний]
+        spacing=10,
         size_hint=(1, 1)
     )
 
     # Фон окна
     with window.canvas.before:
-        Color(0.1, 0.1, 0.1, 1)  # Темный фон
+        Color(0.1, 0.1, 0.1, 1)
         window.rect = RoundedRectangle(size=window.size, pos=window.pos, radius=[15])
-    window.bind(pos=lambda obj, pos: setattr(window.rect, 'pos', pos),
-                size=lambda obj, size: setattr(window.rect, 'size', size))
+    window.bind(
+        pos=lambda obj, pos: setattr(window.rect, 'pos', pos),
+        size=lambda obj, size: setattr(window.rect, 'size', size),
+    )
 
     # Заголовок
     title = Label(
-        text="МИД",
+        text="",
         size_hint=(1, None),
-        height=50,
+        height=60,
         font_size=sp(24),
         color=(1, 1, 1, 1),
         bold=True
     )
 
-    # Список кнопок
+    # Список кнопок с авто-высотой
     button_layout = BoxLayout(
         orientation='vertical',
-        spacing=5,  # Уменьшили расстояние между кнопками
-        size_hint=(1, None),  # Высота будет зависеть от содержимого
-        height=0  # Начальная высота
+        spacing=8,
+        size_hint=(1, None),
+        height=0
     )
-    button_layout.bind(minimum_height=button_layout.setter('height'))  # Автоматическая высота
+    button_layout.bind(minimum_height=button_layout.setter('height'))
 
-    # Рассчитываем базовый размер шрифта
     font_size = calculate_font_size()
+    default_button_color = (0.2, 0.6, 1, 1)
+    default_text_color = (1, 1, 1, 1)
 
-    # Цвета для кнопок
-    default_button_color = (0.2, 0.6, 1, 1)  # Синий цвет
-    default_text_color = (1, 1, 1, 1)  # Белый текст
-
-    # Создаем кнопки для каждой категории
     categories = [
         ("Торговое соглашение", show_trade_agreement_form),
         ("Договор об культурном обмене", lambda *args: show_cultural_exchange_form(faction, game_area, class_faction)),
@@ -276,28 +275,40 @@ def show_new_agreement_window(faction, game_area, class_faction):
     ]
 
     for category_name, callback in categories:
-        button = StyledButton(
+        btn = StyledButton(
             text=category_name,
             font_size=font_size * 1.2,
             button_color=default_button_color,
-            text_color=default_text_color
+            text_color=default_text_color,
+            size_hint=(1, None),
+            height=dp(50)
         )
-        button.bind(on_release=lambda instance, cb=callback: cb(faction, game_area))
-        button_layout.add_widget(button)
+        btn.bind(on_release=lambda instance, cb=callback: cb(faction, game_area))
+        button_layout.add_widget(btn)
 
-    # Кнопка "Вернуться"
     back_button = StyledButton(
         text="Вернуться",
         font_size=font_size * 1.2,
-        button_color=(0.8, 0.2, 0.2, 1),  # Красный цвет
-        text_color=default_text_color
+        button_color=(0.8, 0.2, 0.2, 1),
+        text_color=default_text_color,
+        size_hint=(1, None),
+        height=dp(50)
     )
     back_button.bind(on_release=lambda x: modal.dismiss())
 
-    # Добавляем всё в основное окно
-    window.add_widget(title)
-    scroll_view = ScrollView(size_hint=(1, 0.7))  # Добавляем ScrollView для кнопок
+    scroll_view = ScrollView(
+        size_hint=(1, None),
+        do_scroll_x=False,
+        do_scroll_y=True
+    )
+    button_layout.bind(
+        minimum_height=lambda instance, h: setattr(
+            scroll_view, 'height', h + dp(10)
+        )
+    )
     scroll_view.add_widget(button_layout)
+
+    window.add_widget(title)
     window.add_widget(scroll_view)
     window.add_widget(back_button)
 
@@ -306,6 +317,41 @@ def show_new_agreement_window(faction, game_area, class_faction):
 
 # ======================Торговля
 # Обновленная функция для создания формы торгового соглашения
+
+class TouchSlider(Slider):
+    """
+    Класс-слайдер, который при касании по себе временно отключает
+    вертикальную прокрутку родительского ScrollView, а при отпускании — включает обратно.
+    """
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            # Найдём ближайший ScrollView-родитель и отключим у него do_scroll_y
+            parent = self.parent
+            while parent:
+                if isinstance(parent, ScrollView):
+                    parent.do_scroll_y = False
+                    break
+                parent = parent.parent
+            return super().on_touch_down(touch)
+        return super().on_touch_down(touch)
+
+    def on_touch_move(self, touch):
+        if self.collide_point(*touch.pos):
+            return super().on_touch_move(touch)
+        return super().on_touch_move(touch)
+
+    def on_touch_up(self, touch):
+        if self.collide_point(*touch.pos):
+            # Как только отпустили палец, снова включаем вертикальную прокрутку
+            parent = self.parent
+            while parent:
+                if isinstance(parent, ScrollView):
+                    parent.do_scroll_y = True
+                    break
+                parent = parent.parent
+            return super().on_touch_up(touch)
+        return super().on_touch_up(touch)
+
 
 def show_trade_agreement_form(faction, game_area):
     """Окно формы для торгового соглашения с полностью прозрачным фоном Popup."""
@@ -322,7 +368,7 @@ def show_trade_agreement_form(faction, game_area):
     available_factions = [f for f in available_factions if f != faction]
 
     # --- ScrollView + GridLayout для формы ---
-    scroll = ScrollView(size_hint=(1, 1))
+    scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False, do_scroll_y=True)
     inner_layout = GridLayout(
         cols=1,
         spacing=spacing,
@@ -387,7 +433,7 @@ def show_trade_agreement_form(faction, game_area):
     )
     inner_layout.add_widget(their_resource_spinner)
 
-    # Label + Slider: "Наш ресурс"
+    # Label + TouchSlider: "Наш ресурс"
     our_slider_label = Label(
         text="Наш ресурс: 0",
         size_hint_y=None,
@@ -400,7 +446,7 @@ def show_trade_agreement_form(faction, game_area):
     our_slider_label.bind(size=lambda lbl, sz: lbl.setter('text_size')(lbl, (sz[0], None)))
     inner_layout.add_widget(our_slider_label)
 
-    our_slider = Slider(
+    our_slider = TouchSlider(
         min=0,
         max=100,
         value=0,
@@ -597,7 +643,7 @@ def show_trade_agreement_form(faction, game_area):
     buttons_box.add_widget(send_button)
 
     # -------------------------------------------------------------------
-    # Собираем main_layout и делаем фон прозрачным
+    # Собираем main_layout и рисуем прозрачный фон
     # -------------------------------------------------------------------
     main_layout = BoxLayout(
         orientation='vertical',
@@ -606,7 +652,7 @@ def show_trade_agreement_form(faction, game_area):
 
     # Рисуем тёмный фон за main_layout
     with main_layout.canvas.before:
-        Color(0.12, 0.12, 0.12, 1)  # очень тёмно-серый/почти чёрный
+        Color(0.12, 0.12, 0.12, 1)
         background_rect = Rectangle(pos=main_layout.pos, size=main_layout.size)
 
     def _update_bg_rect(instance, value):
