@@ -996,7 +996,7 @@ class GameScreen(Screen):
             title_color=(1, 1, 1, 1),
             content=content,
             size_hint=(0.9, None),
-            height=Window.height * 0.4,
+            height=Window.height * 0.55,
             background_color=(0.1, 0.1, 0.1, 0.95),
             separator_color=(0.3, 0.3, 0.3, 1),
             auto_dismiss=False
