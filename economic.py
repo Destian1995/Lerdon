@@ -1582,91 +1582,187 @@ def open_build_popup(faction):
 
     build_popup = Popup(
         title="Состояние государства",
-        size_hint=(0.8, 0.8),
-        background_color=(0.1, 0.1, 0.1, 1),  # Темный фон окна
-        title_color=(1, 1, 1, 1),  # Белый цвет заголовка
+        size_hint=(0.9, 0.85),
+        title_size=sp(20),
+        title_align='center',
+        title_color=(1, 1, 1, 1),
+        background_color=(0.1, 0.1, 0.1, 0.95),
+        separator_color=(0.3, 0.3, 0.3, 1),
+        auto_dismiss=False
     )
 
-    main_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+    main_layout = BoxLayout(
+        orientation='vertical',
+        spacing=dp(12),
+        padding=[dp(16), dp(16), dp(16), dp(16)]
+    )
 
-    # Таблица статистики с прокруткой
-    scroll_view = ScrollView(size_hint=(1, 0.6), do_scroll_x=False, do_scroll_y=True)
-    stats_table = GridLayout(
-        cols=2,
+    scroll_view = ScrollView(
+        size_hint=(1, 1),
+        do_scroll_x=False,
+        do_scroll_y=True
+    )
+
+    screen_w, _ = Window.size
+    cols_count = 1 if screen_w < dp(600) else 2
+
+    stats_grid = GridLayout(
+        cols=cols_count,
         size_hint_y=None,
-        spacing=5,  # Расстояние между ячейками
-        padding=[20, 20, 20, 20],
+        spacing=dp(12),
+        row_force_default=True,
+        row_default_height=dp(80)
     )
-    stats_table.bind(minimum_height=stats_table.setter('height'))  # Автоматический ресайз высоты
+    stats_grid.bind(minimum_height=stats_grid.setter('height'))
 
-    # Заполнение таблицы данными
+    # Адаптивный шрифт
+    def calculate_font_size():
+        w, _ = Window.size
+        base = 14 + (w - dp(360)) / (dp(720)) * 4
+        return sp(max(14, min(18, base)))
+
+    adaptive_font = calculate_font_size()
+
+    # 1) Объединённый блок «Постройки за ход» — увеличили высоту до dp(120)
+    build_card = BoxLayout(
+        orientation='vertical',
+        padding=[dp(12), dp(8), dp(12), dp(8)],
+        spacing=dp(4),
+        size_hint_y=None,
+        height=dp(120)
+    )
+    with build_card.canvas.before:
+        Color(0.2, 0.2, 0.2, 1)
+        build_card.bg_rect = RoundedRectangle(
+            pos=build_card.pos,
+            size=build_card.size,
+            radius=[12]
+        )
+    def update_build_rect(instance, val):
+        instance.bg_rect.pos = instance.pos
+        instance.bg_rect.size = instance.size
+    build_card.bind(pos=update_build_rect, size=update_build_rect)
+
+    # Подпись для больницы
+    hosp_label = Label(
+        text=f"1 больница: +500 рабочих / -{faction.buildings_info_fraction()} крон",
+        font_size=adaptive_font,
+        color=(1, 1, 1, 1),
+        size_hint_y=None,
+        height=dp(28),
+        halign='left',
+        valign='middle'
+    )
+    hosp_label.bind(size=lambda inst, val: setattr(inst, 'text_size', (inst.width, inst.height)))
+    build_card.add_widget(hosp_label)
+
+    # Подпись для фабрики
+    fact_label = Label(
+        text="1 фабрика: +1000 сырья / -200 рабочих",
+        font_size=adaptive_font,
+        color=(1, 1, 1, 1),
+        size_hint_y=None,
+        height=dp(28),
+        halign='left',
+        valign='middle'
+    )
+    fact_label.bind(size=lambda inst, val: setattr(inst, 'text_size', (inst.width, inst.height)))
+    build_card.add_widget(fact_label)
+
+    stats_grid.add_widget(build_card)
+
+    # 2) Оставшиеся данные статистики
     stats_data = [
-        ("1 больница (за ход):",
-         f"+500 рабочих / -{faction.buildings_info_fraction()} крон"),
-        ("1 фабрика (за ход):", "+1000 сырья / -200 рабочих"),
         ("Количество больниц:", format_number(faction.hospitals)),
         ("Количество фабрик:", format_number(faction.factories)),
-        ("Количество рабочих на фабриках:", format_number(faction.work_peoples)),
-        ("Чистый прирост рабочих:", format_number(faction.clear_up_peoples)),
-        ("Потребление денег больницами:", format_number(faction.money_info)),
-        ("Чистое производство сырья:", format_number(faction.food_info)),
-        ("Чистый прирост денег:", format_number(faction.money_up)),
+        ("Рабочих на фабриках:", format_number(faction.work_peoples)),
+        ("Прирост рабочих:", format_number(faction.clear_up_peoples)),
+        ("Расход денег больницами:", format_number(faction.money_info)),
+        ("Прирост сырья:", format_number(faction.food_info)),
+        ("Прирост денег:", format_number(faction.money_up)),
         ("Доход от налогов:", format_number(faction.taxes_info)),
-        ("Эффект от налогов (Рост населения):",
-         format_number(faction.apply_tax_effect(int(faction.current_tax_rate[:-1]))) if faction.tax_set else "Налог не установлен"),
+        ("Эффект от налогов:",
+         format_number(faction.apply_tax_effect(int(faction.current_tax_rate[:-1]))) if faction.tax_set else "–")
     ]
 
-    # Функция для расчета размера шрифта
-    def calculate_font_size():
-        screen_width, _ = Window.size
-        base_font_size = max(7, min(16, screen_width / 360 * 10))
-        return int(base_font_size)
-
-    font_size = calculate_font_size()
-
     for label_text, value in stats_data:
-        # Добавляем описание параметра
-        stats_table.add_widget(Label(
-            text=label_text,
-            color=(1, 1, 1, 1),  # Белый цвет текста
-            font_size=f'{font_size}sp',
-            bold=True,
+        card = BoxLayout(
+            orientation='vertical',
+            padding=[dp(12), dp(8), dp(12), dp(8)],
+            spacing=dp(4),
             size_hint_y=None,
-            height=40,
-        ))
-
-        # Добавляем значение параметра с подсветкой
-        if isinstance(value, (int, float)):
-            value_color = (1, 0, 0, 1) if value < 0 else (0, 1, 0, 1)
-        else:
-            value_color = (1, 1, 1, 1)
-
-        stats_table.add_widget(Label(
-            text=str(value),
-            color=value_color,
-            font_size=f'{font_size}sp',
-            bold=True,
-            size_hint_y=None,
-            height=40,
-        ))
-
-    # Привязываем фон к размеру таблицы
-    with stats_table.canvas.before:
-        Color(0.2, 0.2, 0.2, 1)  # Серый фон
-        stats_table.background_rect = RoundedRectangle(
-            size=stats_table.size,
-            pos=stats_table.pos,
-            radius=[10]
+            height=dp(80)
         )
+        with card.canvas.before:
+            Color(0.2, 0.2, 0.2, 1)
+            card.bg_rect = RoundedRectangle(
+                pos=card.pos,
+                size=card.size,
+                radius=[12]
+            )
+        def update_card_rect(instance, val):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+        card.bind(pos=update_card_rect, size=update_card_rect)
 
-    def update_background_rect(instance, value):
-        Clock.schedule_once(lambda dt: setattr(instance.background_rect, 'size', instance.size), 0)
-        Clock.schedule_once(lambda dt: setattr(instance.background_rect, 'pos', instance.pos), 0)
+        lbl = Label(
+            text=label_text,
+            font_size=adaptive_font,
+            color=(1, 1, 1, 1),
+            bold=True,
+            size_hint_y=None,
+            height=dp(24),
+            halign='left',
+            valign='middle'
+        )
+        lbl.bind(size=lambda inst, val: setattr(inst, 'text_size', (inst.width, inst.height)))
+        card.add_widget(lbl)
 
-    stats_table.bind(size=update_background_rect, pos=update_background_rect)
+        if isinstance(value, (int, float)):
+            val_color = (0, 1, 0, 1) if value >= 0 else (1, 0, 0, 1)
+            val_text = str(value)
+        else:
+            val_color = (1, 1, 1, 1)
+            val_text = str(value)
 
-    scroll_view.add_widget(stats_table)
+        val = Label(
+            text=val_text,
+            font_size=adaptive_font,
+            color=val_color,
+            bold=True,
+            size_hint_y=None,
+            height=dp(28),
+            halign='right',
+            valign='middle'
+        )
+        val.bind(size=lambda inst, val: setattr(inst, 'text_size', (inst.width, inst.height)))
+        card.add_widget(val)
+
+        stats_grid.add_widget(card)
+
+    scroll_view.add_widget(stats_grid)
     main_layout.add_widget(scroll_view)
+
+    btn_box = BoxLayout(
+        orientation='horizontal',
+        spacing=dp(12),
+        size_hint=(1, None),
+        height=dp(50)
+    )
+
+    btn_close = Button(
+        text="Закрыть",
+        size_hint=(1, 1),
+        background_normal='',
+        background_color=(0.7, 0.2, 0.2, 1),
+        font_size=adaptive_font,
+        bold=True,
+        color=(1, 1, 1, 1)
+    )
+    btn_close.bind(on_release=lambda x: build_popup.dismiss())
+
+    btn_box.add_widget(btn_close)
+    main_layout.add_widget(btn_box)
 
     build_popup.content = main_layout
     build_popup.open()
