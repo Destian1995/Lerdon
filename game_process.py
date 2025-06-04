@@ -9,8 +9,7 @@ from ii import AIController
 from sov import AdvisorView
 from event_manager import EventManager
 from results_game import ResultsGame
-
-
+from seasons import SeasonManager
 
 
 # Новые кастомные виджеты
@@ -284,7 +283,7 @@ class CircularProgressButton(Button):
         with self.canvas.after:
             Color(1, 1, 1, 0.3)
             self.circle = Line(
-                circle=(self.center_x, self.center_y, min(self.width, self.height)/2 - dp(8), 0, 0),
+                circle=(self.center_x, self.center_y, min(self.width, self.height) / 2 - dp(8), 0, 0),
                 width=dp(4),
                 cap='round'
             )
@@ -303,7 +302,7 @@ class CircularProgressButton(Button):
                 circle=(
                     self.center_x,
                     self.center_y,
-                    min(self.width, self.height)/2 - dp(8),
+                    min(self.width, self.height) / 2 - dp(8),
                     0,
                     self.progress
                 ),
@@ -318,6 +317,14 @@ class CircularProgressButton(Button):
 
 
 class GameScreen(Screen):
+    SEASON_EFFECTS = {
+        "Зима": "+15% к стоимости юнитов",
+        "Весна": "-4% к характеристикам юнитов",
+        "Лето": "+3% к характеристикам юнитов",
+        "Осень": "-9% к характеристикам юнитов"
+    }
+    SEASON_NAMES = ['Зима', 'Весна', 'Лето', 'Осень']
+    SEASON_ICONS = ['snowflake', 'green_leaf', 'sun', 'yellow_leaf']
     def __init__(self, selected_faction, cities, db_path=None, **kwargs):
         super(GameScreen, self).__init__(**kwargs)
         self.selected_faction = selected_faction
@@ -343,7 +350,15 @@ class GameScreen(Screen):
         self.event_manager = EventManager(self.selected_faction, self, self.game_state_manager.faction)
         # Инициализация UI
         self.is_android = platform == 'android'
+        self.season_manager = SeasonManager()
+        self.current_idx = ((self.turn_counter - 1) // 4) % 4 if self.turn_counter >= 1 else 0
+        current_season = {
+            'name': self.SEASON_NAMES[self.current_idx],
+            'icon': self.SEASON_ICONS[self.current_idx]
+        }
         self.init_ui()
+        self._update_season_display(current_season)
+        self.season_manager.update(self.current_idx)
         # Запускаем обновление ресурсов каждую 1 секунду
         Clock.schedule_interval(self.update_cash, 1)
 
@@ -357,6 +372,48 @@ class GameScreen(Screen):
         conn.close()
 
     def init_ui(self):
+        self.season_container = FloatLayout(
+            size_hint=(None, None),
+            size=(dp(120), dp(50)),
+            pos_hint={'right': 0.86, 'top': 1}
+        )
+        # Фон под «сезон» (скруглённый прямоугольник)
+        with self.season_container.canvas.before:
+            Color(0.15, 0.2, 0.3, 0.9)
+            self._season_bg = RoundedRectangle(radius=[10])
+        def _upd_bg(instance, value):
+            self.season_container.canvas.before.clear()
+            with self.season_container.canvas.before:
+                Color(0.15, 0.2, 0.3, 0.9)
+                self._season_bg = RoundedRectangle(pos=instance.pos, size=instance.size, radius=[10])
+        self.season_container.bind(pos=_upd_bg, size=_upd_bg)
+
+        # Image: иконка сезона
+        self.season_icon = Image(
+            source='',  # сюда позже запишем путь к нужной иконке
+            size_hint=(None, None),
+            size=(dp(30), dp(30)),
+            pos_hint={'x': 0.02, 'center_y': 0.5}
+        )
+        # Label: название сезона
+        self.season_label = Label(
+            text='',  # сюда позже запишем текст («Зима», «Лето» и т.п.)
+            font_size=sp(16),
+            color=(1, 1, 1, 1),
+            size_hint=(None, None),
+            size=(dp(80), dp(30)),
+            pos_hint={'x': 0.35, 'center_y': 0.5},
+            halign='left',
+            valign='middle'
+        )
+        self.season_label.bind(size=self.season_label.setter('text_size'))
+
+        self.season_container.add_widget(self.season_icon)
+        self.season_container.add_widget(self.season_label)
+        self.add_widget(self.season_container)
+
+        self.season_container.bind(on_touch_down=self.on_season_pressed)
+
         # === Контейнер для кнопки "Завершить ход" ===
         end_turn_container = BoxLayout(
             orientation='vertical',
@@ -535,6 +592,27 @@ class GameScreen(Screen):
         end_turn_container.add_widget(self.end_turn_button)
         self.add_widget(end_turn_container)
 
+    def _update_season_display(self, season_info: dict):
+        """
+        Получив словарь вида {'name': 'Зима', 'icon': 'snowflake'},
+        обновляем иконку и подпись в интерфейсе.
+        Предполагается, что у вас есть набор png (или других) иконок:
+        например 'icons/snowflake.png', 'icons/green_leaf.png', 'icons/sun.png', 'icons/yellow_leaf.png'.
+        """
+        # Делайте путь к иконке так, как вам удобно:
+        icon_map = {
+            'snowflake': 'files/status/icons/snowflake.png',
+            'green_leaf': 'files/status/icons/green_leaf.png',
+            'sun': 'files/status/icons/sun.png',
+            'yellow_leaf': 'files/status/icons/yellow_leaf.png'
+        }
+        icon_key = season_info.get('icon', '')
+        if icon_key in icon_map:
+            self.season_icon.source = icon_map[icon_key]
+        else:
+            self.season_icon.source = ''
+
+        self.season_label.text = season_info.get('name', '')
 
     def on_window_resize(self, instance, width, height):
         is_landscape = width > height
@@ -723,6 +801,10 @@ class GameScreen(Screen):
         # Обновляем статус ходов
         self.reset_check_attack_flags()
         self.initialize_turn_check_move()
+        # Обновляем текущий сезон
+        new_season = self.update_season(self.turn_counter)
+        self._update_season_display(new_season)
+        self.season_manager.update(self.current_idx)
         # Логирование или обновление интерфейса после хода
         print(f"Ход {self.turn_counter} завершён")
 
@@ -732,27 +814,198 @@ class GameScreen(Screen):
             print("Генерация события...")
             self.event_manager.generate_event(self.turn_counter)
 
-    def confirm_exit(self):
-        # Создаем контент попапа
-        content = BoxLayout(orientation='vertical', spacing=10)
-        message = Label(text="Вы точно хотите выйти?")
-        btn_yes = Button(text="Да", size_hint=(1, 0.4))
-        btn_no = Button(text="Нет", size_hint=(1, 0.4))
+    def update_season(self, turn_count: int) -> dict:
+        """
+        Вызываем каждый ход, передавая turn_count.
+        Если turn_count кратно 4, переключаем current_idx на следующий сезон.
+        Возвращаем {'name': <название>, 'icon': <иконка>}.
+        """
+        if turn_count > 1 and (turn_count - 1) % 4 == 0:
+            # Переходим к следующему сезону
+            self.current_idx = (self.current_idx + 1) % 4
 
-        # Создаем попап
-        popup = Popup(
-            title="Подтверждение выхода",
-            content=content,
-            size_hint=(0.5, 0.4)
+        return {
+            'name': self.SEASON_NAMES[self.current_idx],
+            'icon': self.SEASON_ICONS[self.current_idx]
+        }
+
+    def on_season_pressed(self, instance, touch):
+        """
+        Показывает информационное окно с эффектом текущего сезона
+        при клике (касании) внутри season_container.
+        """
+        if instance.collide_point(touch.x, touch.y):
+            current_season = self.season_label.text
+            effect_text = self.SEASON_EFFECTS.get(
+                current_season,
+                "Информация о сезоне недоступна."
+            )
+
+            # ---------- Определяем адаптивные размеры ----------
+            # Ширина Popup = 90% от ширины экрана, высота = 30% от высоты экрана
+            popup_width = Window.width * 0.9
+            popup_height = Window.height * 0.3
+
+            # Подбираем размер шрифта под Android и под десктоп по-разному
+            if platform == 'android':
+                label_font = sp(18)
+                button_font = sp(16)
+                button_height_dp = dp(46)
+                padding_dp = dp(18)
+                spacing_dp = dp(13)
+            else:
+                label_font = sp(18)
+                button_font = sp(16)
+                button_height_dp = dp(46)
+                padding_dp = dp(18)
+                spacing_dp = dp(13)
+
+            # ---------- Собираем контент Popup ----------
+            content = BoxLayout(
+                orientation='vertical',
+                padding=padding_dp,
+                spacing=spacing_dp
+            )
+
+            # Текст с эффектом сезона
+            label = Label(
+                text=f"[b]{current_season}[/b]: {effect_text}",
+                font_size=label_font,
+                halign='center',
+                valign='middle',
+                markup=True,
+                color=(1, 1, 1, 1),
+                size_hint_y=None
+            )
+            # Чтобы Label занимал ровно необходимую высоту:
+            # рассчитываем высоту текста (примерно) и задаём minimum height
+            label.text_size = (popup_width - 2 * padding_dp, None)
+            label.texture_update()
+            label.height = label.texture_size[1] + dp(10)
+
+            # Кнопка «Закрыть»
+            btn_close = Button(
+                text="Закрыть",
+                size_hint=(1, None),
+                height=button_height_dp,
+                background_normal='',
+                background_color=(0.2, 0.6, 0.8, 1),
+                font_size=button_font,
+                bold=True,
+                color=(1, 1, 1, 1)
+            )
+
+            # Добавляем в контент: сначала Label, затем кнопку
+            content.add_widget(label)
+            content.add_widget(btn_close)
+
+            # ---------- Создаём Popup ----------
+            popup = Popup(
+                title="Эффект сезона",
+                title_align='center',
+                title_size=sp(20) if platform != 'android' else sp(22),
+                title_color=(1, 1, 1, 1),
+                content=content,
+                size_hint=(None, None),
+                size=(popup_width, popup_height),
+                background_color=(0.1, 0.1, 0.1, 0.95),
+                separator_color=(0.3, 0.3, 0.3, 1),
+                auto_dismiss=False
+            )
+
+            # Привязываем закрытие
+            btn_close.bind(on_release=popup.dismiss)
+
+            # Открываем Popup
+            popup.open()
+            return True
+
+        return False
+
+    def confirm_exit(self):
+        # === Создаём основное содержимое Popup с отступами ===
+        content = BoxLayout(
+            orientation='vertical',
+            spacing=dp(15),
+            padding=[dp(20), dp(20), dp(20), dp(20)]
         )
 
-        # Назначаем действия кнопкам
+        # --- Сообщение с увеличенным шрифтом и адаптивной шириной ---
+        message = Label(
+            text="Устали, Ваше Величество?",
+            font_size=sp(18),
+            color=(1, 1, 1, 1),
+            halign='center',
+            valign='middle',
+            size_hint=(1, None)
+        )
+
+        # Привязываем ширину сообщения к ширине Popup (учитываем паддинг)
+        def update_message_size(instance, width):
+            # width здесь — ширина content, без padding по горизонтали
+            message.text_size = (width, None)
+            message.texture_update()
+            message.height = message.texture_size[1] + dp(10)
+
+        content.bind(width=update_message_size)
+        # Инициализируем высоту сразу
+        update_message_size(message, Window.width * 0.8 - dp(40))
+
+        # --- Горизонтальный контейнер для кнопок ---
+        btn_container = BoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(48),
+            spacing=dp(10)
+        )
+
+        # --- Кнопка «Да» (красная) ---
+        btn_yes = Button(
+            text="Да",
+            size_hint=(1, 1),
+            background_normal='',
+            background_color=hex_color('#E53E3E'),
+            font_size=sp(16),
+            bold=True,
+            color=(1, 1, 1, 1)
+        )
+
+        # --- Кнопка «Нет» (зелёная) ---
+        btn_no = Button(
+            text="Нет",
+            size_hint=(1, 1),
+            background_normal='',
+            background_color=hex_color('#38A169'),
+            font_size=sp(16),
+            bold=True,
+            color=(1, 1, 1, 1)
+        )
+
+        btn_container.add_widget(btn_yes)
+        btn_container.add_widget(btn_no)
+
+        # Добавляем метку и контейнер с кнопками в основной контент
+        content.add_widget(message)
+        content.add_widget(btn_container)
+
+        # --- Создаём сам Popup, делаем его адаптивным по размеру экрана ---
+        popup = Popup(
+            title="Подтверждение выхода из матча",
+            title_size=sp(20),
+            title_align='center',
+            title_color=(1, 1, 1, 1),
+            content=content,
+            size_hint=(0.8, None),
+            height=Window.height * 0.3,
+            background_color=(0.1, 0.1, 0.1, 0.95),
+            separator_color=(0.3, 0.3, 0.3, 1),
+            auto_dismiss=False
+        )
+
+        # --- Привязываем действия к кнопкам ---
         btn_yes.bind(on_release=lambda x: (popup.dismiss(), App.get_running_app().restart_app()))
         btn_no.bind(on_release=popup.dismiss)
 
-        content.add_widget(message)
-        content.add_widget(btn_yes)
-        content.add_widget(btn_no)
         popup.open()
 
     def initialize_political_data(self):
