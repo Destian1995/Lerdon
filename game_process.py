@@ -844,7 +844,7 @@ class GameScreen(Screen):
             # ---------- Определяем адаптивные размеры ----------
             # Ширина Popup = 90% от ширины экрана, высота = 30% от высоты экрана
             popup_width = Window.width * 0.9
-            popup_height = Window.height * 0.3
+            popup_height = Window.height * 0.45
 
             # Подбираем размер шрифта под Android и под десктоп по-разному
             if platform == 'android':
@@ -949,7 +949,7 @@ class GameScreen(Screen):
 
         content.bind(width=update_message_size)
         # Инициализируем высоту сразу
-        update_message_size(message, Window.width * 0.8 - dp(40))
+        update_message_size(message, Window.width * 0.95 - dp(10))
 
         # --- Горизонтальный контейнер для кнопок ---
         btn_container = BoxLayout(
@@ -995,8 +995,8 @@ class GameScreen(Screen):
             title_align='center',
             title_color=(1, 1, 1, 1),
             content=content,
-            size_hint=(0.8, None),
-            height=Window.height * 0.3,
+            size_hint=(0.9, None),
+            height=Window.height * 0.4,
             background_color=(0.1, 0.1, 0.1, 0.95),
             separator_color=(0.3, 0.3, 0.3, 1),
             auto_dismiss=False
