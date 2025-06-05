@@ -221,7 +221,7 @@ def show_new_agreement_window(faction, game_area, class_faction):
     # Создаем модальное окно и поднимаем его чуть выше центра
     # Теперь size_hint=(0.8, 0.6) вместо (0.8, 0.8) — окно будет ниже по высоте
     modal = ModalView(
-        size_hint=(0.8, 0.6),
+        size_hint=(0.8, 0.68),
         pos_hint={'center_x': 0.5, 'center_y': 0.55},  # чуть выше по вертикали
         background_color=(0, 0, 0, 0)
     )
