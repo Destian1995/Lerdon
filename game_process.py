@@ -132,165 +132,204 @@ class GameStateManager:
 class ResourceBox(BoxLayout):
     """
     ResourceBox, «приклеенный» к левому верхнему углу,
-    реализован как таблица (GridLayout cols=2): название ресурса + значение.
-    Высота пересчитывается динамически в зависимости от количества ресурсов.
+    с каждой строкой:
+      ----------
+      [иконка] : [значение]   (шрифт sp(16), иконка dp(16))
+      ----------
+    Ширина контейнера = dp(72). Текст и иконки не уменьшаются.
     """
+    ICON_MAP = {
+        "Кроны":      "files/status/resource_box/coin.png",
+        "Рабочие":     "files/status/resource_box/workers.png",
+        "Сырье":       "files/status/resource_box/surie.png",
+        "Население":   "files/status/resource_box/population.png",
+        "Потребление": "files/status/resource_box/consumption.png",
+        "Лимит армии": "files/status/resource_box/army_limit.png",
+        # при необходимости добавьте другие ресурсы → путь к иконке
+    }
 
     def __init__(self, resource_manager, **kwargs):
         super(ResourceBox, self).__init__(**kwargs)
         self.resource_manager = resource_manager
 
-        # Фиксируем привязку к левому верху:
+        # верт. бокс
+        self.orientation = 'vertical'
+
+        # фиксированная узкая ширина, привязка к левому верху
         self.size_hint = (None, None)
         self.pos_hint = {'x': 0, 'top': 1}
+        self.width = dp(150)  # сокращённая ширина
 
-        # Ширина ResourceBox: можно подбирать под экран/пожелания,
-        # здесь возьмём 160 dp (имя+значение помещается).
-        self.width = dp(170)
+        # Отступы внутри: [left, top, right, bottom]
+        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        # spacing = 0, поскольку сами рисуем разделители
+        self.spacing = 0
 
-        # Отступы внутри бокса
-        self.padding = [dp(9), dp(10), dp(8), dp(10)]  # [left, top, right, bottom]
-        self.spacing = dp(4)
-
-        # Фон с закруглёнными углами
+        # фон с закруглёнными углами
         with self.canvas.before:
             Color(0.11, 0.15, 0.21, 0.9)
-            self._bg_rect = RoundedRectangle(radius=[15,])
+            self._bg_rect = RoundedRectangle(radius=[6,])
 
-        # чтобы фон «следовал» за pos/size
         self.bind(pos=self._update_bg, size=self._update_bg)
 
-        # GridLayout: 2 колонки, фиксированная высота строк
-        self.table = GridLayout(
-            cols=2,
-            size_hint=(1, None),
-            row_force_default=True,
-            row_default_height=dp(24),
-            col_force_default=True,
-            col_default_width=(self.width - (self.padding[0] + self.padding[2])) / 2
-        )
+        # Словарь, чтобы хранить метки значений (обновлять при tick)
+        self._label_values = {}
 
-        # Словарь, чтобы хранить ссылки на Label-ы (если понадобится)
-        self._labels = {}
-
-        # Первый раз строим таблицу
+        # Сразу строим содержимое
         self.update_resources()
 
-        # Обновляем шрифты при любом изменении размера (хотя size жёстко задан,
-        # но если вы захотите потом адаптировать ширину/высоту, это сохранится)
-        self.bind(size=self._on_size)
-
-        # Добавляем таблицу внутрь ResourceBox
-        self.add_widget(self.table)
+        # При изменении высоты/ширины пересобираем (нужно для корректного рисования линий)
+        self.bind(size=lambda *a: self.update_resources())
 
     def _update_bg(self, *args):
         self._bg_rect.pos = self.pos
         self._bg_rect.size = self.size
 
-    def _on_size(self, *args):
-        # Если вдруг изменится width, скорректируем ширину столбцов:
-        total_inner_width = self.width - (self.padding[0] + self.padding[2])
-        self.table.col_default_width = total_inner_width / 2
-
-        # И сразу перестроим (чтобы шрифты/высоты меток пересчитались)
-        self.update_resources()
-
     def update_resources(self):
         """
-        Извлекаем актуальные ресурсы из resource_manager.get_resources()
-        и перестраиваем таблицу.
+        Перестраиваем список ресурсов:
+          1) горизонтальная линия 1dp,
+          2) строка (иконка dp(16) + ':' dp(4) + значение, шрифт sp(16)),
+          3) горизонтальная линия,
+          и т.д.
         """
-        # Сначала очищаем старое содержимое
-        self.table.clear_widgets()
-        self._labels.clear()
+        # полностью очищаем
+        self.clear_widgets()
+        self._label_values.clear()
 
-        # Берём словарь: {resource_name: formatted_value}
         resources = self.resource_manager.get_resources()
-
-        # Попытаемся преобразовать строки в числа для проверки условий окраски
+        # Парсим в числа
         parsed = {}
-        for name, value in resources.items():
+        for name, val in resources.items():
             try:
-                parsed[name] = parse_formatted_number(value)
-            except ValueError:
+                parsed[name] = parse_formatted_number(val)
+            except Exception:
                 parsed[name] = None
 
-        # Строим «таблицу» построчно: [Label(name), Label(value)] × N
-        for resource_name, formatted in resources.items():
-            # Определяем цвет текста для value
-            numeric = parsed.get(resource_name)
-            if resource_name == "Потребление":
-                limit_army = parsed.get("Лимит армии", 0) or 0
-                if numeric is not None and numeric > limit_army:
-                    value_color = (1, 0, 0, 1)  # красный при превышении лимита армии
-                else:
-                    value_color = (1, 1, 1, 1)
-            else:
-                if numeric is not None and numeric < 0:
-                    value_color = (1, 0, 0, 1)  # красный при отрицательном значении
-                else:
-                    value_color = (1, 1, 1, 1)
+        # Параметры:
+        row_h = dp(28)       # высота строки «иконка+текст»
+        icon_size = dp(28)   # иконка остаётся dp(27)×dp(27)
+        colon_w = dp(4)      # ширина «:»
+        gap = dp(5)          # промежуток между иконкой и «:»
 
-            # Название ресурса (левая колонка)
-            lbl_name = Label(
-                text=resource_name,
-                font_size=self._calculate_font_size(),
+        # Ширина поля для цифры
+        val_w = self.width - (
+                self.padding[0] + self.padding[2] + icon_size + gap + colon_w + dp(2)
+        )
+        # dp(2) — чуть «воздуха» после двоеточия
+
+        items = list(resources.items())
+        widgets = []
+
+        for idx, (res_name, formatted) in enumerate(items):
+            # 1) линия сверху
+            line = Widget(size_hint=(1, None), height=dp(1))
+            with line.canvas:
+                Color(0.5, 0.5, 0.5, 1)
+                rect = Rectangle(
+                    pos=(self.x + self.padding[0], 0),
+                    size=(self.width - (self.padding[0] + self.padding[2]), dp(1))
+                )
+                # Обновляем pos/size линии при изменении
+                line.bind(
+                    pos=lambda inst, val: setattr(rect, 'pos', (self.x + self.padding[0], val[1])),
+                    size=lambda inst, sz: setattr(rect, 'size', (self.width - (self.padding[0] + self.padding[2]), dp(1)))
+                )
+            widgets.append(line)
+
+            # 2) строка с иконкой, «:», значением
+            row = BoxLayout(
+                orientation='horizontal',
+                size_hint=(1, None),
+                height=row_h,
+                spacing=dp(1)
+            )
+
+            # 2.1) иконка
+            icon_path = self.ICON_MAP.get(res_name)
+            if icon_path:
+                img = Image(
+                    source=icon_path,
+                    size_hint=(None, None),
+                    size=(icon_size, icon_size),
+                    keep_ratio=True,
+                    allow_stretch=True
+                )
+            else:
+                img = Widget(size_hint=(None, None), size=(icon_size, icon_size))
+
+            # 2.2) «:»
+            lbl_colon = Label(
+                text=":",
+                font_size=sp(16),
                 color=(1, 1, 1, 1),
                 size_hint=(None, None),
-                size=(self.table.col_default_width, dp(24)),
+                size=(colon_w, row_h),
+                halign='center',
+                valign='middle'
+            )
+            lbl_colon.text_size = (colon_w, row_h)
+
+            # 2.3) значение ресурса
+            num = parsed.get(res_name)
+            if res_name == "Потребление":
+                limit_army = parsed.get("Лимит армии", 0) or 0
+                val_color = (1, 0, 0, 1) if (num is not None and num > limit_army) else (1, 1, 1, 1)
+            else:
+                val_color = (1, 0, 0, 1) if (num is not None and num < 0) else (1, 1, 1, 1)
+
+            lbl_val = Label(
+                text=str(formatted),
+                font_size=sp(16),
+                color=val_color,
+                size_hint=(None, None),
+                size=(val_w, row_h),
                 halign='left',
                 valign='middle'
             )
-            lbl_name.bind(size=lbl_name.setter('text_size'))
+            lbl_val.text_size = (val_w, row_h)
+            self._label_values[res_name] = lbl_val
 
-            # Значение ресурса (правая колонка)
-            lbl_value = Label(
-                text=str(formatted),
-                font_size=self._calculate_font_size(),
-                color=value_color,
-                size_hint=(None, None),
-                size=(self.table.col_default_width, dp(24)),
-                halign='right',
-                valign='middle'
+            # Добавляем внутрь row (иконка, gap, «:», небольшой gap, цифра)
+            row.add_widget(img)
+            row.add_widget(Widget(size_hint=(None, None), size=(gap, row_h)))
+            row.add_widget(lbl_colon)
+            row.add_widget(Widget(size_hint=(None, None), size=(gap, row_h)))
+            row.add_widget(lbl_val)
+
+            widgets.append(row)
+
+        # 3) после последнего добавляем нижнюю линию
+        last_line = Widget(size_hint=(1, None), height=dp(1))
+        with last_line.canvas:
+            Color(0.5, 0.5, 0.5, 1)
+            rect = Rectangle(
+                pos=(self.x + self.padding[0], 0),
+                size=(self.width - (self.padding[0] + self.padding[2]), dp(1))
             )
-            lbl_value.bind(size=lbl_value.setter('text_size'))
+            last_line.bind(
+                pos=lambda inst, val: setattr(rect, 'pos', (self.x + self.padding[0], val[1])),
+                size=lambda inst, sz: setattr(rect, 'size', (self.width - (self.padding[0] + self.padding[2]), dp(1)))
+            )
+        widgets.append(last_line)
 
-            # Сохраняем ссылки (если нужно потом менять)
-            self._labels[resource_name] = (lbl_name, lbl_value)
+        # 4) Добавляем всё в контейнер (вертикально)
+        for w in widgets:
+            self.add_widget(w)
 
-            # Добавляем в GridLayout
-            self.table.add_widget(lbl_name)
-            self.table.add_widget(lbl_value)
+        # 5) Считаем «сырую» высоту всего ResourceBox
+        num_rows = len(items)
+        sep_h = dp(1)            # высота линии
+        rows_h = num_rows * row_h
+        lines_h = (num_rows + 1) * sep_h
+        total_h_raw = self.padding[1] + self.padding[3] + rows_h + lines_h
 
-        # После того как мы добавили все строки, подгоняем высоту ResourceBox:
-        num_rows = len(resources)
-        row_h = dp(25)
-        top_bottom = self.padding[1] + self.padding[3]  # top + bottom
-        mid_spacing = self.spacing * (num_rows - 1) if num_rows > 1 else 0
-        total_height = top_bottom + (num_rows * row_h) + mid_spacing
+        # Ограничиваем, чтобы низ не заходил на «Завершить ход» (y≈0.35)
+        max_bottom_y = Window.height * 0.35
+        max_allowed_h = Window.height - max_bottom_y
+        final_h = min(total_h_raw, max_allowed_h)
 
-        # Устанавливаем новую высоту
-        self.height = total_height
-        # И корректируем высоту внутри таблицы (GridLayout):
-        self.table.height = num_rows * row_h
-
-    def _calculate_font_size(self):
-        """
-        На основе текущих размеров ResourceBox выбираем размер шрифта.
-        Если нужны более точные формулы, можно донастроить.
-        """
-        # Базовый размер
-        if platform == 'android':
-            base = sp(14)
-            minimum = sp(9)
-        else:
-            base = sp(16)
-            minimum = sp(11)
-
-        # Пропорция от ширины
-        scale = min(self.width / dp(160), 1.0)
-        size = base * scale
-        return max(size, minimum)
+        self.height = final_h
 
 
 # Класс для кнопки с изображением
@@ -624,16 +663,6 @@ class GameScreen(Screen):
         # === ResourceBox ===
         # Инициализируем ResourceBox с фиксированным размером
         self.resource_box = ResourceBox(resource_manager=self.faction)
-
-        # Ставим size_hint=(None,None), чтобы контролировать ширину/высоту жёстко
-        self.resource_box.size_hint = (None, None)
-        # Подбираем более компактные размеры (например, 200×120 dp)
-        self.resource_box.size = (dp(200), dp(420))
-
-        # Используем pos_hint, чтобы «приклеить» его к левому верхнему углу
-        # 'x': 0 означает «справа от левого края (0%)», а 'top': 1 — «верхняя граница (100%)»
-        self.resource_box.pos_hint = {'x': 0, 'top': 1}
-
         self.add_widget(self.resource_box)
 
         # === Инициализация ИИ ===
