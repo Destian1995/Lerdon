@@ -1179,15 +1179,28 @@ class FortressInfoPopup(Popup):
         except sqlite3.Error as e:
             print(f"Ошибка при инициализации turn_check_move: {e}")
 
-    def transfer_troops_between_cities(self, source_fortress_name, destination_fortress_name, unit_name, taken_count,
+    def transfer_troops_between_cities(self,
+                                       source_fortress_name,
+                                       destination_fortress_name,
+                                       unit_name,
+                                       taken_count,
                                        dry_run=False):
         """
-        Переносит войска из одного города в другой с проверкой расстояния по координатам.
+        Переносит войска из одного города в другой с учётом обобщённых правил:
+        1) Если войска в своём городе:
+           — в свой город — без ограничений;
+           — в союзный город — логистика < 300;
+           — в вражеский город — логистика < 225 + проверка флага атаки;
+           — в нейтральный город — запрещено.
+        2) Если войска в городе союзника:
+           — в любой город, принадлежащий текущему игроку или другим его союзникам — логистика < 300;
+           — во все прочие (нейтральные/враждебные) — запрещено.
+        3) Если войска в чужом (нейтральном или враждебном) городе — всегда запрещено.
         :param source_fortress_name: Название исходного города/крепости.
         :param destination_fortress_name: Название целевого города/крепости.
         :param unit_name: Название юнита.
         :param taken_count: Количество юнитов для переноса.
-        :param dry_run: Если True — только проверяет возможность, не меняет данные.
+        :param dry_run: Если True — только проверяем возможность, не меняем данные.
         :return: True, если действие возможно, иначе False.
         """
         try:
@@ -1202,83 +1215,121 @@ class FortressInfoPopup(Popup):
 
             current_player_kingdom = self.player_fraction
 
-            # Проверяем, что исходный город принадлежит текущему игроку
-            if source_owner != current_player_kingdom:
-                show_popup_message("Ошибка", "Вы можете перемещать только свои войска.")
-                return False
-
-            # Получаем координаты городов
+            # Получаем координаты городов и считаем манхэттенское расстояние
             source_coords = self.get_city_coordinates(source_fortress_name)
             destination_coords = self.get_city_coordinates(destination_fortress_name)
             x_diff = abs(source_coords[0] - destination_coords[0])
             y_diff = abs(source_coords[1] - destination_coords[1])
             total_diff = x_diff + y_diff
 
-            print('total_diff:', total_diff)
-
-            # Статус города назначения
-            if destination_owner == current_player_kingdom:
-                # Свой город — перемещение разрешено
-                if not dry_run:
-                    self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
-                return True
-
-            elif self.is_ally(current_player_kingdom, destination_owner):
-                if total_diff < 300:
+            # ── 1) Сценарий: войска в своём городе ──────────────────────────────────────────
+            if source_owner == current_player_kingdom:
+                # — если цель свой город, разрешаем без ограничений;
+                if destination_owner == current_player_kingdom:
                     if not dry_run:
-                        self.move_troops(source_fortress_name, destination_fortress_name, unit_name, taken_count)
+                        self.move_troops(source_fortress_name,
+                                         destination_fortress_name,
+                                         unit_name,
+                                         taken_count)
                     return True
-                else:
-                    show_popup_message("Логистика не выдержит", "Слишком далеко. Найдите ближайший населенный пункт")
-                    return False
 
-            elif self.is_enemy(current_player_kingdom, destination_owner):
-                if total_diff < 225:
-                    # Проверка атаки на фракцию
-                    cursor.execute("SELECT check_attack FROM turn_check_attack_faction WHERE faction = ?",
-                                   (destination_owner,))
-                    attack_data = cursor.fetchone()
-                    if attack_data and attack_data[0]:
-                        show_popup_message("Ошибка", f"Фракция '{destination_owner}' уже была атакована на этом ходу.")
+                # — если цель союзник, проверяем total_diff < 300;
+                elif self.is_ally(current_player_kingdom, destination_owner):
+                    if total_diff < 300:
+                        if not dry_run:
+                            self.move_troops(source_fortress_name,
+                                             destination_fortress_name,
+                                             unit_name,
+                                             taken_count)
+                        return True
+                    else:
+                        show_popup_message("Логистика не выдержит",
+                                           "Слишком далеко. Найдите ближайший населенный пункт")
                         return False
 
-                    if not dry_run:
-                        # Устанавливаем флаг атаки
+                # — если цель враг, проверяем total_diff < 225 и флаги атаки;
+                elif self.is_enemy(current_player_kingdom, destination_owner):
+                    if total_diff < 225:
                         cursor.execute(
-                            "INSERT OR REPLACE INTO turn_check_attack_faction (faction, check_attack) VALUES (?, ?)",
-                            (destination_owner, True)
+                            "SELECT check_attack FROM turn_check_attack_faction WHERE faction = ?",
+                            (destination_owner,)
                         )
-                        self.conn.commit()
+                        attack_data = cursor.fetchone()
+                        if attack_data and attack_data[0]:
+                            show_popup_message("Ошибка",
+                                               f"Фракция '{destination_owner}' уже была атакована на этом ходу.")
+                            return False
 
-                        # Тратим право на движение
-                        cursor.execute("""
-                            UPDATE turn_check_move 
-                            SET can_move = ? 
-                            WHERE faction = ?
-                        """, (False, current_player_kingdom))
-                        self.conn.commit()
+                        if not dry_run:
+                            # Отмечаем, что эту фракцию уже атаковали
+                            cursor.execute(
+                                "INSERT OR REPLACE INTO turn_check_attack_faction (faction, check_attack) VALUES (?, ?)",
+                                (destination_owner, True)
+                            )
+                            self.conn.commit()
 
-                        # Запускаем бой
-                        self.start_battle_group(
-                            source_fortress_name=source_fortress_name,
-                            destination_fortress_name=destination_fortress_name,
-                            attacking_units=self.selected_group
-                        )
+                            # Лишаем игрока права на дальнейшее перемещение в этом ходу
+                            cursor.execute(
+                                "UPDATE turn_check_move SET can_move = ? WHERE faction = ?",
+                                (False, current_player_kingdom)
+                            )
+                            self.conn.commit()
 
-                    return True
+                            # Запускаем бой
+                            self.start_battle_group(source_fortress_name,
+                                                    destination_fortress_name,
+                                                    self.selected_group)
+                        return True
+                    else:
+                        show_popup_message("Логистика не выдержит",
+                                           "Слишком далеко. Найдите ближайший населенный пункт")
+                        return False
+
+                # — иначе (нейтральный), запрещаем.
                 else:
-                    show_popup_message("Логистика не выдержит", "Слишком далеко. Найдите ближайший населенный пункт")
+                    show_popup_message("Ошибка", "Нельзя нападать на нейтральный город.")
                     return False
 
+            # ── 2) Сценарий: войска в городе союзника ────────────────────────────────────
+            elif self.is_ally(current_player_kingdom, source_owner):
+                # Разрешаем перемещать войска из города союзника:
+                # — либо в любой город текущего игрока,
+                # — либо в город любого другого союзника.
+                # Лимит логистики тот же, что и для переходов «свой→союзник» (300).
+
+                # Проверяем, является ли назначение своим городом или городом другого союзника
+                if (destination_owner == current_player_kingdom or
+                        self.is_ally(current_player_kingdom, destination_owner)):
+                    if total_diff < 300:
+                        if not dry_run:
+                            self.move_troops(source_fortress_name,
+                                             destination_fortress_name,
+                                             unit_name,
+                                             taken_count)
+                        return True
+                    else:
+                        show_popup_message("Логистика не выдержит",
+                                           "Слишком далеко. Найдите ближайший населенный пункт")
+                        return False
+                else:
+                    # Попытка отправить войска из города союзника в нейтральный или враждебный город
+                    show_popup_message("Ошибка",
+                                       "Вы можете перемещать войска из города союзника только в свои города или в города союзника.")
+                    return False
+
+            # ── 3) Во всех остальных случаях (нейтральный или враждебный источник) ───────
             else:
-                show_popup_message("Ошибка", "Нельзя нападать на нейтральный город.")
+                show_popup_message("Ошибка",
+                                   "Вы можете перемещать свои войска на свою территорию только из города союзника.")
                 return False
 
         except sqlite3.Error as e:
-            show_popup_message("Ошибка", f"Произошла ошибка при работе с базой данных(transfer): {e}")
+            show_popup_message("Ошибка",
+                               f"Произошла ошибка при работе с базой данных (transfer): {e}")
             return False
         except Exception as e:
-            show_popup_message("Ошибка", f"Произошла ошибка при переносе войск: {e}")
+            show_popup_message("Ошибка",
+                               f"Произошла ошибка при переносе войск: {e}")
             return False
 
     def start_battle_group(self, source_fortress_name, destination_fortress_name, attacking_units):
@@ -1664,28 +1715,77 @@ class FortressInfoPopup(Popup):
 
 def show_popup_message(title, message):
     """
-    Отображает всплывающее окно с сообщением поверх всех элементов.
+    Отображает всплывающее окно с сообщением,
+    расположенным по центру, белым цветом и размером 18sp.
     :param title: Заголовок окна.
-    :param message: Текст сообщения.
+    :param message: Текст сообщения (короткий, без прокрутки).
     """
-    # Создаем содержимое окна
-    content = BoxLayout(orientation='vertical', padding=10, spacing=10)
-    content.add_widget(Label(text=message, size_hint_y=None, height=50))
 
-    # Кнопка закрытия окна
-    close_button = Button(text="Закрыть", size_hint_y=None, height=50)
-    content.add_widget(close_button)
-
-    # Создаем всплывающее окно
-    popup = Popup(
-        title=title,
-        content=content,
-        size_hint=(0.7, 0.3),  # Размер окна (70% ширины и 30% высоты экрана)
-        auto_dismiss=False  # Окно не закрывается автоматически при клике за его пределами
+    # Основной контейнер: заполняет всё пространство popup
+    content = BoxLayout(
+        orientation='vertical',
+        padding=dp(15),
+        spacing=dp(10),
+        size_hint=(1, 1)
     )
 
-    # Привязываем кнопку к закрытию окна
+    # Label с сообщением: белый цвет, 18sp, по центру и внутри
+    message_label = Label(
+        text=message,
+        size_hint=(1, 1),
+        font_size=dp(18),
+        color=(1, 1, 1, 1),  # чисто белый
+        halign='center',
+        valign='middle'
+    )
+    # Чтобы текст правильно оборачивался и центрировался внутри Label:
+    # связываем text_size с размером самой метки
+    message_label.bind(size=lambda instance, value: instance.setter('text_size')(instance, value))
+
+    content.add_widget(message_label)
+
+    # Кнопка «Закрыть» внизу
+    close_button = Button(
+        text="Закрыть",
+        size_hint_y=None,
+        height=dp(50),
+        background_color=get_color_from_hex("#4CAF50"),
+        background_normal='',
+        color=(1, 1, 1, 1),
+        font_size=dp(16),
+        bold=True
+    )
+    content.add_widget(close_button)
+
+    # Размер popup: максимум 90% ширины и 70% высоты экрана
+    popup_width = min(dp(500), Window.width * 0.9)
+    popup_height = min(dp(600), Window.height * 0.7)
+
+    # Создаём само окно. Фон сделаем тёмным, чтобы белый текст был хорошо виден.
+    popup = Popup(
+        title=title,
+        title_size=dp(18),
+        title_align='center',
+        title_color=get_color_from_hex("#FFFFFF"),
+        content=content,
+        separator_color=get_color_from_hex("#FFFFFF"),
+        separator_height=dp(1),
+        size_hint=(None, None),
+        size=(popup_width, popup_height),
+        background_color=(0.15, 0.15, 0.15, 1),  # тёмно-серый фон (чтобы белый текст читался)
+        overlay_color=(0, 0, 0, 0.5),
+        auto_dismiss=False
+    )
+
+    # Обработчик изменения размера окна (если пользователь повернёт экран или сменит размер)
+    def update_size(*args):
+        new_w = min(dp(500), Window.width * 0.9)
+        new_h = min(dp(600), Window.height * 0.7)
+        popup.size = (new_w, new_h)
+
+    Window.bind(on_resize=update_size)
+    popup.bind(on_dismiss=lambda *x: Window.unbind(on_resize=update_size))
+
     close_button.bind(on_release=popup.dismiss)
 
-    # Открываем окно
     popup.open()

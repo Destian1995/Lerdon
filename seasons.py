@@ -21,7 +21,7 @@ class SeasonManager:
     SEASONS = [
         {
             'name': 'Зима',
-            'cost_factor': 1.15,
+            'cost_factor': 1.45,
             'stat_factor': 1.00
         },
         {
@@ -32,18 +32,18 @@ class SeasonManager:
         {
             'name': 'Лето',
             'cost_factor': 1.00,
-            'stat_factor': 1.03
+            'stat_factor': 1.05
         },
         {
             'name': 'Осень',
             'cost_factor': 1.00,
-            'stat_factor': 0.91
+            'stat_factor': 0.87
         },
     ]
 
     # Откат для стоимости (только для Зимы, индекс 0)
     COST_REVERT_FACTORS = [
-        1 / 1.15,  # когда уходим из Зимы
+        1 / 1.45,  # когда уходим из Зимы
         None,
         None,
         None
@@ -53,8 +53,8 @@ class SeasonManager:
     REVERT_FACTORS = [
         None,            # у Зимы stat_factor 1.00 — отката не требуется
         1 / 0.96,        # у Весны stat_factor 0.96 — чтобы вернуть ×1.00, надо ×(1/0.96)
-        1 / 1.03,        # у Лета stat_factor 1.03 — откат ×(1/1.03)
-        1 / 0.91         # у Осени stat_factor 0.91 — откат ×(1/0.91)
+        1 / 1.05,        # у Лета stat_factor 1.05 — откат ×(1/1.05)
+        1 / 0.87         # у Осени stat_factor 0.87 — откат ×(1/0.87)
     ]
 
     def __init__(self):
@@ -115,9 +115,8 @@ class SeasonManager:
                 UPDATE units
                 SET
                     attack     = CAST(ROUND(attack     * ?) AS INTEGER),
-                    defense    = CAST(ROUND(defense    * ?) AS INTEGER),
-                    durability = CAST(ROUND(durability * ?) AS INTEGER)
-            """, (stat_f, stat_f, stat_f))
+                    defense    = CAST(ROUND(defense    * ?) AS INTEGER)
+            """, (stat_f, stat_f))
 
         conn.commit()
         conn.close()
@@ -146,9 +145,8 @@ class SeasonManager:
                 UPDATE units
                 SET
                     attack     = CAST(ROUND(attack     * ?) AS INTEGER),
-                    defense    = CAST(ROUND(defense    * ?) AS INTEGER),
-                    durability = CAST(ROUND(durability * ?) AS INTEGER)
-            """, (stat_revert, stat_revert, stat_revert))
+                    defense    = CAST(ROUND(defense    * ?) AS INTEGER)
+            """, (stat_revert, stat_revert))
 
         conn.commit()
         conn.close()

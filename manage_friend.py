@@ -440,7 +440,7 @@ class ManageFriend(Popup):
 
         def on_touch_down(touch):
             if btn_layout.collide_point(*touch.pos):
-                on_press(btn_layout)
+                on_release(btn_layout)
                 return True
             return False
 

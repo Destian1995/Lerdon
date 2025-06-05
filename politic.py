@@ -270,7 +270,8 @@ def show_new_agreement_window(faction, game_area, class_faction):
         ("Торговое соглашение", show_trade_agreement_form),
         ("Договор об культурном обмене", lambda *args: show_cultural_exchange_form(faction, game_area, class_faction)),
         ("Заключение мира", lambda *args: show_peace_form(faction)),
-        ("Заключение альянса", lambda *args: show_alliance_form(faction, game_area, class_faction)),
+        ("Создание альянса", lambda *args: show_alliance_form(faction, game_area, class_faction)),
+        ("Разрыв альянса", lambda *args: show_break_alliance_form(faction, game_area, class_faction)),
         ("Объявление войны", lambda *args: show_declare_war_form(faction)),
     ]
 
@@ -885,43 +886,33 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
     popup.open()
 
 
-
 def calculate_peace_army_points(conn, faction):
     """
-    Вычисляет общие очки армии для указанной фракции.
-    :param conn: Подключение к базе данных.
-    :param faction: Название фракции.
-    :return: Общие очки армии.
+    Вычисляет общую силу армии фракции с учетом коэффициентов классов юнитов.
     """
-    # Коэффициенты для классов юнитов
     class_coefficients = {
-        1: 1.3,
-        2: 1.7,
-        3: 2.0,
-        4: 3.0,
-        5: 4.0
+        "1": 1.3,
+        "2": 1.7,
+        "3": 2.0,
+        "4": 3.0,
+        "5": 4.0
     }
 
     total_points = 0
     cursor = conn.cursor()
 
     try:
-        # Шаг 1: JOIN-запрос для получения данных о юнитах и их фракции
         cursor.execute("""
-            SELECT g.city_id, g.unit_name, g.unit_count, u.attack, u.defense, u.durability, u.unit_class
+            SELECT g.unit_name, g.unit_count, u.attack, u.defense, u.durability, u.unit_class 
             FROM garrisons g
             JOIN units u ON g.unit_name = u.unit_name
             WHERE u.faction = ?
         """, (faction,))
         units_data = cursor.fetchall()
 
-        # Шаг 2: Вычисление очков для каждого юнита
-        for city_id, unit_name, unit_count, attack, defense, durability, unit_class in units_data:
-            base_score = attack + defense + durability
-            class_multiplier = class_coefficients.get(unit_class, 1.0)  # Если класс не найден, используем 1.0
-            unit_score = base_score * class_multiplier
-
-            # Умножаем на количество юнитов
+        for unit_name, unit_count, attack, defense, durability, unit_class in units_data:
+            coefficient = class_coefficients.get(str(unit_class), 1.0)
+            unit_score = (attack * coefficient) + defense + durability
             total_points += unit_score * unit_count
 
         return total_points
@@ -1391,6 +1382,139 @@ def show_alliance_form(faction, game_area, class_faction):
         auto_dismiss=False
     )
     popup.open()
+
+
+def show_break_alliance_form(faction, game_area, class_faction):
+    """Окно подтверждения разрыва альянса (без выпадающего меню)."""
+    font_size = calculate_font_size()
+    button_height = font_size * 3
+    padding = font_size // 2
+    spacing = font_size // 4
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Получаем союзника
+    cursor.execute("""
+        SELECT CASE 
+            WHEN faction1 = ? THEN faction2
+            ELSE faction1
+        END
+        FROM diplomacies
+        WHERE (faction1 = ? OR faction2 = ?) AND relationship = 'союз'
+    """, (faction, faction, faction))
+    result = cursor.fetchone()
+
+    if not result:
+        show_popup_message("Договор о союзе не найден", "У вашей фракции нет союзов для разрыва.")
+        conn.close()
+        return
+
+    target = result[0]
+
+    # Контейнер
+    content = BoxLayout(
+        orientation='vertical',
+        padding=padding,
+        spacing=spacing
+    )
+
+    title = Label(
+        text="Разрыв альянса",
+        size_hint=(1, None),
+        height=button_height,
+        font_size=font_size * 1.5,
+        color=(1, 1, 1, 1),
+        bold=True
+    )
+    content.add_widget(title)
+
+    # Текст подтверждения
+    confirm_label = Label(
+        text=f"Союз с фракцией [b]{target}[/b] будет разорван.\nВы уверены?",
+        size_hint=(1, None),
+        height=font_size * 4,
+        font_size=font_size,
+        color=(1, 0.8, 0.2, 1),
+        halign='center',
+        markup=True
+    )
+    confirm_label.bind(size=confirm_label.setter('text_size'))
+    content.add_widget(confirm_label)
+
+    message_label = Label(
+        text="",
+        size_hint=(1, None),
+        height=font_size * 2,
+        font_size=font_size,
+        color=(1, 0.5, 0, 1)
+    )
+    content.add_widget(message_label)
+
+    def perform_break(instance):
+        # Обновляем diplomacies
+        cursor.execute("""
+            UPDATE diplomacies 
+            SET relationship = 'нейтралитет'
+            WHERE (faction1 = ? AND faction2 = ?) OR (faction1 = ? AND faction2 = ?)
+        """, (faction, target, target, faction))
+
+        # Понижаем отношения
+        cursor.execute("""
+            SELECT relationship FROM relations 
+            WHERE (faction1 = ? AND faction2 = ?) OR (faction1 = ? AND faction2 = ?)
+        """, (faction, target, target, faction))
+        current = cursor.fetchone()
+        if current:
+            new_value = max(-100, int(current[0]) - 40)
+            cursor.execute("""
+                UPDATE relations 
+                SET relationship = ?
+                WHERE (faction1 = ? AND faction2 = ?) OR (faction1 = ? AND faction2 = ?)
+            """, (new_value, faction, target, target, faction))
+
+        conn.commit()
+        message_label.text = f"Союз с {target} разорван. Отношения ухудшились."
+        message_label.color = (1, 0, 0, 1)
+
+    # Кнопки
+    button_layout = BoxLayout(
+        orientation='horizontal',
+        size_hint=(1, None),
+        height=button_height,
+        spacing=spacing
+    )
+
+    break_button = StyledButton(
+        text="Разорвать альянс",
+        font_size=font_size * 1.2,
+        button_color=(0.8, 0.2, 0.2, 1),
+        text_color=(1, 1, 1, 1)
+    )
+    break_button.bind(on_release=perform_break)
+
+    back_button = StyledButton(
+        text="Отмена",
+        font_size=font_size * 1.2,
+        button_color=(0.3, 0.3, 0.3, 1),
+        text_color=(1, 1, 1, 1)
+    )
+    back_button.bind(on_release=lambda _: popup.dismiss())
+
+    button_layout.add_widget(break_button)
+    button_layout.add_widget(back_button)
+
+    content.add_widget(button_layout)
+
+    popup = Popup(
+        title="Разрыв альянса",
+        content=content,
+        size_hint=(0.8, 0.5),
+        auto_dismiss=False
+    )
+    popup.open()
+
+
 
 def show_declare_war_form(faction):
     """Окно формы для объявления войны (с обновлённым дизайном и StyledButton)."""

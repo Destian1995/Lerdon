@@ -318,13 +318,14 @@ class CircularProgressButton(Button):
 
 class GameScreen(Screen):
     SEASON_EFFECTS = {
-        "Зима": "+15% к стоимости юнитов",
+        "Зима": "+45% к стоимости юнитов",
         "Весна": "-4% к характеристикам юнитов",
-        "Лето": "+3% к характеристикам юнитов",
-        "Осень": "-9% к характеристикам юнитов"
+        "Лето": "+5% к характеристикам юнитов",
+        "Осень": "-13% к характеристикам юнитов"
     }
     SEASON_NAMES = ['Зима', 'Весна', 'Лето', 'Осень']
     SEASON_ICONS = ['snowflake', 'green_leaf', 'sun', 'yellow_leaf']
+
     def __init__(self, selected_faction, cities, db_path=None, **kwargs):
         super(GameScreen, self).__init__(**kwargs)
         self.selected_faction = selected_faction
@@ -351,7 +352,7 @@ class GameScreen(Screen):
         # Инициализация UI
         self.is_android = platform == 'android'
         self.season_manager = SeasonManager()
-        self.current_idx = ((self.turn_counter - 1) // 4) % 4 if self.turn_counter >= 1 else 0
+        self.current_idx = random.randint(0, 3)
         current_season = {
             'name': self.SEASON_NAMES[self.current_idx],
             'icon': self.SEASON_ICONS[self.current_idx]
@@ -381,18 +382,20 @@ class GameScreen(Screen):
         with self.season_container.canvas.before:
             Color(0.15, 0.2, 0.3, 0.9)
             self._season_bg = RoundedRectangle(radius=[10])
+
         def _upd_bg(instance, value):
             self.season_container.canvas.before.clear()
             with self.season_container.canvas.before:
                 Color(0.15, 0.2, 0.3, 0.9)
                 self._season_bg = RoundedRectangle(pos=instance.pos, size=instance.size, radius=[10])
+
         self.season_container.bind(pos=_upd_bg, size=_upd_bg)
 
         # Image: иконка сезона
         self.season_icon = Image(
             source='',  # сюда позже запишем путь к нужной иконке
             size_hint=(None, None),
-            size=(dp(30), dp(30)),
+            size=(dp(40), dp(30)),
             pos_hint={'x': 0.02, 'center_y': 0.5}
         )
         # Label: название сезона
@@ -576,9 +579,11 @@ class GameScreen(Screen):
 
         # === ResourceBox ===
         self.resource_box = ResourceBox(resource_manager=self.faction)
-        self.resource_box.size_hint = (0.2, 0.7)
-        self.resource_box.pos_hint = {'x': 0, 'y': 0.4}
-        Window.bind(on_resize=self.on_window_resize)
+        self.resource_box.size = (dp(200), dp(400))
+        self.resource_box.pos = (dp(0), Window.height - self.resource_box.height)
+
+        # Привязываем обновление позиции к изменению высоты окна
+        Window.bind(on_resize=self.update_resource_box_position)
         self.add_widget(self.resource_box)
 
         # === Инициализация ИИ ===
@@ -591,6 +596,11 @@ class GameScreen(Screen):
         self.end_turn_button.bind(on_release=on_end_turn)
         end_turn_container.add_widget(self.end_turn_button)
         self.add_widget(end_turn_container)
+
+    def update_resource_box_position(self, *args):
+        """Обновляет позицию ResourceBox так, чтобы он всегда был в левом верхнем углу."""
+        if self.resource_box:
+            self.resource_box.pos = (dp(0), Window.height - self.resource_box.height)
 
     def _update_season_display(self, season_info: dict):
         """
@@ -613,22 +623,6 @@ class GameScreen(Screen):
             self.season_icon.source = ''
 
         self.season_label.text = season_info.get('name', '')
-
-    def on_window_resize(self, instance, width, height):
-        is_landscape = width > height
-        if is_landscape:
-            self.resource_box.size_hint = (0.2, 0.9)
-            self.resource_box.pos_hint = {'x': 0, 'y': 0}
-            self.game_area.size_hint = (0.6, 1)
-            self.game_area.pos_hint = {'x': 0.2, 'y': 0}
-            self.end_turn_button.pos_hint = {'x': 0.02, 'y': 0.02}
-            self.turn_label.text = f"Ход: {self.turn_counter}"
-        else:
-            self.resource_box.size_hint = (0.25, 0.95)
-            self.resource_box.pos_hint = {'x': 0, 'y': 0}
-            self.game_area.size_hint = (0.7, 1)
-            self.game_area.pos_hint = {'x': 0.25, 'y': 0}
-            self.end_turn_button.pos_hint = {'x': 0.02, 'y': 0.02}
 
     def check_diplomacy_changes(self):
         """
@@ -996,7 +990,7 @@ class GameScreen(Screen):
             title_color=(1, 1, 1, 1),
             content=content,
             size_hint=(0.9, None),
-            height=Window.height * 0.55,
+            height=Window.height * 0.51,
             background_color=(0.1, 0.1, 0.1, 0.95),
             separator_color=(0.3, 0.3, 0.3, 1),
             auto_dismiss=False
@@ -1073,7 +1067,7 @@ class GameScreen(Screen):
         self.game_area.clear_widgets()
 
     def on_stop(self):
-        """Закрытие соединения с базой данных при завершении игры."""
+        Window.unbind(on_resize=self.update_resource_box_position)
         self.game_state_manager.close_connection()
 
     def show_advisor(self, instance):
