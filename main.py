@@ -1128,9 +1128,8 @@ class DossierScreen(Screen):
     def clear_dossier(self, instance):
         """
         Полная очистка всех записей в таблице dossier.
-        После успеха — обновляем вкладки.
+        После успеха — полностью удаляем и пересоздаем вкладку.
         """
-        from main import db_path
         try:
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
@@ -1141,9 +1140,8 @@ class DossierScreen(Screen):
             print(f"❌ Ошибка удаления: {e}")
         finally:
             conn.close()
-        # Обновляем табы через одну «итерацию» Clock,
-        # чтобы UI успел отреагировать
-        Clock.schedule_once(lambda dt: self.load_dossier_data(), 0)
+
+        self._recreate_dossier_tab()
 
     def go_back(self, instance):
         """
@@ -1154,48 +1152,22 @@ class DossierScreen(Screen):
         root.clear_widgets()
         root.add_widget(MenuWidget())
 
-    def on_enter(self, *args):
+    def _recreate_dossier_tab(self):
         """
-        Когда экран показан — запускаем таймер для авто-очистки.
+        Полностью удаляет текущую вкладку 'Личное дело' и создаёт новую.
         """
-        # Срабатывает каждые 300 сек (5 мин)
-        self.auto_clear_event = Clock.schedule_interval(self.check_auto_clear, 300)
+        # Определяем, какая вкладка сейчас открыта
+        current_tab = self.tabs.current_tab
 
-    def on_leave(self, *args):
-        """
-        Когда экран скрыт — отменяем таймер.
-        """
-        if self.auto_clear_event:
-            self.auto_clear_event.cancel()
-            self.auto_clear_event = None
+        # Если это нужная нам вкладка — удаляем её
+        if current_tab and current_tab.text == "Информация":
+            self.tabs.remove_widget(current_tab)
 
-    def check_auto_clear(self, dt):
-        """
-        Если ToggleButton «Авто-очистка» в состоянии 'down' — очищаем старые записи.
-        """
-        if self.auto_clear_toggle.state == 'down':
-            self.clear_old_records()
-
-    def clear_old_records(self):
-        """
-        Удаляем записи старше 30 дней (last_data < текущая дата минус 30 дней).
-        После удаления хотя бы одной записи — обновляем вкладки.
-        """
-        from main import db_path
-        try:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cutoff_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
-            cursor.execute("DELETE FROM dossier WHERE last_data < ?", (cutoff_date,))
-            deleted = cursor.rowcount
-            conn.commit()
-            if deleted > 0:
-                Clock.schedule_once(lambda dt: self.load_dossier_data(), 0)
-        except sqlite3.Error as e:
-            print(f"Ошибка при автоматической очистке: {e}")
-        finally:
-            conn.close()
-
+        # Перезагружаем данные и создаём новую вкладку
+        self.load_dossier_data()
+        tab_list = self.tabs.get_tab_list()
+        if tab_list:
+            self.tabs.switch_to(tab_list[0])
 
 class HowToPlayScreen(FloatLayout):
     def __init__(self, **kwargs):

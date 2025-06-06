@@ -400,12 +400,6 @@ class CircularProgressButton(Button):
 
 
 class GameScreen(Screen):
-    SEASON_EFFECTS = {
-        "Зима": "+45% к стоимости юнитов",
-        "Весна": "-4% к характеристикам юнитов",
-        "Лето": "+5% к характеристикам юнитов",
-        "Осень": "-13% к характеристикам юнитов"
-    }
     SEASON_NAMES = ['Зима', 'Весна', 'Лето', 'Осень']
     SEASON_ICONS = ['snowflake', 'green_leaf', 'sun', 'yellow_leaf']
 
@@ -905,21 +899,50 @@ class GameScreen(Screen):
     def on_season_pressed(self, instance, touch):
         """
         Показывает информационное окно с эффектом текущего сезона
-        при клике (касании) внутри season_container.
+        для выбранной фракции при клике (касании) внутри season_container.
         """
         if instance.collide_point(touch.x, touch.y):
-            current_season = self.season_label.text
-            effect_text = self.SEASON_EFFECTS.get(
-                current_season,
-                "Информация о сезоне недоступна."
-            )
+            # Текущий индекс сезона в SeasonManager
+            current_idx = self.current_idx
+            current_season_name = self.SEASON_NAMES[current_idx]
+
+            # Извлекаем коэффициенты именно для этой фракции
+            faction = self.selected_faction
+            try:
+                coeffs = SeasonManager.FACTION_EFFECTS[current_idx][faction]
+            except KeyError:
+                # Если вдруг нечаянно фракции или сезона нет — выводим заглушку
+                effect_text = "Информация о бонусах для вашей фракции недоступна."
+            else:
+                stat_f = coeffs['stat']
+                cost_f = coeffs['cost']
+
+                parts = []
+                # Если stat_f != 1.0, вычисляем процент изменения атаки/защиты
+                if stat_f != 1.0:
+                    stat_pct = (stat_f - 1.0) * 100
+                    # Округляем до ближайшего целого
+                    stat_pct_int = int(abs(round(stat_pct)))
+                    sign = '+' if stat_pct > 0 else '-'
+                    parts.append(f"{sign}{stat_pct_int}% к Урону и Защите")
+
+                # Если cost_f != 1.0, вычисляем процент изменения стоимости
+                if cost_f != 1.0:
+                    cost_pct = (cost_f - 1.0) * 100
+                    cost_pct_int = int(abs(round(cost_pct)))
+                    sign = '+' if cost_pct > 0 else '-'
+                    parts.append(f"{sign}{cost_pct_int}% к стоимости юнитов")
+
+                # Если ни stat, ни cost нет изменений (коэффициент 1.0) — делаем общий текст
+                if not parts:
+                    effect_text = "Нет изменений для вашей фракции в этом сезоне."
+                else:
+                    effect_text = ", ".join(parts)
 
             # ---------- Определяем адаптивные размеры ----------
-            # Ширина Popup = 90% от ширины экрана, высота = 30% от высоты экрана
             popup_width = Window.width * 0.9
             popup_height = Window.height * 0.45
 
-            # Подбираем размер шрифта под Android и под десктоп по-разному
             if platform == 'android':
                 label_font = sp(18)
                 button_font = sp(16)
@@ -940,9 +963,9 @@ class GameScreen(Screen):
                 spacing=spacing_dp
             )
 
-            # Текст с эффектом сезона
+            # Маркированный текст: жирным показываем название сезона, дальше — effect_text
             label = Label(
-                text=f"[b]{current_season}[/b]: {effect_text}",
+                text=f"{effect_text}",
                 font_size=label_font,
                 halign='center',
                 valign='middle',
@@ -950,13 +973,10 @@ class GameScreen(Screen):
                 color=(1, 1, 1, 1),
                 size_hint_y=None
             )
-            # Чтобы Label занимал ровно необходимую высоту:
-            # рассчитываем высоту текста (примерно) и задаём minimum height
             label.text_size = (popup_width - 2 * padding_dp, None)
             label.texture_update()
             label.height = label.texture_size[1] + dp(10)
 
-            # Кнопка «Закрыть»
             btn_close = Button(
                 text="Закрыть",
                 size_hint=(1, None),
@@ -968,13 +988,11 @@ class GameScreen(Screen):
                 color=(1, 1, 1, 1)
             )
 
-            # Добавляем в контент: сначала Label, затем кнопку
             content.add_widget(label)
             content.add_widget(btn_close)
 
-            # ---------- Создаём Popup ----------
             popup = Popup(
-                title="Эффект сезона",
+                title=f"Эффект сезона. {self.selected_faction}",
                 title_align='center',
                 title_size=sp(20) if platform != 'android' else sp(22),
                 title_color=(1, 1, 1, 1),
@@ -986,10 +1004,7 @@ class GameScreen(Screen):
                 auto_dismiss=False
             )
 
-            # Привязываем закрытие
             btn_close.bind(on_release=popup.dismiss)
-
-            # Открываем Popup
             popup.open()
             return True
 
