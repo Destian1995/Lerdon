@@ -548,7 +548,7 @@ class AdvisorView(FloatLayout):
         # Заголовки таблицы
         table.add_widget(self.create_header("Фракция"))
         table.add_widget(self.create_header("Отношения"))
-        table.add_widget(self.create_header("Кф. торговли"))
+        table.add_widget(self.create_header("Торговля"))
         table.add_widget(self.create_header("Статус"))
 
         # Добавление данных
