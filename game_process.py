@@ -1242,7 +1242,7 @@ class GameScreen(Screen):
             return
 
         # Параметры отрисовки
-        STAR_SIZE = 25
+        STAR_SIZE = 45
         SPACING = 5
         CITY_ICON_SIZE = 77
         DELTA_Y = 5  # Поднимаем немного над иконкой
