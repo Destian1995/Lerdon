@@ -426,13 +426,17 @@ class EventManager:
 
     def show_temporary_build(self, description, event_type):
         """
-        Отображает бегущую строку по всей ширине окна.
-        Текст плавно движется справа налево.
-        :param description: Описание события.
-        :param event_type: Тип события ('passive' или 'sequences').
+        Отображает бегущую строку, начинающуюся справа от контейнера с вкладками.
+        Текст движется слева направо и занимает всю доступную ширину для лучшей читаемости.
+        Предотвращает наложение нескольких строк.
         """
+        # === Проверяем, есть ли уже активная бегущая строка ===
+        if hasattr(self, '_running_marquee') and self._running_marquee:
+            print("[DEBUG] Событие отложено: уже отображается бегущая строка.")
+            Clock.schedule_once(lambda dt: self.show_temporary_build(description, event_type), 1)
+            return
 
-        # Цвет текста в зависимости от типа события
+        # === Цвет текста в зависимости от типа события ===
         if event_type == "passive":
             text_color = (1, 1, 1, 1)  # Белый
         elif event_type == "sequences":
@@ -442,21 +446,23 @@ class EventManager:
 
         font_size = get_adaptive_font_size(min_size=14, max_size=20)
 
-        # === Создаем контейнер во всю ширину экрана ===
-        container_width = Window.width
-        container_height = dp(30)
+        # === Определяем позицию контейнера — справа от панели вкладок ===
+        mode_panel_width = dp(90)  # ширина панели с кнопками режимов
+        screen_width = Window.width
+        marquee_width = screen_width - mode_panel_width  # ширина от правой части панели до правого края экрана
+        marquee_height = dp(30)
+        start_x = screen_width  # начальная позиция за правым краем экрана
+        start_y = Window.height * 0.13  # ~13% от низа экрана
 
-        # Позиция: полностью за пределами экрана справа, пониже
-        container_pos = (Window.width, Window.height * 0.1)  # ~10% от низа экрана
-
+        # === Создаем контейнер ===
         container = BoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            size=(container_width, container_height),
-            pos=container_pos
+            size=(marquee_width, marquee_height),
+            pos=(start_x, start_y)
         )
 
-        # === Внутри контейнера — Label с текстом ===
+        # === Label с текстом внутри контейнера ===
         build_label = Label(
             text=description,
             font_size=font_size,
@@ -464,18 +470,17 @@ class EventManager:
             halign="left",
             valign="middle",
             size_hint_x=None,
-            width=container_width * 1.5,  # Чтобы текст выходил за край
-            text_size=(None, container_height),  # Для переноса и выравнивания
+            width=marquee_width,
+            text_size=(None, marquee_height),
             shorten=False,
             markup=True
         )
         build_label.bind(texture_size=build_label.setter('size'))
-
         container.add_widget(build_label)
 
-        # === Добавляем черную рамку вокруг контейнера ===
+        # === Черный фон с прозрачностью ===
         with container.canvas.before:
-            Color(0, 0, 0, 0.7)  # Черный фон с прозрачностью
+            Color(0, 0, 0, 0.7)
             container.rect = Rectangle(pos=container.pos, size=container.size)
 
         def update_rect(instance, value):
@@ -486,15 +491,19 @@ class EventManager:
 
         self.game_screen.add_widget(container)
 
-        # === Анимация движения слева направо ===
-        move_distance = container.width + Window.width
-        duration = move_distance / dp(150)
+        # === Анимация движения от правого края экрана до левого ===
+        move_distance = start_x + marquee_width - mode_panel_width
+        duration = move_distance / dp(170)  # скорость движения
 
-        anim = Animation(pos=(-container.width, container.y), duration=duration)
+        anim = Animation(pos=(-marquee_width, start_y), duration=duration)
         anim.start(container)
 
-        # === Удаляем виджет после завершения анимации ===
-        def remove_widget(dt):
-            self.game_screen.remove_widget(container)
+        # === Установка флага активной строки и планирование удаления после окончания ===
+        self._running_marquee = True
 
-        Clock.schedule_once(remove_widget, duration)
+        def on_animation_complete(*args):
+            self.game_screen.remove_widget(container)
+            self._running_marquee = False
+            print("[DEBUG] Бегущая строка завершена.")
+
+        anim.bind(on_complete=on_animation_complete)

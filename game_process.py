@@ -499,7 +499,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=(dp(160), dp(75)),
-            pos_hint={'x': 0, 'y': 0.2},
+            pos_hint={'x': 0, 'y': 0.29},
             padding=dp(5)
         )
 
@@ -523,7 +523,7 @@ class GameScreen(Screen):
             color=(1, 1, 1, 1),
             background_color=(0, 0, 0, 0),
             size_hint=(1, 1),
-            duration=1.5  # Время анимации в секундах
+            duration=1.4  # Время анимации в секундах
         )
 
         # === Контейнер для названия фракции ===
@@ -664,7 +664,8 @@ class GameScreen(Screen):
 
         def on_end_turn(instance):
             instance.start_progress()
-            Clock.schedule_once(lambda dt: self.process_turn(None), 1.5)
+            self.process_turn(None)
+            Clock.schedule_once(lambda dt: instance.reset_button(), 1.5)  # Ждём 1.5 секунды и сбрасываем кнопку
 
         self.end_turn_button.bind(on_release=on_end_turn)
         end_turn_container.add_widget(self.end_turn_button)
