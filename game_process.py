@@ -834,7 +834,6 @@ class GameScreen(Screen):
 
         # Обновляем метку с текущим ходом
         self.turn_label.text = f"Текущий ход: {self.turn_counter}"
-
         # Сохраняем текущее значение хода в таблицу turn
         self.save_turn(self.selected_faction, self.turn_counter)
         # Сохраняем историю ходов в таблицу turn_save
@@ -863,7 +862,6 @@ class GameScreen(Screen):
         # Выполнение хода для всех ИИ
         for ai_controller in self.ai_controllers.values():
             ai_controller.make_turn()
-
         # Обновляем статус уничтоженных фракций
         self.update_destroyed_factions()
         # Обновляем статус ходов
@@ -873,6 +871,10 @@ class GameScreen(Screen):
         new_season = self.update_season(self.turn_counter)
         self._update_season_display(new_season)
         self.season_manager.update(self.current_idx)
+        print("Здесь должны вызываться функции отрисовки звезд мощи городов")
+        # Обновляем статус городов и отрисовываем звёздочки мощи армий
+        self.update_city_military_status()
+        self.draw_army_stars_on_map()
         # Логирование или обновление интерфейса после хода
         print(f"Ход {self.turn_counter} завершён")
 
@@ -1228,6 +1230,201 @@ class GameScreen(Screen):
             print("Флаги check_attack успешно сброшены на False.")
         except sqlite3.Error as e:
             print(f"Ошибка при сбросе флагов check_attack: {e}")
+
+    def draw_army_stars_on_map(self):
+        """
+        Рисует звёздочки над городами (иконка 77×77) в game_area.canvas.after.
+        Центрирует звёздочки по горизонтали относительно центра иконки города.
+        """
+        star_img_path = 'files/status/army_in_city/star.png'
+        if not os.path.exists(star_img_path):
+            print(f"Файл звезды не найден: {star_img_path}")
+            return
+
+        # Параметры отрисовки
+        STAR_SIZE = 25
+        SPACING = 5
+        CITY_ICON_SIZE = 77
+        DELTA_Y = 5  # Поднимаем немного над иконкой
+
+        # Если нет данных — ничего не рисуем
+        if not hasattr(self, 'city_star_levels') or not self.city_star_levels:
+            return
+
+        # Очищаем предыдущие звёзды
+        self.game_area.canvas.after.clear()
+
+        with self.game_area.canvas.after:
+            for city_id, data in self.city_star_levels.items():
+                star_level, screen_x, screen_y, city_name = data
+                if star_level <= 0:
+                    continue
+
+                # --- Новая логика центрирования ---
+                # Иконка имеет размер 77x77 → её центр находится здесь:
+                start_x = (screen_x + CITY_ICON_SIZE) * 1.14
+                start_y = screen_y + CITY_ICON_SIZE
+
+                # Рисуем каждую звезду
+                for i in range(star_level):
+                    x_i = start_x + i * (STAR_SIZE + SPACING)
+                    y_i = start_y
+                    Rectangle(
+                        source=star_img_path,
+                        pos=(x_i, y_i),
+                        size=(STAR_SIZE, STAR_SIZE)
+                    )
+
+    def get_total_army_strength_by_faction(self, faction):
+        """Возвращает общую мощь армии фракции."""
+        print('Вызов get_total_army_strength_by_faction', faction)
+        class_coefficients = {
+            "1": 1.3,
+            "2": 1.7,
+            "3": 2.0,
+            "4": 3.0,
+            "5": 4.0
+        }
+        try:
+            self.cursor.execute("""
+                SELECT g.unit_name, g.unit_count, u.attack, u.defense, u.durability, u.unit_class
+                FROM garrisons g
+                JOIN units u ON g.unit_name = u.unit_name
+                WHERE u.faction = ?
+                  AND g.city_id IN (SELECT name FROM cities WHERE faction = ?)
+            """, (faction, faction))
+            rows = self.cursor.fetchall()
+            total_strength = 0
+            for row in rows:
+                unit_name, count, attack, defense, durability, unit_class = row
+                coefficient = class_coefficients.get(unit_class, 1.0)
+                unit_strength = (attack * coefficient) + defense + durability
+                total_strength += unit_strength * count
+            return total_strength
+        except sqlite3.Error as e:
+            print(f"Ошибка при подсчёте общей мощи армии: {e}")
+            return 0
+
+    def get_city_army_strength_by_faction(self, city_id, faction):
+        """Возвращает мощь армии фракции в конкретном городе."""
+        print('Вызов get_city_army_strength_by_faction', city_id, faction)
+        class_coefficients = {
+            "1": 1.3,
+            "2": 1.7,
+            "3": 2.0,
+            "4": 3.0,
+            "5": 4.0
+        }
+        try:
+            self.cursor.execute("""
+                SELECT g.unit_name, g.unit_count, u.attack, u.defense, u.durability, u.unit_class
+                FROM garrisons g
+                JOIN units u ON g.unit_name = u.unit_name
+                WHERE g.city_id = ? AND u.faction = ?
+            """, (city_id, faction))
+            rows = self.cursor.fetchall()
+            city_strength = 0
+            for row in rows:
+                unit_name, count, attack, defense, durability, unit_class = row
+                coefficient = class_coefficients.get(unit_class, 1.0)
+                unit_strength = (attack * coefficient) + defense + durability
+                city_strength += unit_strength * count
+            return city_strength
+        except sqlite3.Error as e:
+            print(f"Ошибка при подсчёте мощи города {city_id}: {e}")
+            return 0
+
+    def calculate_star_level(self, total_strength, city_strength):
+        """Возвращает уровень (количество звездочек) на основе процентного соотношения мощи."""
+        if total_strength == 0 or city_strength == 0:
+            return 0  # Нет войск — нет звёздочек
+
+        percent = (city_strength / total_strength) * 100
+
+        if percent < 25:
+            return 1
+        elif 25 <= percent < 75:
+            return 2
+        elif 75 <= percent <= 100:
+            return 3
+        else:
+            return 3  # На случай, если процент > 100 из-за ошибок округления
+
+    def update_city_military_status(self):
+        """
+        Для всех фракций:
+          1) Находим все города, где есть гарнизоны.
+          2) Для каждой фракции считаем общую мощь армии.
+          3) Для каждого города этой фракции считаем его мощь.
+          4) Вычисляем star_level = 0–3.
+          5) Сохраняем в self.city_star_levels: {city_name: (star_level, screen_x, screen_y, faction)}
+        """
+        MAP_WIDTH = 1200
+        MAP_HEIGHT = 800
+        ga_w, ga_h = self.game_area.size
+
+        try:
+            # Получаем все города, где есть гарнизоны
+            self.cursor.execute("""
+                SELECT c.name, c.coordinates, c.faction 
+                FROM cities c
+                WHERE c.name IN (SELECT city_id FROM garrisons)
+            """)
+            raw_cities = self.cursor.fetchall()
+        except sqlite3.Error as e:
+            print(f"Ошибка при получении городов с гарнизонами: {e}")
+            self.city_star_levels = {}
+            return
+
+        if not raw_cities:
+            print("Нет городов с гарнизонами.")
+            self.city_star_levels = {}
+            return
+
+        # Группируем города по фракциям
+        from collections import defaultdict
+        factions_cities = defaultdict(list)
+        for city_name, coords_str, faction in raw_cities:
+            factions_cities[faction].append((city_name, coords_str))
+
+        new_dict = {}
+
+        # Для каждой фракции вычисляем общую мощь её армии
+        for faction, cities_list in factions_cities.items():
+            total_strength = self.get_total_army_strength_by_faction(faction)
+
+            if total_strength == 0:
+                continue
+
+            for city_name, coords_str in cities_list:
+                try:
+                    coords = eval(coords_str)  # лучше заменить на ast.literal_eval
+                    x_map, y_map = coords
+                except Exception as ex:
+                    print(f"Ошибка парсинга координат для {city_name}: {ex}")
+                    continue
+
+                screen_x = (x_map / MAP_WIDTH) * ga_w
+                screen_y = (y_map / MAP_HEIGHT) * ga_h
+
+                city_strength = self.get_city_army_strength_by_faction(city_name, faction)
+
+                if city_strength == 0:
+                    star_level = 0
+                else:
+                    percent = (city_strength / total_strength) * 100
+                    if percent < 35:
+                        star_level = 1
+                    elif percent < 65:
+                        star_level = 2
+                    else:
+                        star_level = 3
+
+                new_dict[city_name] = (star_level, screen_x, screen_y, city_name)
+                print(f"Город: {city_name}, Координаты: {x_map, y_map}, Сила: {city_strength}, Уровень: {star_level}")
+
+        self.city_star_levels = new_dict
+
 
     def initialize_turn_check_move(self):
         """
