@@ -445,11 +445,10 @@ class MapWidget(Widget):
         return abs(source_coords[0] - destination_coords[0]) + abs(source_coords[1] - destination_coords[1])
 
     def draw_fortresses(self):
-        """Рисует крепости на карте"""
+        """Рисует крепости на карте и обновляет координаты иконок и названий в базе данных"""
         self.fortress_rectangles.clear()
         self.canvas.clear()
 
-        # Перерисовываем карту
         with self.canvas:
             self.map_image = Rectangle(
                 source='files/map/map.png',
@@ -457,7 +456,6 @@ class MapWidget(Widget):
                 size=(self.base_map_width * self.map_scale, self.base_map_height * self.map_scale)
             )
 
-            # Словарь фракций и их изображений
             faction_images = {
                 'Хиперион': 'files/buildings/giperion.png',
                 'Аркадия': 'files/buildings/arkadia.png',
@@ -478,7 +476,6 @@ class MapWidget(Widget):
                 print("Нет данных о городах в базе данных.")
                 return
 
-            # Рисуем крепости
             for fortress_name, kingdom, coords_str in fortresses_data:
                 try:
                     coords = ast.literal_eval(coords_str)
@@ -521,6 +518,21 @@ class MapWidget(Widget):
 
                 Color(1, 1, 1, 1)
                 Rectangle(texture=text_texture, pos=(text_x, text_y), size=(text_width, text_height))
+
+                # --- Записываем координаты в базу данных ---
+                try:
+                    cursor.execute("""
+                        UPDATE cities
+                        SET icon_coordinates = ?, label_coordinates = ?
+                        WHERE name = ?
+                    """, (
+                        f"({drawn_x}, {drawn_y})",  # icon_coordinates
+                        f"({text_x}, {text_y})",  # label_coordinates
+                        fortress_name
+                    ))
+                    self.conn.commit()
+                except sqlite3.Error as e:
+                    print(f"Ошибка при обновлении координат для {fortress_name}: {e}")
 
     def check_fortress_click(self, touch):
         """Проверяет нажатие на крепость"""

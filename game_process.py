@@ -1233,8 +1233,9 @@ class GameScreen(Screen):
 
     def draw_army_stars_on_map(self):
         """
-        Рисует звёздочки над городами (иконка 77×77) в game_area.canvas.after.
-        Центрирует звёздочки по горизонтали относительно центра иконки города.
+        Рисует звёздочки над иконками городов.
+        Использует готовые координаты из self.city_star_levels:
+            { city_name: (star_level, icon_x, icon_y, city_name) }
         """
         star_img_path = 'files/status/army_in_city/star.png'
         if not os.path.exists(star_img_path):
@@ -1242,28 +1243,33 @@ class GameScreen(Screen):
             return
 
         # Параметры отрисовки
-        STAR_SIZE = 45
+        STAR_SIZE = 25
         SPACING = 5
         CITY_ICON_SIZE = 77
-
 
         # Если нет данных — ничего не рисуем
         if not hasattr(self, 'city_star_levels') or not self.city_star_levels:
             return
 
-        # Очищаем предыдущие звёзды
+        # Очищаем прошлые звёзды
         self.game_area.canvas.before.clear()
 
         with self.game_area.canvas.before:
             for city_id, data in self.city_star_levels.items():
-                star_level, screen_x, screen_y, city_name = data
+                star_level, icon_x, icon_y, city_name = data
                 if star_level <= 0:
                     continue
 
-                # --- Новая логика центрирования ---
-                # Иконка имеет размер 77x77 → её центр находится здесь:
-                start_x = (screen_x + CITY_ICON_SIZE) * 1.14
-                start_y = screen_y + CITY_ICON_SIZE
+                # Центр иконки
+                icon_center_x = icon_x + CITY_ICON_SIZE / 2
+                icon_center_y = icon_y + CITY_ICON_SIZE / 2
+
+                # Общая ширина всех звёздочек
+                total_width = STAR_SIZE * star_level + SPACING * (star_level - 1)
+
+                # Смещаем так, чтобы центр звёзд совпадал с центром иконки
+                start_x = icon_center_x - total_width / 2
+                start_y = icon_center_y + 20  # чуть выше центра иконки
 
                 # Рисуем каждую звезду
                 for i in range(star_level):
@@ -1353,22 +1359,18 @@ class GameScreen(Screen):
     def update_city_military_status(self):
         """
         Для всех фракций:
-          1) Находим все города, где есть гарнизоны.
-          2) Для каждой фракции считаем общую мощь армии.
-          3) Для каждого города этой фракции считаем его мощь.
-          4) Вычисляем star_level = 0–3.
-          5) Сохраняем в self.city_star_levels: {city_name: (star_level, screen_x, screen_y, faction)}
+          1) Находим все города, где есть гарнизоны
+          2) Для каждой фракции считаем общую мощь армии
+          3) Для каждого города этой фракции считаем его мощь
+          4) Вычисляем star_level = 0–3
+          5) Сохраняем в self.city_star_levels:
+             { city_name: (star_level, icon_x, icon_y, city_name) }
         """
-        MAP_WIDTH = 1230
-        MAP_HEIGHT = 756
-        ga_w, ga_h = self.game_area.size
-
         try:
-            # Получаем все города, где есть гарнизоны
             self.cursor.execute("""
-                SELECT c.name, c.coordinates, c.faction 
-                FROM cities c
-                WHERE c.name IN (SELECT city_id FROM garrisons)
+                SELECT name, faction, icon_coordinates 
+                FROM cities 
+                WHERE icon_coordinates IS NOT NULL
             """)
             raw_cities = self.cursor.fetchall()
         except sqlite3.Error as e:
@@ -1381,31 +1383,25 @@ class GameScreen(Screen):
             self.city_star_levels = {}
             return
 
-        # Группируем города по фракциям
         from collections import defaultdict
         factions_cities = defaultdict(list)
-        for city_name, coords_str, faction in raw_cities:
+        for city_name, faction, coords_str in raw_cities:
             factions_cities[faction].append((city_name, coords_str))
 
         new_dict = {}
 
-        # Для каждой фракции вычисляем общую мощь её армии
         for faction, cities_list in factions_cities.items():
             total_strength = self.get_total_army_strength_by_faction(faction)
-
             if total_strength == 0:
                 continue
 
             for city_name, coords_str in cities_list:
                 try:
                     coords = eval(coords_str)  # лучше заменить на ast.literal_eval
-                    x_map, y_map = coords
+                    icon_x, icon_y = coords
                 except Exception as ex:
-                    print(f"Ошибка парсинга координат для {city_name}: {ex}")
+                    print(f"Ошибка парсинга icon_coordinates для {city_name}: {ex}")
                     continue
-
-                screen_x = (x_map / MAP_WIDTH) * ga_w
-                screen_y = (y_map / MAP_HEIGHT) * ga_h
 
                 city_strength = self.get_city_army_strength_by_faction(city_name, faction)
 
@@ -1420,8 +1416,8 @@ class GameScreen(Screen):
                     else:
                         star_level = 3
 
-                new_dict[city_name] = (star_level, screen_x, screen_y, city_name)
-                print(f"Город: {city_name}, Координаты: {x_map, y_map}, Сила: {city_strength}, Уровень: {star_level}")
+                new_dict[city_name] = (star_level, icon_x, icon_y, city_name)
+                print(f"Город: {city_name}, Сила: {city_strength}, Уровень: {star_level}")
 
         self.city_star_levels = new_dict
 
