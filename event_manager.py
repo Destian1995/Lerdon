@@ -426,13 +426,13 @@ class EventManager:
 
     def show_temporary_build(self, description, event_type):
         """
-        Отображает бегущую строку, начинающуюся справа от контейнера с вкладками.
-        Текст движется слева направо и занимает всю доступную ширину для лучшей читаемости.
-        Предотвращает наложение нескольких строк.
+        Отображает бегущую строку: текст начинается справа от контейнера с вкладками,
+        плавно движется слева направо, оставаясь внутри Label.
+        Label подстраивается под длину текста, но не выходит за пределы экрана.
         """
-        # === Проверяем, есть ли уже активная бегущая строка ===
+
+        # Проверяем, есть ли уже активная бегущая строка
         if hasattr(self, '_running_marquee') and self._running_marquee:
-            print("[DEBUG] Событие отложено: уже отображается бегущая строка.")
             Clock.schedule_once(lambda dt: self.show_temporary_build(description, event_type), 1)
             return
 
@@ -449,17 +449,28 @@ class EventManager:
         # === Определяем позицию контейнера — справа от панели вкладок ===
         mode_panel_width = dp(90)  # ширина панели с кнопками режимов
         screen_width = Window.width
-        marquee_width = screen_width - mode_panel_width  # ширина от правой части панели до правого края экрана
-        marquee_height = dp(30)
-        start_x = screen_width  # начальная позиция за правым краем экрана
+        max_label_width = screen_width - mode_panel_width * 2  # Максимальная ширина для Label
+        label_height = dp(30)
         start_y = Window.height * 0.13  # ~13% от низа экрана
 
-        # === Создаем контейнер ===
+        # Создаем временный Label для измерения размера текста
+        temp_label = Label(
+            text=description,
+            font_size=font_size,
+            size_hint=(None, None),
+            text_size=(None, label_height),
+            shorten=False
+        )
+        temp_label.texture_update()
+        texture_width = temp_label.texture_size[0] + dp(30)  # Добавляем отступы
+        label_width = min(texture_width, max_label_width)  # Ограничиваем максимальную ширину
+
+        # === Контейнер для Label (начинается за правым краем экрана) ===
         container = BoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            size=(marquee_width, marquee_height),
-            pos=(start_x, start_y)
+            size=(label_width, label_height),
+            pos=(screen_width, start_y)
         )
 
         # === Label с текстом внутри контейнера ===
@@ -469,16 +480,17 @@ class EventManager:
             color=text_color,
             halign="left",
             valign="middle",
-            size_hint_x=None,
-            width=marquee_width,
-            text_size=(None, marquee_height),
+            size_hint=(None, 1),
+            width=label_width,
+            text_size=(label_width, label_height),
             shorten=False,
             markup=True
         )
         build_label.bind(texture_size=build_label.setter('size'))
+
         container.add_widget(build_label)
 
-        # === Черный фон с прозрачностью ===
+        # === Черный фон с прозрачностью вокруг контейнера ===
         with container.canvas.before:
             Color(0, 0, 0, 0.7)
             container.rect = Rectangle(pos=container.pos, size=container.size)
@@ -492,10 +504,10 @@ class EventManager:
         self.game_screen.add_widget(container)
 
         # === Анимация движения от правого края экрана до левого ===
-        move_distance = start_x + marquee_width - mode_panel_width
+        move_distance = screen_width + label_width - mode_panel_width
         duration = move_distance / dp(170)  # скорость движения
 
-        anim = Animation(pos=(-marquee_width, start_y), duration=duration)
+        anim = Animation(pos=(-label_width, start_y), duration=duration)
         anim.start(container)
 
         # === Установка флага активной строки и планирование удаления после окончания ===
@@ -504,6 +516,5 @@ class EventManager:
         def on_animation_complete(*args):
             self.game_screen.remove_widget(container)
             self._running_marquee = False
-            print("[DEBUG] Бегущая строка завершена.")
 
         anim.bind(on_complete=on_animation_complete)
