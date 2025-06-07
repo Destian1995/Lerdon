@@ -1245,16 +1245,16 @@ class GameScreen(Screen):
         STAR_SIZE = 45
         SPACING = 5
         CITY_ICON_SIZE = 77
-        DELTA_Y = 5  # Поднимаем немного над иконкой
+
 
         # Если нет данных — ничего не рисуем
         if not hasattr(self, 'city_star_levels') or not self.city_star_levels:
             return
 
         # Очищаем предыдущие звёзды
-        self.game_area.canvas.after.clear()
+        self.game_area.canvas.before.clear()
 
-        with self.game_area.canvas.after:
+        with self.game_area.canvas.before:
             for city_id, data in self.city_star_levels.items():
                 star_level, screen_x, screen_y, city_name = data
                 if star_level <= 0:
@@ -1359,8 +1359,8 @@ class GameScreen(Screen):
           4) Вычисляем star_level = 0–3.
           5) Сохраняем в self.city_star_levels: {city_name: (star_level, screen_x, screen_y, faction)}
         """
-        MAP_WIDTH = 1200
-        MAP_HEIGHT = 800
+        MAP_WIDTH = 1230
+        MAP_HEIGHT = 756
         ga_w, ga_h = self.game_area.size
 
         try:
