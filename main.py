@@ -154,6 +154,7 @@ RANK_TO_FILENAME = {
     "Коммандер":                 "commander.png",
     "Полковник":                 "colonel.png",
     "Подполковник":              "lieutenant_colonel.png",
+    "Майор":                     "major.png",
     "Капитан-лейтенант":         "captain_lieutenant.png",
     "Капитан":                   "captain.png",
     "Платиновый лейтенант":      "platinum_lieutenant.png",
@@ -220,26 +221,6 @@ def load_cities_from_db(selected_kingdom):
     finally:
         # Закрытие соединения с базой данных
         conn.close()
-
-
-def cleanup_sqlite_cache(db_path):
-    """
-    Удаляет .shm и .wal файлы, если они старше 5 минут.
-    """
-    shm_file = db_path + "-shm"
-    wal_file = db_path + "-wal"
-
-    for cache_file in [shm_file, wal_file]:
-        if os.path.exists(cache_file):
-            # Получаем время последнего изменения файла
-            file_mtime = os.path.getmtime(cache_file)
-            age_seconds = time.time() - file_mtime
-            if age_seconds > 300:  # 5 минут = 300 секунд
-                try:
-                    os.remove(cache_file)
-                    print(f"🗑️ Удалён устаревший файл кэша: {cache_file}")
-                except Exception as e:
-                    print(f"❌ Не удалось удалить файл {cache_file}: {e}")
 
 
 def restore_from_backup():

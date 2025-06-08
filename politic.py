@@ -266,7 +266,7 @@ def show_new_agreement_window(faction, game_area, class_faction):
     default_text_color = (1, 1, 1, 1)
 
     categories = [
-        ("Торговое соглашение", show_trade_agreement_form),
+        ("Торговля", show_trade_agreement_form),
         ("Договор об культурном обмене", lambda *args: show_cultural_exchange_form(faction, game_area, class_faction)),
         ("Заключение мира", lambda *args: show_peace_form(faction)),
         ("Создание альянса", lambda *args: show_alliance_form(faction, game_area, class_faction)),

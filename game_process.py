@@ -145,7 +145,6 @@ class ResourceBox(BoxLayout):
         "Население":   "files/status/resource_box/population.png",
         "Потребление": "files/status/resource_box/consumption.png",
         "Лимит армии": "files/status/resource_box/army_limit.png",
-        # при необходимости добавьте другие ресурсы → путь к иконке
     }
 
     def __init__(self, resource_manager, **kwargs):
@@ -186,19 +185,10 @@ class ResourceBox(BoxLayout):
         self._bg_rect.size = self.size
 
     def update_resources(self):
-        """
-        Перестраиваем список ресурсов:
-          1) горизонтальная линия 1dp,
-          2) строка (иконка dp(16) + ':' dp(4) + значение, шрифт sp(16)),
-          3) горизонтальная линия,
-          и т.д.
-        """
-        # полностью очищаем
         self.clear_widgets()
         self._label_values.clear()
 
         resources = self.resource_manager.get_resources()
-        # Парсим в числа
         parsed = {}
         for name, val in resources.items():
             try:
@@ -206,62 +196,93 @@ class ResourceBox(BoxLayout):
             except Exception:
                 parsed[name] = None
 
-        # Параметры:
-        row_h = dp(28)       # высота строки «иконка+текст»
-        icon_size = dp(28)   # иконка остаётся dp(27)×dp(27)
-        colon_w = dp(4)      # ширина «:»
-        gap = dp(5)          # промежуток между иконкой и «:»
-
-        # Ширина поля для цифры
-        val_w = self.width - (
-                self.padding[0] + self.padding[2] + icon_size + gap + colon_w + dp(2)
-        )
-        # dp(2) — чуть «воздуха» после двоеточия
+        row_h = dp(28)
+        icon_size = dp(28)
+        colon_w = dp(4)
+        gap = dp(5)
+        val_w = self.width - (self.padding[0] + self.padding[2] + icon_size + gap + colon_w + dp(2))
 
         items = list(resources.items())
         widgets = []
 
+        def show_tooltip(res_name):
+            info_text = {
+                "Кроны": (
+                    "Кроны — валюта Лэрдона.\n"
+                    "Основной источник: налоги.\n"
+                    "Можно получить: продав Сырьё на рынке или от дружественных стран при торговле."
+                ),
+                "Рабочие": (
+                    "Работоспособное население,\nспособное работать на фабриках или служить в армии.\n"
+                    "Чем больше больниц — тем больше рабочих."
+                ),
+                "Сырье": (
+                    "Потребляемый ресурс,\nнеобходимый для поддержания армии и населения.\n"
+                    "Добыча зависит от количества фабрик."
+                ),
+                "Население": (
+                    "Платят налоги\nи потребляют сырьё.\n"
+                    "Растёт при росте рабочих.\nУмирают если нет сырья."
+                ),
+                "Потребление": (
+                    "Уровень потребления сырья армией.\n"
+                    "Если превышает лимит армии — армия умирает от голода."
+                ),
+                "Лимит армии": (
+                    "Текущий максимальный лимит,\nпотребления армией сырья.\n"
+                    "Зависит от количества городов фракции."
+                )
+            }.get(res_name, "Информация о ресурсе недоступна.")
+
+            content = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+            label = Label(
+                text=info_text,
+                font_size=sp(15),
+                color=(1, 1, 1, 1),
+                halign='center',
+                valign='middle'
+            )
+            label.bind(size=label.setter('text_size'))
+            close_btn = Button(text="Закрыть", size_hint_y=None, height=dp(40), background_color=(0.2, 0.6, 0.8, 1))
+            content.add_widget(label)
+            content.add_widget(close_btn)
+
+            popup = Popup(
+                title=res_name,
+                content=content,
+                size_hint=(0.7, 0.4),
+                title_size=sp(18),
+                title_align='center',
+                background_color=(0.1, 0.1, 0.1, 0.95),
+                separator_color=(0.3, 0.3, 0.3, 1)
+            )
+            close_btn.bind(on_release=popup.dismiss)
+            popup.open()
+
         for idx, (res_name, formatted) in enumerate(items):
-            # 1) линия сверху
+            # --- Строка с ресурсом ---
             line = Widget(size_hint=(1, None), height=dp(1))
             with line.canvas:
                 Color(0.5, 0.5, 0.5, 1)
-                rect = Rectangle(
-                    pos=(self.x + self.padding[0], 0),
-                    size=(self.width - (self.padding[0] + self.padding[2]), dp(1))
-                )
-                # Обновляем pos/size линии при изменении
-                line.bind(
-                    pos=lambda inst, val: setattr(rect, 'pos', (self.x + self.padding[0], val[1])),
-                    size=lambda inst, sz: setattr(rect, 'size', (self.width - (self.padding[0] + self.padding[2]), dp(1)))
-                )
+                rect = Rectangle(pos=(self.x + self.padding[0], 0),
+                                 size=(self.width - (self.padding[0] + self.padding[2]), dp(1)))
+                line.bind(pos=lambda inst, val: setattr(rect, 'pos', (self.x + self.padding[0], val[1])),
+                          size=lambda inst, sz: setattr(rect, 'size',
+                                                        (self.width - (self.padding[0] + self.padding[2]), dp(1))))
+
             widgets.append(line)
 
-            # 2) строка с иконкой, «:», значением
-            row = BoxLayout(
-                orientation='horizontal',
-                size_hint=(1, None),
-                height=row_h,
-                spacing=dp(1)
-            )
+            row = BoxLayout(orientation='horizontal', size_hint=(1, None), height=row_h, spacing=dp(1))
 
-            # 2.1) иконка
             icon_path = self.ICON_MAP.get(res_name)
             if icon_path:
-                img = Image(
-                    source=icon_path,
-                    size_hint=(None, None),
-                    size=(icon_size, icon_size),
-                    keep_ratio=True,
-                    allow_stretch=True
-                )
+                img = Image(source=icon_path, size_hint=(None, None), size=(icon_size, icon_size), allow_stretch=True)
             else:
                 img = Widget(size_hint=(None, None), size=(icon_size, icon_size))
 
-            # 2.2) «:»
             lbl_colon = Label(
                 text=":",
-                font_size=sp(16),
+                font_size=sp(15),
                 color=(1, 1, 1, 1),
                 size_hint=(None, None),
                 size=(colon_w, row_h),
@@ -270,13 +291,9 @@ class ResourceBox(BoxLayout):
             )
             lbl_colon.text_size = (colon_w, row_h)
 
-            # 2.3) значение ресурса
             num = parsed.get(res_name)
-            if res_name == "Потребление":
-                limit_army = parsed.get("Лимит армии", 0) or 0
-                val_color = (1, 0, 0, 1) if (num is not None and num > limit_army) else (1, 1, 1, 1)
-            else:
-                val_color = (1, 0, 0, 1) if (num is not None and num < 0) else (1, 1, 1, 1)
+            val_color = (1, 0, 0, 1) if (num is not None and num < 0) or (
+                    res_name == "Потребление" and num > parsed.get("Лимит армии", 0)) else (1, 1, 1, 1)
 
             lbl_val = Label(
                 text=str(formatted),
@@ -290,45 +307,42 @@ class ResourceBox(BoxLayout):
             lbl_val.text_size = (val_w, row_h)
             self._label_values[res_name] = lbl_val
 
-            # Добавляем внутрь row (иконка, gap, «:», небольшой gap, цифра)
             row.add_widget(img)
             row.add_widget(Widget(size_hint=(None, None), size=(gap, row_h)))
             row.add_widget(lbl_colon)
             row.add_widget(Widget(size_hint=(None, None), size=(gap, row_h)))
             row.add_widget(lbl_val)
 
+            # --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+            row.bind(
+                on_touch_down=lambda instance, touch, name=res_name: show_tooltip(name) if instance.collide_point(
+                    touch.x, touch.y) else False
+            )
+
             widgets.append(row)
 
-        # 3) после последнего добавляем нижнюю линию
         last_line = Widget(size_hint=(1, None), height=dp(1))
         with last_line.canvas:
             Color(0.5, 0.5, 0.5, 1)
-            rect = Rectangle(
-                pos=(self.x + self.padding[0], 0),
-                size=(self.width - (self.padding[0] + self.padding[2]), dp(1))
-            )
-            last_line.bind(
-                pos=lambda inst, val: setattr(rect, 'pos', (self.x + self.padding[0], val[1])),
-                size=lambda inst, sz: setattr(rect, 'size', (self.width - (self.padding[0] + self.padding[2]), dp(1)))
-            )
+            rect = Rectangle(pos=(self.x + self.padding[0], 0),
+                             size=(self.width - (self.padding[0] + self.padding[2]), dp(1)))
+            last_line.bind(pos=lambda inst, val: setattr(rect, 'pos', (self.x + self.padding[0], val[1])),
+                           size=lambda inst, sz: setattr(rect, 'size',
+                                                         (self.width - (self.padding[0] + self.padding[2]), dp(1))))
+
         widgets.append(last_line)
 
-        # 4) Добавляем всё в контейнер (вертикально)
         for w in widgets:
             self.add_widget(w)
 
-        # 5) Считаем «сырую» высоту всего ResourceBox
         num_rows = len(items)
-        sep_h = dp(1)            # высота линии
+        sep_h = dp(1)
         rows_h = num_rows * row_h
         lines_h = (num_rows + 1) * sep_h
         total_h_raw = self.padding[1] + self.padding[3] + rows_h + lines_h
-
-        # Ограничиваем, чтобы низ не заходил на «Завершить ход» (y≈0.35)
         max_bottom_y = Window.height * 0.35
         max_allowed_h = Window.height - max_bottom_y
         final_h = min(total_h_raw, max_allowed_h)
-
         self.height = final_h
 
 
@@ -593,10 +607,12 @@ class GameScreen(Screen):
         mode_panel_container.add_widget(btn_army)
         mode_panel_container.add_widget(btn_politics)
         self.add_widget(mode_panel_container)
+        self.save_interface_element("ModePanel", "bottom", mode_panel_container)
 
         # === Центральная область ===
         self.game_area = FloatLayout(size_hint=(0.7, 1), pos_hint={'x': 0.25, 'y': 0})
         self.add_widget(self.game_area)
+        self.save_interface_element("GameArea", "center", self.game_area)
 
         # === Счётчик ходов ===
         turn_counter_size = (dp(200), dp(50))
@@ -661,6 +677,9 @@ class GameScreen(Screen):
         self.resource_box = ResourceBox(resource_manager=self.faction)
         self.add_widget(self.resource_box)
 
+        # Сохраняем координаты ResourceBox
+        self.save_interface_element("ResourceBox", "top_left", self.resource_box)
+
         # === Инициализация ИИ ===
         self.init_ai_controllers()
 
@@ -672,6 +691,7 @@ class GameScreen(Screen):
         self.end_turn_button.bind(on_release=on_end_turn)
         end_turn_container.add_widget(self.end_turn_button)
         self.add_widget(end_turn_container)
+        self.save_interface_element("EndTurnButton", "bottom_right", self.end_turn_button)
 
     def update_resource_box_position(self, *args):
         """Обновляет позицию ResourceBox так, чтобы он всегда был в левом верхнем углу."""
@@ -1470,6 +1490,33 @@ class GameScreen(Screen):
             VALUES (?, ?)
         ''', (faction, turn_count))
         self.conn.commit()
+
+    def save_interface_element(self, element_name, screen_section, widget):
+        """Сохраняет координаты и размер элемента интерфейса в базу данных."""
+        if not self.conn:
+            return
+
+        try:
+            pos = widget.pos
+            size = widget.size
+            pos_hint = str(widget.pos_hint) if widget.pos_hint else None
+
+            self.cursor.execute('''
+                INSERT INTO interface_coord (
+                    element_name, screen_section, x, y, width, height, size_hint_x, size_hint_y, pos_hint
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                element_name,
+                screen_section,
+                pos[0], pos[1],
+                size[0], size[1],
+                widget.size_hint[0] if widget.size_hint[0] is not None else None,
+                widget.size_hint[1] if widget.size_hint[1] is not None else None,
+                pos_hint
+            ))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            print(f"Ошибка при сохранении координат {element_name}: {e}")
 
     def reset_game(self):
         """Сброс игры (например, при новой игре)."""

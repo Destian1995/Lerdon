@@ -2181,7 +2181,7 @@ def start_economy_mode(faction, game_area):
 
     auto_btn = create_styled_button("Стройка", lambda x: open_auto_build_popup(faction))
     build_btn = create_styled_button("Статистика", lambda x: open_build_popup(faction))
-    trade_btn = create_styled_button("Торговля", lambda x: open_trade_popup(faction))
+    trade_btn = create_styled_button("Рынок", lambda x: open_trade_popup(faction))
     tax_btn = create_styled_button("Налоги", lambda x: open_tax_popup(faction))
 
     economy_layout.add_widget(auto_btn)
