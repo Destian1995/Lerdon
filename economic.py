@@ -1383,13 +1383,13 @@ class Faction:
 
         # Генерация новой цены
         if current_turn == 1:  # Если это первый ход
-            self.current_raw_material_price = random.randint(1000, 49700)
+            self.current_raw_material_price = random.randint(896, 51700)
             self.raw_material_price_history.append(self.current_raw_material_price)
         else:
             # Генерация новой цены на основе текущей
             self.current_raw_material_price = self.raw_material_price_history[-1] + random.randint(-3450, 3550)
             self.current_raw_material_price = max(
-                1000, min(49700, self.current_raw_material_price)  # Ограничиваем диапазон
+                896, min(51700, self.current_raw_material_price)  # Ограничиваем диапазон
             )
             self.raw_material_price_history.append(self.current_raw_material_price)
 
@@ -1892,7 +1892,7 @@ def handle_trade(game_instance, action, quantity, trade_popup):
             raise ValueError("Не было введено количество лотов. Пожалуйста, введите количество лотов.")
 
         quantity = int(quantity)
-        price_per_lot = game_instance.current_raw_material_price / 10000  # Цена за единицу сырья
+        price_per_lot = game_instance.current_raw_material_price  # Цена за 1 лот
 
         # Проверяем, что количество сырья для продажи не превышает доступное
         if action == 'sell' and quantity * 10000 > game_instance.resources["Сырье"]:
@@ -1902,19 +1902,22 @@ def handle_trade(game_instance, action, quantity, trade_popup):
         if result:  # Если торговля прошла успешно
 
             # Рассчитываем экономическую эффективность
-            economic_efficiency = price_per_lot  # Текущая цена деленная на 10000
-
-            # Обновляем значение в таблице results
+            economic_efficiency = round(price_per_lot / 10000, 2)  # Цена за единицу сырья
             game_instance.update_economic_efficiency(economic_efficiency)
 
-            show_message("Успех", f"{'Куплено' if action == 'buy' else 'Продано'} {quantity} лотов сырья.")
-        else:  # Если операция не удалась
+            if action == 'buy':
+                total_cost = price_per_lot * quantity
+                show_message("Успех", f"Куплено {format_number(quantity)} лотов сырья за {format_number(total_cost)} крон.")
+            elif action == 'sell':
+                profit = price_per_lot * quantity
+                show_message("Успех", f"Получено: {format_number(profit)} крон\n(Соотношение: {economic_efficiency} крон/ед. сырья)")
+
+        else:
             show_message("Ошибка", "Не удалось завершить операцию.")
     except ValueError as e:
         show_message("Ошибка", str(e))
 
     trade_popup.dismiss()  # Закрываем попап после операции
-
 
 # -----------------------------------
 def open_tax_popup(faction):

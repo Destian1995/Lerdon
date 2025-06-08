@@ -11,6 +11,7 @@ import time
 import threading
 from datetime import datetime, timedelta
 import unicodedata
+import webbrowser
 
 # kivy libraries
 from kivy.animation import Animation

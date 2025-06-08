@@ -196,13 +196,12 @@ class ResourceBox(BoxLayout):
             except Exception:
                 parsed[name] = None
 
-        row_h = dp(28)
-        icon_size = dp(28)
-        colon_w = dp(4)
-        gap = dp(5)
-        val_w = self.width - (self.padding[0] + self.padding[2] + icon_size + gap + colon_w + dp(2))
+        row_h = dp(32)
+        icon_size = dp(24)
+        colon_w = dp(6)
+        gap = dp(8)
+        val_w = self.width - (self.padding[0] + self.padding[2] + icon_size + gap + colon_w + dp(4))
 
-        items = list(resources.items())
         widgets = []
 
         def show_tooltip(res_name):
@@ -234,33 +233,65 @@ class ResourceBox(BoxLayout):
                 )
             }.get(res_name, "Информация о ресурсе недоступна.")
 
-            content = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+            # Label с текстом информации
             label = Label(
                 text=info_text,
-                font_size=sp(15),
-                color=(1, 1, 1, 1),
-                halign='center',
-                valign='middle'
+                font_size=sp(16),
+                color=(0.9, 0.9, 0.9, 1),
+                halign='left',
+                valign='top',
+                size_hint_y=None,
+                padding=[dp(15), dp(10)]
             )
-            label.bind(size=label.setter('text_size'))
-            close_btn = Button(text="Закрыть", size_hint_y=None, height=dp(40), background_color=(0.2, 0.6, 0.8, 1))
-            content.add_widget(label)
+
+            # Привязка высоты к размеру текста
+            label.bind(
+                width=lambda *x: label.setter('text_size')(label, (label.width, None)),
+                texture_size=lambda *x: label.setter('height')(label, label.texture_size[1])
+            )
+
+            # ScrollView для длинного текста
+            scroll_view = ScrollView(size_hint=(1, 1))
+            scroll_view.add_widget(label)
+
+            # Кнопка закрытия
+            close_btn = Button(
+                text="Закрыть",
+                size_hint=(1, None),
+                height=dp(50),
+                font_size=sp(18),
+                background_color=(0.2, 0.6, 0.8, 1),
+                background_normal='',
+                on_press=lambda btn: popup.dismiss()
+            )
+
+            # Общий контент попапа
+            content = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
+            content.add_widget(scroll_view)
             content.add_widget(close_btn)
 
+            # Само окно Popup
             popup = Popup(
                 title=res_name,
                 content=content,
-                size_hint=(0.7, 0.4),
-                title_size=sp(18),
+                size_hint=(0.8, 0.6),
+                title_size=sp(20),
                 title_align='center',
-                background_color=(0.1, 0.1, 0.1, 0.95),
-                separator_color=(0.3, 0.3, 0.3, 1)
+                background_color=(0.1, 0.1, 0.1, 0.98),
+                separator_color=(0.3, 0.3, 0.3, 1),
+                auto_dismiss=False  # чтобы случайно не закрыть вне кнопки
             )
+
+            # Привязываем закрытие к кнопке
             close_btn.bind(on_release=popup.dismiss)
+
+            # Открываем попап
             popup.open()
 
+        # --- Рендеринг строк ---
+        items = list(resources.items())
         for idx, (res_name, formatted) in enumerate(items):
-            # --- Строка с ресурсом ---
+            # Разделитель сверху
             line = Widget(size_hint=(1, None), height=dp(1))
             with line.canvas:
                 Color(0.5, 0.5, 0.5, 1)
@@ -272,7 +303,8 @@ class ResourceBox(BoxLayout):
 
             widgets.append(line)
 
-            row = BoxLayout(orientation='horizontal', size_hint=(1, None), height=row_h, spacing=dp(1))
+            # Строка с ресурсом
+            row = BoxLayout(orientation='horizontal', size_hint=(1, None), height=row_h, spacing=dp(4))
 
             icon_path = self.ICON_MAP.get(res_name)
             if icon_path:
@@ -282,7 +314,7 @@ class ResourceBox(BoxLayout):
 
             lbl_colon = Label(
                 text=":",
-                font_size=sp(15),
+                font_size=sp(16),
                 color=(1, 1, 1, 1),
                 size_hint=(None, None),
                 size=(colon_w, row_h),
@@ -313,7 +345,7 @@ class ResourceBox(BoxLayout):
             row.add_widget(Widget(size_hint=(None, None), size=(gap, row_h)))
             row.add_widget(lbl_val)
 
-            # --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+            # Добавляем обработчик тапа по строке для показа подсказки
             row.bind(
                 on_touch_down=lambda instance, touch, name=res_name: show_tooltip(name) if instance.collide_point(
                     touch.x, touch.y) else False
@@ -321,6 +353,7 @@ class ResourceBox(BoxLayout):
 
             widgets.append(row)
 
+        # Нижний разделитель
         last_line = Widget(size_hint=(1, None), height=dp(1))
         with last_line.canvas:
             Color(0.5, 0.5, 0.5, 1)
@@ -332,9 +365,11 @@ class ResourceBox(BoxLayout):
 
         widgets.append(last_line)
 
+        # Добавляем все виджеты
         for w in widgets:
             self.add_widget(w)
 
+        # Расчёт высоты
         num_rows = len(items)
         sep_h = dp(1)
         rows_h = num_rows * row_h
