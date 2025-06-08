@@ -501,7 +501,7 @@ class GameScreen(Screen):
             orientation='vertical',
             size_hint=(None, None),
             size=(dp(160), dp(75)),
-            pos_hint={'x': 0, 'y': 0.29},
+            pos_hint={'x': 0, 'y': 0.31},
             padding=dp(5)
         )
 

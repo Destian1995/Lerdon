@@ -450,7 +450,7 @@ class EventManager:
         mode_panel_width = dp(90)  # ширина панели с кнопками режимов
         screen_width = Window.width
         label_height = dp(36)
-        start_y = Window.height * 0.13  # ~13% от низа экрана
+        start_y = Window.height * 0.15  # ~15% от низа экрана
 
         # Создаем Label с полной длиной текста
         build_label = Label(
