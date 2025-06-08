@@ -1551,7 +1551,7 @@ class KingdomSelectionWidget(FloatLayout):
         super(KingdomSelectionWidget, self).__init__(**kwargs)
         is_android = platform == 'android'
 
-        # Инициализируем selected_button, чтобы не было ошибки при первом выборе
+        # Инициализируем selected_button
         self.selected_button = None
 
         # ======== ФОН ВИДЕО ========
@@ -1564,12 +1564,11 @@ class KingdomSelectionWidget(FloatLayout):
             size_hint=(1, 1),
             pos_hint={'x': 0, 'y': 0}
         )
-        # Страховка: если options={'eos':'loop'} не сработает, loop-video через событие on_eos
         self.bg_video.bind(on_eos=self.loop_video)
         self.add_widget(self.bg_video)
 
         # ======== ЗАГОЛОВОК «Выберите сторону» ========
-        label_size = '20sp' if is_android else '36sp'
+        label_size = '40sp' if is_android else '40sp'
         self.select_side_label = Label(
             text="Выберите сторону",
             font_size=label_size,
@@ -1580,8 +1579,8 @@ class KingdomSelectionWidget(FloatLayout):
             halign='center',
             valign='middle',
             size_hint=(0.8, None),
-            height=dp(60) if is_android else 80,
-            pos_hint={'center_x': 0.8, 'top': 0.9}
+            height=dp(80) if is_android else 80,
+            pos_hint={'center_x': 0.5, 'top': 0.97}
         )
         self.add_widget(self.select_side_label)
 
@@ -1614,17 +1613,21 @@ class KingdomSelectionWidget(FloatLayout):
 
         # ======== ПАНЕЛЬ КНОПОК ФРАКЦИЙ (изначально скрыта) ========
         panel_width = 0.35
-        button_height = dp(40) if is_android else 60
+        button_height = dp(45) if is_android else 60
         spacing_val = dp(10) if is_android else 10
         padding = [dp(20), dp(20), dp(20), dp(20)] if is_android else [20, 20, 20, 20]
 
         total_height = self.calculate_panel_height(button_height, spacing_val, padding)
+
+        # Здесь смещаем начальную позицию по Y чуть выше (0.6 вместо 0.5):
+        initial_y = Window.height * 0.6 - total_height / 2
+
         self.kingdom_buttons = BoxLayout(
             orientation='vertical',
             spacing=spacing_val,
             size_hint=(panel_width, None),
             height=total_height,
-            pos=(-Window.width * 0.7, Window.height * 0.5 - total_height / 2),
+            pos=(-Window.width * 0.7, initial_y),  # был 0.5, заменили на 0.6
             opacity=1
         )
 
@@ -1674,20 +1677,18 @@ class KingdomSelectionWidget(FloatLayout):
         # ======== Запускаем анимацию появления кнопок-фракций ========
         Clock.schedule_once(lambda dt: self.animate_in(), 0.3)
 
-    def loop_video(self, instance):
-        instance.state = 'stop'
-        instance.state = 'play'
-
     def animate_in(self):
         """
-        1) Ставим панель в финальную позицию,
+        1) Ставим панель в финальную позицию (выше),
         2) Поочерёдно проявляем opacity каждой кнопки-фракции,
         3) Кнопки «Начать игру» и «Вернуться» уже видны.
         """
+        # Смещаем финальную позицию панели по Y (тоже выше):
         final_x_panel = Window.width * 0.1
-        final_y_panel = Window.height * 0.5 - self.kingdom_buttons.height / 2
+        final_y_panel = Window.height * 0.6 - self.kingdom_buttons.height / 2  # было 0.5, заменили на 0.6
         self.kingdom_buttons.pos = (final_x_panel, final_y_panel)
 
+        # Список всех кнопок-фракций внутри BoxLayout, сверху вниз:
         faction_buttons = list(self.kingdom_buttons.children)[::-1]
         delay_between = 0.15
 
@@ -1700,6 +1701,11 @@ class KingdomSelectionWidget(FloatLayout):
         total_delay = (len(faction_buttons) - 1) * delay_between + 0.4
         self.buttons_locked = True
         Clock.schedule_once(lambda dt: setattr(self, 'buttons_locked', False), total_delay)
+
+
+    def loop_video(self, instance):
+        instance.state = 'stop'
+        instance.state = 'play'
 
     def calculate_panel_height(self, btn_height, spacing, padding):
         num_buttons = len(self.kingdom_data)
