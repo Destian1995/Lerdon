@@ -439,6 +439,8 @@ class GameScreen(Screen):
         self.season_manager.update(self.current_idx)
         # Запускаем обновление ресурсов каждую 1 секунду
         Clock.schedule_interval(self.update_cash, 1)
+        # Запускаем обновление рейтинга армии каждые 1 секунду
+        Clock.schedule_interval(self.update_army_rating, 1)
 
     def save_selected_faction_to_db(self):
         conn = sqlite3.connect(self.db_path)
@@ -873,12 +875,12 @@ class GameScreen(Screen):
         self.season_manager.update(self.current_idx)
         print("Здесь должны вызываться функции отрисовки звезд мощи городов")
         # Обновляем статус городов и отрисовываем звёздочки мощи армий
-        self.update_city_military_status()
-        self.draw_army_stars_on_map()
+        # Принудительно обновляем рейтинг один раз
+        self.update_army_rating()
         # Логирование или обновление интерфейса после хода
         print(f"Ход {self.turn_counter} завершён")
 
-        self.event_now = random.randint(9, 10)
+        self.event_now = random.randint(1, 100)
         # Проверяем, нужно ли запустить событие
         if self.turn_counter % self.event_now == 0:
             print("Генерация события...")
@@ -1231,6 +1233,11 @@ class GameScreen(Screen):
         except sqlite3.Error as e:
             print(f"Ошибка при сбросе флагов check_attack: {e}")
 
+    def update_army_rating(self, dt=None):
+        """Обновляет рейтинг армии и отрисовывает звёзды над городами."""
+        self.update_city_military_status()
+        self.draw_army_stars_on_map()
+
     def draw_army_stars_on_map(self):
         """
         Рисует звёздочки над иконками городов.
@@ -1283,7 +1290,6 @@ class GameScreen(Screen):
 
     def get_total_army_strength_by_faction(self, faction):
         """Возвращает общую мощь армии фракции."""
-        print('Вызов get_total_army_strength_by_faction', faction)
         class_coefficients = {
             "1": 1.3,
             "2": 1.7,
@@ -1313,7 +1319,6 @@ class GameScreen(Screen):
 
     def get_city_army_strength_by_faction(self, city_id, faction):
         """Возвращает мощь армии фракции в конкретном городе."""
-        print('Вызов get_city_army_strength_by_faction', city_id, faction)
         class_coefficients = {
             "1": 1.3,
             "2": 1.7,
@@ -1417,7 +1422,7 @@ class GameScreen(Screen):
                         star_level = 3
 
                 new_dict[city_name] = (star_level, icon_x, icon_y, city_name)
-                print(f"Город: {city_name}, Сила: {city_strength}, Уровень: {star_level}")
+
 
         self.city_star_levels = new_dict
 

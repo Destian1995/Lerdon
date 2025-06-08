@@ -426,9 +426,9 @@ class EventManager:
 
     def show_temporary_build(self, description, event_type):
         """
-        Отображает бегущую строку: текст начинается справа от контейнера с вкладками,
-        плавно движется слева направо, оставаясь внутри Label.
-        Label подстраивается под длину текста, но не выходит за пределы экрана.
+        Отображает бегущую строку: появляется Label с черным фоном на всю ширину,
+        по которому скользит текст события целиком, не обрезаясь.
+        Label исчезает только после того, как текст полностью выйдет за левый край.
         """
 
         # Проверяем, есть ли уже активная бегущая строка
@@ -446,48 +446,41 @@ class EventManager:
 
         font_size = get_adaptive_font_size(min_size=14, max_size=20)
 
-        # === Определяем позицию контейнера — справа от панели вкладок ===
+        # === Ширина контейнера — вся доступная область между панелью и правым краем экрана ===
         mode_panel_width = dp(90)  # ширина панели с кнопками режимов
         screen_width = Window.width
-        max_label_width = screen_width - mode_panel_width * 2  # Максимальная ширина для Label
-        label_height = dp(30)
+        label_height = dp(36)
         start_y = Window.height * 0.13  # ~13% от низа экрана
 
-        # Создаем временный Label для измерения размера текста
-        temp_label = Label(
-            text=description,
-            font_size=font_size,
-            size_hint=(None, None),
-            text_size=(None, label_height),
-            shorten=False
-        )
-        temp_label.texture_update()
-        texture_width = temp_label.texture_size[0] + dp(30)  # Добавляем отступы
-        label_width = min(texture_width, max_label_width)  # Ограничиваем максимальную ширину
-
-        # === Контейнер для Label (начинается за правым краем экрана) ===
-        container = BoxLayout(
-            orientation='horizontal',
-            size_hint=(None, None),
-            size=(label_width, label_height),
-            pos=(screen_width, start_y)
-        )
-
-        # === Label с текстом внутри контейнера ===
+        # Создаем Label с полной длиной текста
         build_label = Label(
             text=description,
             font_size=font_size,
             color=text_color,
             halign="left",
             valign="middle",
-            size_hint=(None, 1),
-            width=label_width,
-            text_size=(label_width, label_height),
+            size_hint=(None, None),
+            height=label_height,
+            width=screen_width - mode_panel_width * 2,
+            text_size=(None, label_height),
             shorten=False,
             markup=True
         )
-        build_label.bind(texture_size=build_label.setter('size'))
+        build_label.texture_update()
+        text_width = build_label.texture_size[0] + dp(20)
 
+        # === Контейнер для Label (начинается за правым краем экрана) ===
+        container_width = screen_width - mode_panel_width * 2
+        container = BoxLayout(
+            orientation='horizontal',
+            size_hint=(None, None),
+            size=(text_width, label_height),
+            pos=(screen_width, start_y)
+        )
+
+        # === Устанавливаем Label в контейнер и выравниваем по левому краю ===
+        build_label.pos = (0, 0)
+        build_label.size = (text_width, label_height)
         container.add_widget(build_label)
 
         # === Черный фон с прозрачностью вокруг контейнера ===
@@ -501,20 +494,22 @@ class EventManager:
 
         container.bind(pos=update_rect, size=update_rect)
 
+        # Добавляем контейнер на экран
         self.game_screen.add_widget(container)
 
-        # === Анимация движения от правого края экрана до левого ===
-        move_distance = screen_width + label_width - mode_panel_width
-        duration = move_distance / dp(170)  # скорость движения
+        # === Анимация движения текста внутри контейнера ===
+        move_distance = text_width + container_width  # полное перемещение текста через контейнер
+        duration = move_distance / dp(180)  # скорость движения (можно регулировать)
 
-        anim = Animation(pos=(-label_width, start_y), duration=duration)
-        anim.start(container)
+        # === Анимация всего контейнера ===
+        anim_container = Animation(pos=(-text_width, start_y), duration=duration, t='linear')
 
-        # === Установка флага активной строки и планирование удаления после окончания ===
-        self._running_marquee = True
-
+        # === Привязка завершения анимации ===
         def on_animation_complete(*args):
             self.game_screen.remove_widget(container)
             self._running_marquee = False
 
-        anim.bind(on_complete=on_animation_complete)
+        # Запуск анимации
+        self._running_marquee = True
+        anim_container.bind(on_complete=on_animation_complete)
+        anim_container.start(container)
