@@ -1568,7 +1568,7 @@ class KingdomSelectionWidget(FloatLayout):
         self.add_widget(self.bg_video)
 
         # ======== ЗАГОЛОВОК «Выберите сторону» ========
-        label_size = '40sp' if is_android else '40sp'
+        label_size = '36sp' if is_android else '40sp'
         self.select_side_label = Label(
             text="Выберите сторону",
             font_size=label_size,
@@ -1580,7 +1580,7 @@ class KingdomSelectionWidget(FloatLayout):
             valign='middle',
             size_hint=(0.8, None),
             height=dp(80) if is_android else 80,
-            pos_hint={'center_x': 0.5, 'top': 0.97}
+            pos_hint={'center_x': 0.75, 'top': 0.97}
         )
         self.add_widget(self.select_side_label)
 
