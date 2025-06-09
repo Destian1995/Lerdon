@@ -1500,7 +1500,7 @@ class FortressInfoPopup(Popup):
             self.close_current_popup()
 
         except sqlite3.Error as e:
-            print(f"Произошла ошибка при работе с базой данных(move_troops): {e}")
+            print(f"Произошла ошибка при работе с базой данных(move _ troops): {e}")
         except Exception as e:
             print(f"Произошла ошибка при переносе войск: {e}")
 

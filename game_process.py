@@ -415,7 +415,7 @@ class CircularProgressButton(Button):
         with self.canvas.after:
             Color(1, 1, 1, 0.3)
             self.circle = Line(
-                circle=(self.center_x, self.center_y, min(self.width, self.height) / 2 - dp(8), 0, 0),
+                circle=(self.center_x, self.center_y, min(self.width, self.height)/2 - dp(8), 0, 0),
                 width=dp(4),
                 cap='round'
             )
@@ -434,7 +434,7 @@ class CircularProgressButton(Button):
                 circle=(
                     self.center_x,
                     self.center_y,
-                    min(self.width, self.height) / 2 - dp(8),
+                    min(self.width, self.height)/2 - dp(8),
                     0,
                     self.progress
                 ),
@@ -718,12 +718,12 @@ class GameScreen(Screen):
         # === Инициализация ИИ ===
         self.init_ai_controllers()
 
+
         def on_end_turn(instance):
             instance.start_progress()
-            self.process_turn(None)
-            Clock.schedule_once(lambda dt: instance.reset_button(), 1.5)  # Ждём 1.5 секунды и сбрасываем кнопку
+            Clock.schedule_once(lambda dt: self.process_turn(None), 1.5)
 
-        self.end_turn_button.bind(on_release=on_end_turn)
+        self.end_turn_button.bind(on_press=on_end_turn)
         end_turn_container.add_widget(self.end_turn_button)
         self.add_widget(end_turn_container)
         self.save_interface_element("EndTurnButton", "bottom_right", self.end_turn_button)

@@ -73,5 +73,5 @@ from kivy.clock import Clock
 from kivy.animation import AnimationTransition
 from kivy.utils import get_color_from_hex as hex_color
 from kivy.uix.stencilview import StencilView
-
+from kivy.properties import BooleanProperty
 # kivymd libraries
