@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import unicodedata
 import webbrowser
 
+
 # kivy libraries
 from kivy.animation import Animation
 from kivy.app import App
@@ -74,4 +75,6 @@ from kivy.animation import AnimationTransition
 from kivy.utils import get_color_from_hex as hex_color
 from kivy.uix.stencilview import StencilView
 from kivy.properties import BooleanProperty
+
+
 # kivymd libraries
