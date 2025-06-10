@@ -28,7 +28,7 @@ else:
 original_asset_path = resource_find('game_data.db')
 # Если по какой-то причине resource_find вернул None — база не упакована
 if original_asset_path is None:
-    raise FileNotFoundError("❌ Не удалось найти game_data.db в assets. Проверьте source.include_patterns и папку assets/.")
+    raise FileNotFoundError("❌ Couldn't find game_data.db in assets. Check the source.include_patterns and assets folder/.")
 
 # Путь, куда будем копировать базу для фактической работы:
 copied_db = os.path.join(storage_dir, 'game_data.db')
@@ -42,9 +42,9 @@ if not os.path.exists(copied_db):
         # Если запускаемся на Android, original_asset_path будет указывать во внутрь APK (read-only),
         # но можно копировать напрямую из ресурса:
         shutil.copyfile(original_asset_path, copied_db)
-        print(f"✅ База данных успешно скопирована: {copied_db}")
+        print(f"✅ Database copying success: {copied_db}")
     except Exception as e:
-        raise RuntimeError(f"❌ Ошибка при копировании базы: {e}")
+        raise RuntimeError(f"❌ Database copying error: {e}")
 
 # ==========================
 # 4. Задаём глобальный db_path
