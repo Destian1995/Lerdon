@@ -2012,6 +2012,7 @@ class HowToPlayScreen(FloatLayout):
 class EmpireApp(App):
     def __init__(self, **kwargs):
         super(EmpireApp, self).__init__(**kwargs)
+        print("app starting...")
         # Флаг, что мы на мобильной платформе Android
         self.is_mobile = (platform == 'android')
         # Можно завести другие глобальные настройки здесь
