@@ -214,7 +214,7 @@ class StyledButton(ButtonBehavior, BoxLayout):
             self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[self.height // 4])
 
 
-def show_new_agreement_window(faction, game_area, class_faction):
+def show_new_agreement_window(faction, game_area, class_faction, conn):
     """Создание окна с кнопками (адаптировано для Android, уменьшенная высота)."""
     game_area.clear_widgets()
 
@@ -266,12 +266,12 @@ def show_new_agreement_window(faction, game_area, class_faction):
     default_text_color = (1, 1, 1, 1)
 
     categories = [
-        ("Торговля", show_trade_agreement_form),
-        ("Договор об культурном обмене", lambda *args: show_cultural_exchange_form(faction, game_area, class_faction)),
-        ("Заключение мира", lambda *args: show_peace_form(faction)),
-        ("Создание альянса", lambda *args: show_alliance_form(faction, game_area, class_faction)),
-        ("Разрыв альянса", lambda *args: show_break_alliance_form(faction, game_area, class_faction)),
-        ("Объявление войны", lambda *args: show_declare_war_form(faction)),
+        ("Торговля", lambda *args: show_trade_agreement_form(faction, game_area, conn)),
+        ("Договор об культурном обмене", lambda *args: show_cultural_exchange_form(faction, game_area, class_faction, conn)),
+        ("Заключение мира", lambda *args: show_peace_form(faction, conn)),
+        ("Создание альянса", lambda *args: show_alliance_form(faction, game_area, class_faction, conn)),
+        ("Разрыв альянса", lambda *args: show_break_alliance_form(faction, game_area, class_faction, conn)),
+        ("Объявление войны", lambda *args: show_declare_war_form(faction, conn)),
     ]
 
     for category_name, callback in categories:
@@ -353,7 +353,7 @@ class TouchSlider(Slider):
         return super().on_touch_up(touch)
 
 
-def show_trade_agreement_form(faction, game_area):
+def show_trade_agreement_form(faction, game_area, conn):
     """Окно формы для торгового соглашения с полностью прозрачным фоном Popup."""
     font_size = dp(18)
     button_height = font_size * 3
@@ -361,7 +361,6 @@ def show_trade_agreement_form(faction, game_area):
     padding = dp(16)
     spacing = dp(12)
 
-    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     available_factions = all_factions(cursor)
@@ -587,15 +586,14 @@ def show_trade_agreement_form(faction, game_area):
             return
 
         try:
-            conn2 = connect_to_db()
-            cur2 = conn2.cursor()
+            cur2 = conn.cursor()
             cur2.execute("""
                 INSERT INTO trade_agreements 
                 (initiator, target_faction, initiator_type_resource, 
                  target_type_resource, initiator_summ_resource, target_summ_resource)
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (faction, target, our_res, their_res, our_amt, their_amt))
-            conn2.commit()
+            conn.commit()
             agreement_summary.text = (
                 f"Условия договора отправлены фракции {target}.\n"
                 f"Если его примут, поставки начнутся через 1 ход."
@@ -603,8 +601,7 @@ def show_trade_agreement_form(faction, game_area):
             send_button.disabled = True
         except sqlite3.Error as e:
             show_warning(f"Ошибка базы данных: {e}")
-        finally:
-            conn2.close()
+
 
     # Привязка событий
     our_resource_spinner.bind(text=update_sliders)
@@ -682,12 +679,8 @@ def on_window_resize(instance, width, height):
     global font_size
     font_size = calculate_font_size()
 
-def connect_to_db():
-    """Подключение к базе данных."""
-    return sqlite3.connect(db_path)
 
-
-def show_cultural_exchange_form(faction, game_area, class_faction):
+def show_cultural_exchange_form(faction, game_area, class_faction, conn):
     """Окно формы для договора о культурном обмене (с StyledButton, увеличенным шрифтом, чуть меньшим размером окна и отступом перед кнопками)."""
     font_size = calculate_font_size()
     button_height = font_size * 3
@@ -695,7 +688,6 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
     padding = font_size // 2
     spacing = font_size // 4
 
-    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     # Список всех фракций, кроме текущей
     available_factions = all_factions(cursor)
@@ -767,11 +759,9 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
     political_cash = PoliticalCash(faction, class_faction)
 
     # Переподключаемся к БД, чтобы узнать количество городов у фракций
-    conn = connect_to_db()
     cursor = conn.cursor()
     cursor.execute("SELECT faction, COUNT(*) FROM cities GROUP BY faction")
     city_counts = {row[0]: row[1] for row in cursor.fetchall()}
-    conn.close()
 
     # Функция отправки предложения
     def send_proposal(instance):
@@ -780,8 +770,7 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
             show_warning("Пожалуйста, выберите фракцию!")
             return
 
-        conn2 = connect_to_db()
-        cursor2 = conn2.cursor()
+        cursor2 = conn.cursor()
         try:
             # Получаем текущее отношение
             cursor2.execute(
@@ -826,7 +815,7 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
                 "UPDATE relations SET relationship = ? WHERE (faction1 = ? AND faction2 = ?) OR (faction1 = ? AND faction2 = ?)",
                 (new_relationship, faction, target_faction, target_faction, faction)
             )
-            conn2.commit()
+            conn.commit()
 
             show_warning(
                 f"Отношения с {target_faction} улучшены до {new_relationship}\n"
@@ -836,8 +825,7 @@ def show_cultural_exchange_form(faction, game_area, class_faction):
 
         except Exception as e:
             show_warning(f"Произошла ошибка: {e}")
-        finally:
-            conn2.close()
+
 
     # -------------------------------------------------------------------
     # Добавляем отступ перед кнопочной панелью
@@ -921,7 +909,7 @@ def calculate_peace_army_points(conn, faction):
         return 0
 
 
-def show_peace_form(player_faction):
+def show_peace_form(player_faction, conn):
     """Окно формы для предложения о заключении мира (с использованием StyledButton)."""
     # Рассчитываем базовый размер шрифта
     font_size = calculate_font_size()
@@ -929,8 +917,6 @@ def show_peace_form(player_faction):
     input_height = font_size * 2.5
     padding = font_size // 2
     spacing = font_size // 4
-
-    conn = connect_to_db()
     cursor = conn.cursor()
 
     try:
@@ -942,11 +928,9 @@ def show_peace_form(player_faction):
         relations = {f: status for f, status in cursor.fetchall()}
 
         # Берем все активные фракции и фильтруем только те, с кем в "войне"
-        conn2 = sqlite3.connect(db_path)
-        cursor2 = conn2.cursor()
+        cursor2 = conn.cursor()
         active_factions = all_factions(cursor2)
         available_factions = [f for f in active_factions if relations.get(f) == "война"]
-        conn2.close()
 
         # Если нет фракций для мира
         if not available_factions:
@@ -1153,28 +1137,24 @@ alliance_phrases = {
 }
 
 
-def show_alliance_form(faction, game_area, class_faction):
+def show_alliance_form(faction, game_area, class_faction, conn):
     """Окно формы для предложения о создании альянса (обновлённый дизайн с StyledButton)."""
     font_size = calculate_font_size()
     button_height = font_size * 3
     input_height = font_size * 2.5
     padding = font_size // 2
     spacing = font_size // 4
-
-    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     # Проверка существования фракции в таблицах
     cursor.execute("SELECT COUNT(*) FROM diplomacies WHERE faction1 = ? OR faction2 = ?", (faction, faction))
     if cursor.fetchone()[0] == 0:
         print(f"Ошибка: Фракция '{faction}' не найдена в таблице 'diplomacies'.")
-        conn.close()
         return
 
     cursor.execute("SELECT COUNT(*) FROM relations WHERE faction1 = ? OR faction2 = ?", (faction, faction))
     if cursor.fetchone()[0] == 0:
         print(f"Ошибка: Фракция '{faction}' не найдена в таблице 'relations'.")
-        conn.close()
         return
 
     # Получаем текущие отношения
@@ -1383,14 +1363,13 @@ def show_alliance_form(faction, game_area, class_faction):
     popup.open()
 
 
-def show_break_alliance_form(faction, game_area, class_faction):
+def show_break_alliance_form(faction, game_area, class_faction, conn):
     """Окно подтверждения разрыва альянса (без выпадающего меню)."""
     font_size = calculate_font_size()
     button_height = font_size * 3
     padding = font_size // 2
     spacing = font_size // 4
 
-    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     # Получаем союзника
@@ -1406,7 +1385,6 @@ def show_break_alliance_form(faction, game_area, class_faction):
 
     if not result:
         show_popup_message("Договор о союзе не найден", "У вашей фракции нет союзов для разрыва.")
-        conn.close()
         return
 
     target = result[0]
@@ -1515,7 +1493,7 @@ def show_break_alliance_form(faction, game_area, class_faction):
 
 
 
-def show_declare_war_form(faction):
+def show_declare_war_form(faction, conn):
     """Окно формы для объявления войны (с обновлённым дизайном и StyledButton)."""
     font_size = calculate_font_size()
     button_height = font_size * 3
@@ -1525,7 +1503,6 @@ def show_declare_war_form(faction):
 
     # Доступные цели соберём заранее
     try:
-        with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
 
             # Проверка текущего хода
@@ -1630,22 +1607,21 @@ def show_declare_war_form(faction):
             return
 
         try:
-            with sqlite3.connect(db_path) as conn2:
-                cursor2 = conn2.cursor()
+            cursor2 = conn.cursor()
 
-                cursor2.execute("""
+            cursor2.execute("""
                     UPDATE diplomacies 
                     SET relationship = 'война' 
                     WHERE (faction1 = ? AND faction2 = ?) OR (faction1 = ? AND faction2 = ?)
                 """, (faction, target, target, faction))
 
-                cursor2.execute("""
+            cursor2.execute("""
                     UPDATE relations 
                     SET relationship = 0 
                     WHERE (faction1 = ? AND faction2 = ?) OR (faction1 = ? AND faction2 = ?)
                 """, (faction, target, target, faction))
 
-                conn2.commit()
+            conn.commit()
 
             phrase = faction_phrases.get(target, f"Война объявлена против {target}!")
             show_warning(phrase, color=(1, 0, 0, 1))
@@ -1718,7 +1694,7 @@ def show_popup_message(title, message):
 
 #-------------------------------------
 
-def calculate_army_strength():
+def calculate_army_strength(conn):
     """Рассчитывает силу армий для каждой фракции."""
     class_coefficients = {
         "1": 1.3,  # Класс 1: базовые юниты
@@ -1731,7 +1707,6 @@ def calculate_army_strength():
     army_strength = {}
 
     try:
-        with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
 
             # Получаем все юниты из таблицы garrisons и их характеристики из таблицы units
@@ -1772,9 +1747,9 @@ def calculate_army_strength():
     return army_strength, formatted_army_strength
 
 
-def create_army_rating_table():
+def create_army_rating_table(conn):
     """Создает таблицу рейтинга армий с улучшенным дизайном."""
-    army_strength, formatted_army_strength = calculate_army_strength()
+    army_strength, formatted_army_strength = calculate_army_strength(conn)
     if not army_strength:
         return GridLayout()
 
@@ -1841,9 +1816,9 @@ def create_army_rating_table():
 
     return layout
 
-def show_ratings_popup():
+def show_ratings_popup(conn):
     """Открывает всплывающее окно с рейтингом армий."""
-    table_layout = create_army_rating_table()
+    table_layout = create_army_rating_table(conn)
 
     scroll_view = ScrollView(
         size_hint=(1, 1),
@@ -1866,7 +1841,7 @@ def show_ratings_popup():
 
 
 #------------------------------------------------------------------
-def start_politic_mode(faction, game_area, class_faction):
+def start_politic_mode(faction, game_area, class_faction, conn):
     """Инициализация политического режима для выбранной фракции"""
 
     from kivy.metrics import dp, sp
@@ -1886,7 +1861,7 @@ def start_politic_mode(faction, game_area, class_faction):
     # Добавляем пустое пространство слева
     politics_layout.add_widget(Widget(size_hint_x=None, width=dp(20)))
 
-    manage_friend_popup = ManageFriend(faction, game_area)
+    manage_friend_popup = ManageFriend(faction, game_area, conn)
 
     def styled_btn(text, callback):
         btn = Button(
@@ -1913,9 +1888,9 @@ def start_politic_mode(faction, game_area, class_faction):
         btn.bind(on_release=callback)
         return btn
 
-    btn_new = styled_btn("Дипломатия", lambda btn: show_new_agreement_window(faction, game_area, class_faction))
+    btn_new = styled_btn("Дипломатия", lambda btn: show_new_agreement_window(faction, game_area, class_faction, conn))
     btn_allies = styled_btn("Союзник", lambda btn: manage_friend_popup.open_popup())
-    btn_army = styled_btn("Сила армий", lambda btn: show_ratings_popup())
+    btn_army = styled_btn("Сила армий", lambda btn: show_ratings_popup(conn))
 
     politics_layout.add_widget(btn_new)
     politics_layout.add_widget(btn_allies)

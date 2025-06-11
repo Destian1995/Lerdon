@@ -83,18 +83,22 @@ def transform_filename(file_path):
 
 
 class GameStateManager:
-    def __init__(self):
+    def __init__(self, conn):
         self.faction = None  # Объект фракции
         self.resource_box = None  # Объект ResourceBox
         self.game_area = None  # Центральная область игры
-        self.conn = None  # Соединение с базой данных
+        self.conn = conn  # Соединение с базой данных
         self.cursor = None  # Курсор для работы с БД
         self.turn_counter = 1  # Счетчик ходов
 
-    def initialize(self, selected_faction, db_path=db_path):
+    def initialize(self, selected_faction):
         """Инициализация объектов игры."""
-        self.faction = Faction(selected_faction)  # Создаем объект фракции
-        self.conn = sqlite3.connect(db_path)  # Подключаемся к базе данных
+        self.faction = Faction(selected_faction, self.conn)  # Создаем объект фракции
+        # Включаем WAL для повышения параллелизма
+        self.conn.execute("PRAGMA journal_mode=WAL;")
+        self.conn.execute("PRAGMA synchronous=NORMAL;")
+        self.conn.execute("PRAGMA busy_timeout=5000;")  # Ждать до 5 секунд при блокировке
+
         self.cursor = self.conn.cursor()
         self.turn_counter = self.load_turn(selected_faction)  # Загружаем счетчик ходов
 
@@ -123,10 +127,7 @@ class GameStateManager:
         except sqlite3.Error as e:
             print(f"Ошибка при сохранении счетчика ходов: {e}")
 
-    def close_connection(self):
-        """Закрывает соединение с базой данных."""
-        if self.conn:
-            self.conn.close()
+
 
 
 class ResourceBox(BoxLayout):
@@ -452,13 +453,13 @@ class GameScreen(Screen):
     SEASON_NAMES = ['Зима', 'Весна', 'Лето', 'Осень']
     SEASON_ICONS = ['snowflake', 'green_leaf', 'sun', 'yellow_leaf']
 
-    def __init__(self, selected_faction, cities, db_path=None, **kwargs):
+    def __init__(self, selected_faction, cities, conn=None, **kwargs):
         super(GameScreen, self).__init__(**kwargs)
         self.selected_faction = selected_faction
         self.cities = cities
-        self.db_path = db_path or 'game_data.db'
+        self.conn = conn
         # Инициализация GameStateManager
-        self.game_state_manager = GameStateManager()
+        self.game_state_manager = GameStateManager(self.conn)
         self.game_state_manager.initialize(selected_faction)
         # Доступ к объектам через менеджер состояния
         self.faction = self.game_state_manager.faction
@@ -474,7 +475,7 @@ class GameScreen(Screen):
         # Инициализация AI-контроллеров
         self.ai_controllers = {}
         # Инициализация EventManager
-        self.event_manager = EventManager(self.selected_faction, self, self.game_state_manager.faction)
+        self.event_manager = EventManager(self.selected_faction, self, self.game_state_manager.faction, self.conn)
         # Инициализация UI
         self.is_android = platform == 'android'
         self.season_manager = SeasonManager()
@@ -485,20 +486,19 @@ class GameScreen(Screen):
         }
         self.init_ui()
         self._update_season_display(current_season)
-        self.season_manager.update(self.current_idx)
+        self.season_manager.update(self.current_idx, self.conn)
         # Запускаем обновление ресурсов каждую 1 секунду
         Clock.schedule_interval(self.update_cash, 1)
         # Запускаем обновление рейтинга армии каждые 1 секунду
         Clock.schedule_interval(self.update_army_rating, 1)
 
     def save_selected_faction_to_db(self):
-        conn = sqlite3.connect(self.db_path)
+        conn = self.conn
         cursor = conn.cursor()
 
         cursor.execute("INSERT INTO user_faction (faction_name) VALUES (?)", (self.selected_faction,))
 
         conn.commit()
-        conn.close()
 
     def init_ui(self):
         self.season_container = FloatLayout(
@@ -718,7 +718,6 @@ class GameScreen(Screen):
         # === Инициализация ИИ ===
         self.init_ai_controllers()
 
-
         def on_end_turn(instance):
             instance.start_progress()
             Clock.schedule_once(lambda dt: self.process_turn(None), 1.5)
@@ -911,7 +910,7 @@ class GameScreen(Screen):
             else:
                 status = "lose"  # Условия поражения
             # Запускаем модуль results_game для обработки результатов
-            results_game_instance = ResultsGame(status, reason)  # Создаем экземпляр класса ResultsGame
+            results_game_instance = ResultsGame(status, reason, self.conn)  # Создаем экземпляр класса ResultsGame
             results_game_instance.show_results(self.selected_faction, status, reason)
             App.get_running_app().restart_app()  # Добавляем прямой вызов перезагрузки
             return  # Прерываем выполнение дальнейших действий
@@ -927,7 +926,7 @@ class GameScreen(Screen):
         # Обновляем текущий сезон
         new_season = self.update_season(self.turn_counter)
         self._update_season_display(new_season)
-        self.season_manager.update(self.current_idx)
+        self.season_manager.update(self.current_idx, self.conn)
         print("Здесь должны вызываться функции отрисовки звезд мощи городов")
         # Обновляем статус городов и отрисовываем звёздочки мощи армий
         # Принудительно обновляем рейтинг один раз
@@ -1209,12 +1208,12 @@ class GameScreen(Screen):
     def switch_to_army(self, instance):
         """Переключение на армейскую вкладку."""
         self.clear_game_area()
-        army.start_army_mode(self.selected_faction, self.game_area, self.game_state_manager.faction)
+        army.start_army_mode(self.selected_faction, self.game_area, self.game_state_manager.faction, self.conn)
 
     def switch_to_politics(self, instance):
         """Переключение на политическую вкладку."""
         self.clear_game_area()
-        politic.start_politic_mode(self.selected_faction, self.game_area, self.game_state_manager.faction)
+        politic.start_politic_mode(self.selected_faction, self.game_area, self.game_state_manager.faction, self.conn)
 
     def clear_game_area(self):
         """Очистка центральной области."""
@@ -1227,7 +1226,7 @@ class GameScreen(Screen):
     def show_advisor(self, instance):
         """Показать экран советника"""
         self.clear_game_area()
-        advisor_view = AdvisorView(self.selected_faction)
+        advisor_view = AdvisorView(self.selected_faction, self.conn)
         self.game_area.add_widget(advisor_view)
 
     def update_destroyed_factions(self):
@@ -1502,7 +1501,7 @@ class GameScreen(Screen):
         """Создание контроллеров ИИ для каждой фракции кроме выбранной"""
         for faction in FACTIONS:
             if faction != self.selected_faction:
-                self.ai_controllers[faction] = AIController(faction)
+                self.ai_controllers[faction] = AIController(faction, self.conn)
 
     def load_turn(self, faction):
         """Загрузка текущего значения хода для фракции."""

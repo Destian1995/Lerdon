@@ -1,6 +1,7 @@
 from lerdon_libraries import *
 from db_lerdon_connect import *
 
+
 def calculate_font_size():
     base_height = 360
     default_font_size = 14
@@ -11,6 +12,7 @@ def calculate_font_size():
         scale_factor *= 1.5  # или 2 для более крупного текста
 
     return max(14, int(default_font_size * scale_factor))
+
 
 # Словарь для перевода названий
 translation_dict = {
@@ -35,13 +37,11 @@ def transform_filename(file_path):
 reverse_translation_dict = {v: k for k, v in translation_dict.items()}
 
 
-
 class AdvisorView(FloatLayout):
-    def __init__(self, faction, **kwargs):
+    def __init__(self, faction, conn, **kwargs):
         super(AdvisorView, self).__init__(**(kwargs))
         self.faction = faction
-        self.db = db_path
-        self.db_connection = sqlite3.connect(self.db)  # Подключение к базе данных
+        self.db_connection = conn  # Единое подключение к базе
         self.cursor = self.db_connection.cursor()
         self._exp_points = 0
         self._attack_progress = 0
@@ -132,7 +132,6 @@ class AdvisorView(FloatLayout):
             border=(0, 0, 0, 0)
         )
         relations_button.bind(on_release=lambda x: self.show_relations("Состояние отношений"))
-
 
         bottom_panel.add_widget(political_system_button)
         bottom_panel.add_widget(relations_button)
@@ -413,7 +412,6 @@ class AdvisorView(FloatLayout):
         else:
             print("Ошибка: Попап не найден.")
 
-
     def load_relations(self):
         """
         Загружает текущие отношения из таблицы relations в базе данных.
@@ -575,18 +573,17 @@ class AdvisorView(FloatLayout):
         """
         diplomacies_data = {}
         try:
-            with sqlite3.connect(self.db) as conn:
-                cursor = conn.cursor()
-                # Добавляем условие WHERE faction1 = ?
-                query = "SELECT faction2, relationship FROM diplomacies WHERE faction1 = ?"
-                cursor.execute(query, (self.faction,))
-                rows = cursor.fetchall()
+            cursor = self.db_connection.cursor()
+            # Добавляем условие WHERE faction1 = ?
+            query = "SELECT faction2, relationship FROM diplomacies WHERE faction1 = ?"
+            cursor.execute(query, (self.faction,))
+            rows = cursor.fetchall()
 
-                print("Загруженные данные из таблицы diplomacies:", rows)  # Отладочный вывод
+            print("Загруженные данные из таблицы diplomacies:", rows)  # Отладочный вывод
 
-                # Преобразуем результат в словарь
-                for faction2, relationship in rows:
-                    diplomacies_data[faction2] = relationship
+            # Преобразуем результат в словарь
+            for faction2, relationship in rows:
+                diplomacies_data[faction2] = relationship
 
         except sqlite3.Error as e:
             print(f"Ошибка при работе с базой данных: {e}")
@@ -822,4 +819,3 @@ class AdvisorView(FloatLayout):
             return (0.1, 0.3, 0.9, 1)
         else:
             return (1, 1, 1, 1)
-

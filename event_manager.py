@@ -58,11 +58,10 @@ def get_adaptive_font_size(min_size=15, max_size=20):
 
 
 class EventManager:
-    def __init__(self, player_faction, game_screen, class_faction_economic):
+    def __init__(self, player_faction, game_screen, class_faction_economic, conn):
         self.player_faction = player_faction
         self.game_screen = game_screen  # Ссылка на экран игры для отображения событий
-        self.db = db_path
-        self.db_connection = sqlite3.connect(self.db)  # Подключение к базе данных
+        self.db_connection = conn # Используем единую сессию с БД
         self.economics = class_faction_economic  # Экономический модуль
 
     def generate_event(self, current_turn):

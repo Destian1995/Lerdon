@@ -3,24 +3,21 @@ from db_lerdon_connect import *
 
 
 class ResultsGame:
-    def __init__(self, game_status, reason):
+    def __init__(self, game_status, reason, conn):
         self.game_status = game_status  # Статус игры: "win" или "lose"
         self.reason = reason  # Причина завершения игры
-
+        self.conn = conn  # Соединение с базой
     def load_results(self):
         """
         Загрузка результатов игры из базы данных.
         :return: Список результатов.
         """
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM results')
         results = cursor.fetchall()
         return results
 
-    def close_connection(self):
-        if hasattr(self, 'conn') and self.conn:
-            self.conn.close()
 
     def calculate_results(self):
         """
@@ -70,7 +67,7 @@ class ResultsGame:
         return calculated_results
 
     def update_dossier_stats(self):
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cursor = conn.cursor()
 
         # Получаем последний результат (или можно передавать как параметр)
@@ -82,8 +79,6 @@ class ResultsGame:
                 rating = data["army_efficiency_ratio"]
                 break
         else:
-            # Если не нашли данных по фракции — выходим
-            conn.close()
             return
 
         # Определяем, победа или поражение
@@ -100,7 +95,7 @@ class ResultsGame:
         ''', (rating, victories, defeats, self.current_faction))
 
         conn.commit()
-        conn.close()
+
 
     def show_results(self, faction_name, status, reason):
         self.game_status = status
@@ -138,7 +133,7 @@ class ResultsGame:
             # Если current_faction не задан, ничего не делаем
             return
 
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cursor = conn.cursor()
 
         # Получаем данные по фракции игрока
@@ -151,8 +146,6 @@ class ResultsGame:
         row = cursor.fetchone()
 
         if row is None:
-            # Если фракции нет в таблице dossier, ничего не делаем
-            conn.close()
             return
 
         rating, starving, victories, defeats = row
@@ -212,7 +205,7 @@ class ResultsGame:
         ''', (assigned_rank, self.current_faction))
 
         conn.commit()
-        conn.close()
+
 
     def show_results_popup(self, title, message, results, text_color):
         # Создаем основной контейнер
@@ -398,7 +391,6 @@ class ResultsGame:
         self.popup = popup
 
     def exit_to_main_menu(self, instance):
-        self.close_connection()
         app = App.get_running_app()
 
         # Закрываем все попапы

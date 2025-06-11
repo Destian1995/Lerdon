@@ -62,7 +62,7 @@ class SeasonManager:
         # None означает, что до этого ни один сезон не применялся.
         self.last_idx = None
 
-    def update(self, new_idx: int):
+    def update(self, new_idx: int, conn):
         """
         Вызывается при смене сезона на new_idx (0–3).
         Если last_idx != new_idx, то:
@@ -73,23 +73,22 @@ class SeasonManager:
         """
         if self.last_idx is None:
             # Первый раз — просто накладываем
-            self._apply_season(new_idx)
+            self._apply_season(new_idx, conn)
             self.last_idx = new_idx
         elif new_idx != self.last_idx:
             # Сначала откатить предыдущий сезон
-            self._revert_season(self.last_idx)
+            self._revert_season(self.last_idx, conn)
             # Потом применить новый
-            self._apply_season(new_idx)
+            self._apply_season(new_idx, conn)
             self.last_idx = new_idx
         # Если new_idx == last_idx, остаёмся как есть
 
-    def _apply_season(self, idx: int):
+    def _apply_season(self, idx: int, conn):
         """
         Накладывает все эффекты сезона idx на таблицу units,
         по каждой фракции берутся соответствующие коэффициенты.
         """
         faction_effects = self.FACTION_EFFECTS[idx]
-        conn = sqlite3.connect(db_path)
         cur = conn.cursor()
 
         for faction_name, coeffs in faction_effects.items():
@@ -117,15 +116,13 @@ class SeasonManager:
                 """, {'cost_f': cost_f, 'faction': faction_name})
 
         conn.commit()
-        conn.close()
 
-    def _revert_season(self, idx: int):
+    def _revert_season(self, idx: int, conn):
         """
         Откатывает эффекты сезона idx, возвращая к «базовым» значениям.
         Для каждой фракции берём обратные коэффициенты: 1 / applied_factor.
         """
         faction_effects = self.FACTION_EFFECTS[idx]
-        conn = sqlite3.connect(db_path)
         cur = conn.cursor()
 
         for faction_name, coeffs in faction_effects.items():
@@ -155,4 +152,3 @@ class SeasonManager:
                 """, {'cost_rev': cost_revert, 'faction': faction_name})
 
         conn.commit()
-        conn.close()

@@ -123,7 +123,7 @@ def calculate_experience(losing_side, db_connection):
             db_connection.rollback()
             print(f"Ошибка при обновлении таблицы experience: {e}")
 
-def show_battle_report(report_data, is_user_involved=False, user_faction=None):
+def show_battle_report(report_data, is_user_involved=False, user_faction=None, conn=None):
     """
     Отображает красивый отчет о бое с использованием возможностей Kivy.
     :param report_data: Данные отчета о бое.
@@ -261,9 +261,7 @@ def show_battle_report(report_data, is_user_involved=False, user_faction=None):
     if is_user_involved and user_faction and report_data:
         is_victory = any(item['result'] == "Победа" for item in report_data)
         try:
-            conn = sqlite3.connect(db_path)
             update_dossier_battle_stats(conn, user_faction, is_victory)
-            conn.close()
         except Exception as e:
             print(f"[Ошибка] Не удалось обновить досье: {e}")
 
@@ -277,13 +275,13 @@ def show_battle_report(report_data, is_user_involved=False, user_faction=None):
     popup.open()
 
 def fight(attacking_city, defending_city, defending_army, attacking_army,
-          attacking_fraction, defending_fraction, db_connection):
+          attacking_fraction, defending_fraction, conn):
     """
     Основная функция боя между двумя армиями.
     """
     print('Армия attacking_army: ', attacking_army)
-    db_connection.row_factory = sqlite3.Row
-    cursor = db_connection.cursor()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
     try:
         cursor.execute("SELECT faction_name FROM user_faction")
         result = cursor.fetchone()
@@ -294,8 +292,6 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
     is_user_involved = False
 
     if user_faction:
-        cursor = db_connection.cursor()
-
         # Проверяем атакующую армию
         for unit in attacking_army:
             unit_name = unit['unit_name']
@@ -345,7 +341,7 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
     for atk in merged_attacking:
         for df in merged_defending:
             if atk['unit_count'] > 0 and df['unit_count'] > 0:
-                atk_new, df_new = battle_units(atk, df, defending_city, user_faction)
+                atk_new, df_new = battle_units(atk, df, defending_city, user_faction, conn)
                 atk['unit_count'], df['unit_count'] = atk_new['unit_count'], df_new['unit_count']
 
     # Вычисляем потери после боя
@@ -363,7 +359,7 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
         attacking_army=merged_attacking,
         defending_army=merged_defending,
         attacking_fraction=attacking_fraction,
-        cursor=db_connection.cursor()
+        cursor=conn.cursor()
     )
 
     # Подготовка данных для таблицы results
@@ -373,15 +369,15 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
     total_defending_losses = sum(u['killed_count'] for u in merged_defending)
 
     # Обновляем таблицу results
-    update_results_table(db_connection, attacking_fraction, total_attacking_units, total_attacking_losses, total_defending_losses)
-    update_results_table(db_connection, defending_fraction, total_defending_units, total_defending_losses, total_attacking_losses)
+    update_results_table(conn, attacking_fraction, total_attacking_units, total_attacking_losses, total_defending_losses)
+    update_results_table(conn, defending_fraction, total_defending_units, total_defending_losses, total_attacking_losses)
 
     # Начисляем опыт игроку
     if is_user_involved:
         if winner == 'attacking' and attacking_fraction == user_faction:
-            calculate_experience(merged_defending, db_connection)
+            calculate_experience(merged_defending, conn)
         elif winner == 'defending' and defending_fraction == user_faction:
-            calculate_experience(merged_attacking, db_connection)
+            calculate_experience(merged_attacking, conn)
 
     # Подготовка итоговых списков для отчёта
     final_report_attacking = []
@@ -415,7 +411,7 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
             user_faction=user_faction,
             city=defending_city
         )
-        show_battle_report(report_data, is_user_involved=is_user_involved, user_faction=user_faction)
+        show_battle_report(report_data, is_user_involved=is_user_involved, user_faction=user_faction, conn=conn)
 
     return {
         "winner": winner,
@@ -525,7 +521,7 @@ def calculate_unit_power(unit, is_attacking):
         defense = unit['units_stats']['Защита']
         return durability + defense
 
-def battle_units(attacking_unit, defending_unit, city, user_faction):
+def battle_units(attacking_unit, defending_unit, city, user_faction, conn):
     """
     Осуществляет бой между двумя юнитами.
     :param city:
@@ -541,7 +537,7 @@ def battle_units(attacking_unit, defending_unit, city, user_faction):
     defense_points = calculate_unit_power(defending_unit, is_attacking=False)
     total_defense_power = defense_points * defending_unit['unit_count']
 
-    damage_to_infrastructure(total_attack_power, city, user_faction)
+    damage_to_infrastructure(total_attack_power, city, user_faction, conn)
 
     # Определение победителя раунда
     if total_attack_power > total_defense_power:
@@ -656,21 +652,20 @@ def update_garrisons_after_battle(winner, attacking_city, defending_city,
 
 #------------------------------------
 
-def damage_to_infrastructure(all_damage, city_name, user_faction):
+def damage_to_infrastructure(all_damage, city_name, user_faction, conn):
     """
     Вычисляет урон по инфраструктуре города и обновляет данные в базе данных.
 
     :param all_damage: Общий урон, который нужно нанести.
     :param city_name: Название города, по которому наносится урон.
     """
-    global conn, damage_info
 
     # Константа для урона, необходимого для разрушения одного здания
+    global damage_info
     DAMAGE_PER_BUILDING = 45900
 
     # Подключение к базе данных
     try:
-        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
         # Загрузка данных о зданиях для указанного города
@@ -749,8 +744,6 @@ def damage_to_infrastructure(all_damage, city_name, user_faction):
 
     except Exception as e:
         print(f"Ошибка при работе с базой данных: {e}")
-    finally:
-        conn.close()
 
     if user_faction == 1:
         # Показать информацию об уроне
@@ -778,7 +771,7 @@ def show_damage_info_infrastructure(damage_info):
     popup = Popup(title="Результат удара по инфраструктуре", content=content, size_hint=(0.7, 0.7))
     popup.open()
 
-def update_dossier_battle_stats(db_connection, user_faction, is_victory):
+def update_dossier_battle_stats(conn, user_faction, is_victory):
     """
     Обновляет статистику по боям в таблице dossier для текущей фракции пользователя.
 
@@ -787,7 +780,7 @@ def update_dossier_battle_stats(db_connection, user_faction, is_victory):
     :param is_victory: True, если игрок победил, False — если проиграл.
     """
     try:
-        cursor = db_connection.cursor()
+        cursor = conn.cursor()
         # Проверяем, существует ли запись для этой фракции
         cursor.execute("SELECT battle_victories, battle_defeats FROM dossier WHERE faction = ?", (user_faction,))
         result = cursor.fetchone()

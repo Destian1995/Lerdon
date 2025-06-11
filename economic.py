@@ -40,12 +40,12 @@ def format_number(number):
         return f"{number}"
 
 
-def save_building_change(faction_name, city, building_type, delta):
+def save_building_change(faction_name, city, building_type, delta, conn):
     """
     Обновляет количество зданий для указанного города в базе данных.
     delta — изменение (например, +1 или -1).
     """
-    conn = sqlite3.connect(db_path)
+
     cursor = conn.cursor()
 
     try:
@@ -77,15 +77,13 @@ def save_building_change(faction_name, city, building_type, delta):
         conn.commit()
     except sqlite3.Error as e:
         print(f"Ошибка при сохранении изменений в зданиях: {e}")
-    finally:
-        conn.close()
+
 
 
 class Faction:
-    def __init__(self, name):
+    def __init__(self, name, conn):
         self.faction = name
-        self.db_path = db_path # Путь к базе данных
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = conn
         self.cursor = self.conn.cursor()
         self.resources = self.load_resources_from_db()  # Загрузка ресурсов
         self.buildings = self.load_buildings()  # Загрузка зданий
@@ -163,42 +161,8 @@ class Faction:
             resources[resource_type] = amount
         return resources
 
-    def save_building_change(faction_name, city, building_type, delta):
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        try:
-            # Ищем существующую запись
-            cursor.execute('''
-                SELECT count 
-                FROM buildings 
-                WHERE city_name = ? AND faction = ? AND building_type = ?
-            ''', (city, faction_name, building_type))
-            row = cursor.fetchone()
-
-            if row:
-                # Обновляем существующую запись
-                new_count = max(row[0] + delta, 0)  # Предотвращаем отрицательные значения
-                cursor.execute('''
-                    UPDATE buildings 
-                    SET count = ? 
-                    WHERE city_name = ? AND faction = ? AND building_type = ?
-                ''', (new_count, city, faction_name, building_type))
-            else:
-                # Добавляем новую запись, если delta положительный
-                if delta > 0:
-                    cursor.execute('''
-                        INSERT INTO buildings (city_name, faction, building_type, count)
-                        VALUES (?, ?, ?, ?)
-                    ''', (city, faction_name, building_type, delta))
-            conn.commit()
-        except sqlite3.Error as e:
-            print(f"Ошибка при сохранении изменений в зданиях: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
-
     def load_auto_build_settings(self):
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cursor = conn.cursor()
         cursor.execute('''
             SELECT enabled, hospitals_ratio, factories_ratio 
@@ -206,7 +170,7 @@ class Faction:
             WHERE faction = ?
         ''', (self.faction,))
         result = cursor.fetchone()
-        conn.close()
+
         if result:
             self.auto_build_enabled = bool(result[0])
             # Сохраняем пропорцию как кортеж целых чисел
@@ -215,7 +179,7 @@ class Faction:
             self.auto_build_ratio = (1, 1)  # Значение по умолчанию
 
     def save_auto_build_settings(self):
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cursor = conn.cursor()
         cursor.execute('''
             INSERT OR REPLACE INTO auto_build_settings 
@@ -224,7 +188,7 @@ class Faction:
         ''', (self.faction, int(self.auto_build_enabled),
               self.auto_build_ratio[0], self.auto_build_ratio[1]))
         conn.commit()
-        conn.close()
+
 
     def city_has_space(self, city_name):
         current = self.cities_buildings.get(city_name, {"Больница": 0, "Фабрика": 0})
@@ -424,7 +388,7 @@ class Faction:
         if city not in self.cities_buildings:
             self.cities_buildings[city] = {'Больница': 0, 'Фабрика': 0}
         self.cities_buildings[city]['Фабрика'] += quantity  # Обновляем локальные данные
-        save_building_change(self.faction, city, "Фабрика", quantity)  # Передаем изменение
+        save_building_change(self.faction, city, "Фабрика", quantity, self.conn)  # Передаем изменение
         self.load_buildings()  # Пересчитываем общие показатели
 
     def build_hospital(self, city, quantity=1):
@@ -432,7 +396,7 @@ class Faction:
         if city not in self.cities_buildings:
             self.cities_buildings[city] = {'Больница': 0, 'Фабрика': 0}
         self.cities_buildings[city]['Больница'] += quantity
-        save_building_change(self.faction, city, "Больница", quantity)
+        save_building_change(self.faction, city, "Больница", quantity, self.conn)
         self.load_buildings()  # Пересчитываем общие показатели
 
     def cash_build(self, money):

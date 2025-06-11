@@ -47,7 +47,7 @@ class ArmyButton(Button):
         return super().on_touch_up(touch)
 
 class ArmyCash:
-    def __init__(self, faction, class_faction):
+    def __init__(self, faction, class_faction, conn):
         """
         Инициализация класса ArmyCash.
         :param faction: Название фракции.
@@ -55,8 +55,7 @@ class ArmyCash:
         """
         self.faction = faction
         self.class_faction = class_faction  # Экономический модуль
-        self.db_path = db_path
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = conn  # Подключение к
         self.cursor = self.conn.cursor()
         self.resources = self.load_resources()  # Загрузка начальных ресурсов
 
@@ -326,16 +325,14 @@ class ArmyCash:
         popup.open()
 
 
-def load_unit_data(faction):
+def load_unit_data(faction, conn):
     """Загружает данные о юнитах для выбранной фракции из базы данных."""
-    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT unit_name, consumption, cost_money, cost_time, image_path, attack, defense, durability, unit_class
         FROM units WHERE faction = ?
     """, (faction,))
     rows = cursor.fetchall()
-    conn.close()
 
     unit_data = {}
     for row in rows:
@@ -354,8 +351,8 @@ def load_unit_data(faction):
     return unit_data
 
 
-def start_army_mode(faction, game_area, class_faction):
-    army_hire = ArmyCash(faction, class_faction)
+def start_army_mode(faction, game_area, class_faction, conn):
+    army_hire = ArmyCash(faction, class_faction, conn)
     faction_colors = {
         "Аркадия": (0.2, 0.4, 0.9, 0.8),
         "Селестия": (0.2, 0.7, 0.3, 0.8),
@@ -383,7 +380,7 @@ def start_army_mode(faction, game_area, class_faction):
     )
 
     # Загрузка и сортировка юнитов
-    unit_data = load_unit_data(faction)
+    unit_data = load_unit_data(faction, conn)
     sorted_units = sorted(unit_data.items(), key=lambda x: int(x[1]['stats']['Класс юнита'].split()[0]))
 
     # Создание слайдов

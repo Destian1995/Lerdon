@@ -3,10 +3,10 @@ from fight import fight
 from db_lerdon_connect import *
 
 class AIController:
-    def __init__(self, faction, db_path=db_path):
+    def __init__(self, faction, conn=None):
         self.faction = faction
         self.turn = 0
-        self.db_connection = sqlite3.connect(db_path)
+        self.db_connection = conn
         self.cursor = self.db_connection.cursor()
         self.garrison = self.load_garrison()
         self.relations = self.load_relations()

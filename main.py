@@ -2,12 +2,12 @@ from lerdon_libraries import *
 from game_process import GameScreen
 from ui import *
 from db_lerdon_connect import *
-
+from db_manager import DBManager
 
 class AuthorScreen(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, conn, **kwargs):
         super(AuthorScreen, self).__init__(**kwargs)
-
+        self.conn = conn
         root = FloatLayout()
 
         # Фоновое видео
@@ -88,16 +88,16 @@ class AuthorScreen(Screen):
     def go_back(self, instance):
         app = App.get_running_app()
         app.root.clear_widgets()
-        app.root.add_widget(MenuWidget())
+        app.root.add_widget(MenuWidget(self.conn))
 
     def open_link(self, instance, url):
         webbrowser.open(url)
 
 
 class LoadingScreen(FloatLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, conn, **kwargs):
         super(LoadingScreen, self).__init__(**kwargs)
-
+        self.conn = conn
         # === Фон через Canvas ===
         with self.canvas.before:
             self.bg_rect = Rectangle(
@@ -229,7 +229,7 @@ class LoadingScreen(FloatLayout):
 
         # --- Убираем все дочерние виджеты (прогресс-бар, подпись и т.д.) ---
         self.clear_widgets()
-        self.add_widget(MenuWidget())
+        self.add_widget(MenuWidget(self.conn))
 
 
 RANK_TO_FILENAME = {
@@ -255,135 +255,73 @@ RANK_TO_FILENAME = {
 }
 
 
-def save_last_clicked_city(city_name: str):
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-    # если строки ещё нет, вставим, иначе перепишем
-    cur.execute(
-        "INSERT OR REPLACE INTO last_click (id, city_name) VALUES (1, ?)",
-        (city_name,)
-    )
-    conn.commit()
-    conn.close()
-
-
-def load_cities_from_db(selected_kingdom):
+def save_last_clicked_city(conn, city_name: str):
     """
-    Функция загружает данные о городах для выбранного княжества из таблицы city.
+    Сохраняет последний выбранный город в базу данных.
+    :param conn: Активное соединение с базой данных.
+    :param city_name: Название города.
+    """
+    cur = conn.cursor()
+    cur.execute("INSERT OR REPLACE INTO last_click (id, city_name) VALUES (1, ?)", (city_name,))
+    conn.commit()
 
-    :param selected_kingdom: Название выбранного княжества.
+
+def load_cities_from_db(conn, selected_kingdom):
+    """
+    Загружает данные о городах для выбранного княжества.
+    :param conn: Активное соединение с базой данных.
+    :param selected_kingdom: Название княжества.
     :return: Список словарей с данными о городах.
     """
-    # Подключение к базе данных
-    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-
     try:
-        # Запрос к таблице city для получения данных по выбранному княжеству
-        query = """
-        SELECT id, kingdom, color, fortress_name, coordinates
-        FROM city
-        WHERE kingdom = ?
-        """
+        query = "SELECT id, kingdom, color, fortress_name, coordinates FROM city WHERE kingdom = ?"
         cursor.execute(query, (selected_kingdom,))
         rows = cursor.fetchall()
 
-        # Преобразование данных в список словарей
         cities = []
         for row in rows:
-            city_data = {
+            cities.append({
                 'id': row[0],
                 'kingdom': row[1],
                 'color': row[2],
                 'fortress_name': row[3],
-                'coordinates': row[4]  # Предполагается, что координаты хранятся как строка "x,y"
-            }
-            cities.append(city_data)
+                'coordinates': row[4]
+            })
 
         return cities
-
     except sqlite3.Error as e:
-        print(f"Ошибка при работе с базой данных: {e}")
+        print(f"Ошибка при загрузке данных о городах: {e}")
         return []
 
-    finally:
-        # Закрытие соединения с базой данных
-        conn.close()
 
-
-def restore_from_backup():
+def restore_from_backup(conn):
     """
-    Загрузка данных из стандартных таблиц (default) в рабочие таблицы.
-    Используется при запуске новой игры для восстановления начального состояния.
+    Восстанавливает данные из стандартных таблиц в рабочие.
+    :param conn: Активное соединение с базой данных.
     """
-    # Настройка логирования
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    cursor = conn.cursor()
+    tables_to_restore = [
+        ("city_default", "city"),
+        ("diplomacies_default", "diplomacies"),
+        ("relations_default", "relations"),
+        ("resources_default", "resources"),
+        ("cities_default", "cities"),
+        ("units_default", "units")
+    ]
 
-    # Подключение к базе данных
-    conn = None
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE")  # Блокируем на время восстановления
 
-        # Список таблиц для восстановления
-        tables_to_restore = [
-            ("city_default", "city"),
-            ("diplomacies_default", "diplomacies"),
-            ("relations_default", "relations"),
-            ("resources_default", "resources"),
-            ("cities_default", "cities"),
-            ("units_default", "units")
-        ]
-
-        # Проверяем существование всех стандартных таблиц
-        all_tables_exist = True
-        for default_table, _ in tables_to_restore:
-            cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?", (default_table,))
-            if not cursor.fetchone():
-                logging.error(f"Таблица {default_table} не найдена в базе данных.")
-                all_tables_exist = False
-
-        if not all_tables_exist:
-            logging.error("Не все стандартные таблицы найдены. Восстановление невозможно.")
-            return
-
-        # Начало транзакции
-        cursor.execute("BEGIN TRANSACTION")
-
-        # Восстанавливаем данные из стандартных таблиц в рабочие
         for default_table, working_table in tables_to_restore:
-            try:
-                # Проверяем, есть ли данные в стандартной таблице
-                cursor.execute(f"SELECT COUNT(*) FROM {default_table}")
-                if cursor.fetchone()[0] == 0:
-                    logging.warning(f"Стандартная таблица {default_table} пуста. Пропускаем восстановление.")
-                    continue
+            cursor.execute(f"DELETE FROM {working_table}")
+            cursor.execute(f"INSERT INTO {working_table} SELECT * FROM {default_table}")
 
-                # Очищаем рабочую таблицу
-                cursor.execute(f"DELETE FROM {working_table}")
-
-                # Копируем данные из стандартной таблицы в рабочую
-                cursor.execute(f'''
-                    INSERT INTO {working_table}
-                    SELECT * FROM {default_table}
-                ''')
-                logging.info(f"Данные успешно восстановлены из таблицы {default_table} в таблицу {working_table}.")
-            except Exception as e:
-                logging.error(f"Ошибка при восстановлении таблицы {working_table}: {e}")
-                conn.rollback()  # Откатываем транзакцию в случае ошибки
-                return
-
-        # Фиксируем изменения
         conn.commit()
-        logging.info("Все данные успешно восстановлены из стандартных таблиц.")
-
+        print("Данные успешно восстановлены из бэкапа.")
     except sqlite3.Error as e:
-        logging.error(f"Ошибка при работе с базой данных: {e}")
-        if conn:
-            conn.rollback()  # Откатываем транзакцию в случае ошибки
-    finally:
-        if conn:
-            conn.close()
+        conn.rollback()
+        print(f"Ошибка восстановления данных: {e}")
 
 
 def clear_tables(conn):
@@ -426,9 +364,9 @@ def clear_tables(conn):
 
 
 class MapWidget(Widget):
-    def __init__(self, selected_kingdom=None, player_kingdom=None, **kwargs):
+    def __init__(self, selected_kingdom=None, player_kingdom=None, conn=None, **kwargs):
         super(MapWidget, self).__init__(**kwargs)
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn = conn
         self.fortress_rectangles = []  # Список для хранения крепостей
         self.current_player_kingdom = player_kingdom  # Текущее королевство игрока
 
@@ -608,11 +546,12 @@ class MapWidget(Widget):
         for fort_rect, fortress_data, owner in self.fortress_rectangles:
             x, y, w, h = fort_rect
             if x <= touch.x <= x + w and y <= touch.y <= y + h:
-                save_last_clicked_city(fortress_data["name"])
+                save_last_clicked_city(self.conn, fortress_data["name"])
                 popup = FortressInfoPopup(
                     ai_fraction=owner,
                     city_coords=fortress_data["coordinates"],
-                    player_fraction=self.current_player_kingdom
+                    player_fraction=self.current_player_kingdom,
+                    conn=self.conn
                 )
                 popup.open()
                 print(
@@ -736,11 +675,9 @@ class RectangularButton(Button):
 
 
 class KingdomSelectionWidget(FloatLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, conn, **kwargs):
         super(KingdomSelectionWidget, self).__init__(**kwargs)
         is_android = platform == 'android'
-
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
 
         # Инициализируем selected_button
         self.selected_button = None
@@ -814,7 +751,7 @@ class KingdomSelectionWidget(FloatLayout):
         self.add_widget(self.buttons_container)
 
         # ======== ЗАГРУЗКА ДАННЫХ ИЗ БД ========
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn = conn
         self.kingdom_data = self.load_kingdoms_from_db()
 
         # ======== ПАНЕЛЬ КНОПОК ФРАКЦИЙ (изначально скрыта) ========
@@ -937,7 +874,7 @@ class KingdomSelectionWidget(FloatLayout):
             return
         app = App.get_running_app()
         app.root.clear_widgets()
-        app.root.add_widget(MenuWidget())
+        app.root.add_widget(MenuWidget(self.conn))
 
     def load_kingdoms_from_db(self):
         kingdoms = {}
@@ -1107,7 +1044,7 @@ class KingdomSelectionWidget(FloatLayout):
             self.cleanup_and_start_game()
 
     def force_start_game(self, dt):
-        # Если on_eos не сработал за 3 сек, форсируем запуск игры
+        # Если on_eos не сработал за 3, сек, форсируем запуск игры
         print("Резервный таймер сработал — завершаем видео и запускаем игру")
         if self.start_video:
             self.start_video.state = 'stop'
@@ -1120,21 +1057,18 @@ class KingdomSelectionWidget(FloatLayout):
         self.disable_all_buttons(False)
 
         try:
-            conn = sqlite3.connect(db_path)
-            clear_tables(conn)
-            conn.close()
-            restore_from_backup()
-
             app = App.get_running_app()
+            clear_tables(self.conn)
+            restore_from_backup(self.conn)
             selected_kingdom = app.selected_kingdom
-            cities = load_cities_from_db(selected_kingdom)
+            cities = load_cities_from_db(self.conn, selected_kingdom)
             if not cities:
                 print("Города не найдены.")
                 return
 
-            game_screen = GameScreen(selected_kingdom, cities, db_path=db_path)
+            game_screen = GameScreen(selected_kingdom, cities, conn=self.conn)
             app.root.clear_widgets()
-            map_widget = MapWidget(selected_kingdom=selected_kingdom, player_kingdom=selected_kingdom)
+            map_widget = MapWidget(selected_kingdom=selected_kingdom, player_kingdom=selected_kingdom, conn=self.conn)
             app.root.add_widget(map_widget)
             app.root.add_widget(game_screen)
         except Exception as e:
@@ -1147,9 +1081,9 @@ class KingdomSelectionWidget(FloatLayout):
 
 
 class MenuWidget(FloatLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, conn, **kwargs):
         super(MenuWidget, self).__init__(**kwargs)
-
+        self.conn = conn
         # ======== Фоновые изображения (попеременно сменяются) ========
         self.bg_image_1 = Image(
             source='files/menu/arkadia.jpg',
@@ -1323,31 +1257,33 @@ class MenuWidget(FloatLayout):
             return
         app = App.get_running_app()
         app.root.clear_widgets()
-        app.root.add_widget(DossierScreen())
+        app.root.add_widget(DossierScreen(self.conn))
 
     def open_how_to_play(self, instance):
         if getattr(self, 'buttons_locked', False):
             return
         app = App.get_running_app()
         app.root.clear_widgets()
-        app.root.add_widget(HowToPlayScreen())
+        app.root.add_widget(HowToPlayScreen(self.conn))
 
     def open_author(self, instance):
         if getattr(self, 'buttons_locked', False):
             return
         app = App.get_running_app()
         app.root.clear_widgets()
-        app.root.add_widget(AuthorScreen())
+        app.root.add_widget(AuthorScreen(self.conn))
 
     def start_game(self, instance):
         if getattr(self, 'buttons_locked', False):
             return
         app = App.get_running_app()
         app.root.clear_widgets()
-        app.root.add_widget(KingdomSelectionWidget())
+        app.root.add_widget(KingdomSelectionWidget(self.conn))
 
     def exit_game(self, instance):
-        App.get_running_app().stop()
+        app = App.get_running_app()
+        app.on_stop()  # Явно вызываем on_stop(), чтобы закрыть соединения
+        app.stop()     # Завершаем приложение
 
 
 class CustomTab(TabbedPanelItem):
@@ -1366,8 +1302,9 @@ class CustomTab(TabbedPanelItem):
 
 
 class DossierScreen(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, conn, **kwargs):
         super().__init__(**kwargs)
+        self.conn = conn
         self.auto_clear_event = None
         self.auto_clear_toggle = None
         self.tabs = None
@@ -1483,15 +1420,13 @@ class DossierScreen(Screen):
             for tab in list(self.tabs.get_tab_list()):
                 self.tabs.remove_widget(tab)
         try:
-            conn = sqlite3.connect(db_path)
+            conn = self.conn
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM dossier")
             rows = cursor.fetchall()
         except sqlite3.Error as e:
             print(f"Ошибка базы данных: {e}")
             rows = []
-        finally:
-            conn.close()
 
         if not rows:
             # Если записей нет
@@ -1717,15 +1652,14 @@ class DossierScreen(Screen):
         После успеха — полностью удаляем и пересоздаем вкладку.
         """
         try:
-            conn = sqlite3.connect(db_path)
+            conn = self.conn
             cursor = conn.cursor()
             cursor.execute("DELETE FROM dossier")
             conn.commit()
             print("✅ Все записи успешно удалены.")
         except sqlite3.Error as e:
             print(f"❌ Ошибка удаления: {e}")
-        finally:
-            conn.close()
+
 
         self._recreate_dossier_tab()
 
@@ -1736,7 +1670,7 @@ class DossierScreen(Screen):
         app = App.get_running_app()
         root = app.root
         root.clear_widgets()
-        root.add_widget(MenuWidget())
+        root.add_widget(MenuWidget(self.conn))
 
     def _recreate_dossier_tab(self):
         """
@@ -1757,8 +1691,9 @@ class DossierScreen(Screen):
 
 
 class HowToPlayScreen(FloatLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, conn, **kwargs):
         super(HowToPlayScreen, self).__init__(**kwargs)
+        self.conn = conn
         # Фон
         self.add_widget(Image(source='files/menu/how_to_play_bg.jpg', allow_stretch=True, keep_ratio=False))
 
@@ -2006,7 +1941,7 @@ class HowToPlayScreen(FloatLayout):
     def back_to_menu(self, instance):
         app = App.get_running_app()
         app.root.clear_widgets()
-        app.root.add_widget(MenuWidget())
+        app.root.add_widget(MenuWidget(self.conn))
 
 
 class EmpireApp(App):
@@ -2018,37 +1953,92 @@ class EmpireApp(App):
         # Можно завести другие глобальные настройки здесь
         self.selected_kingdom = None  # Атрибут для хранения выбранного королевства
 
+        # Инициализация соединения с базой данных
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn.execute("PRAGMA journal_mode=WAL;")
+        self.conn.execute("PRAGMA synchronous=NORMAL;")
+        self.conn.execute("PRAGMA busy_timeout=5000;")
+
     def build(self):
-        return LoadingScreen()  # Возвращаем виджет главного меню
+        """Создает начальный интерфейс приложения."""
+        return LoadingScreen(self.conn)  # Возвращаем виджет загрузочного экрана
 
     def restart_app(self):
-        # Явное закрытие всех соединений с базой данных
-        conn = sqlite3.connect(db_path)
-        clear_tables(conn)
-        conn.close()
+        """Перезапуск игры — очистка БД, восстановление бэкапа, пересоздание интерфейса."""
+        try:
+            # Очистка таблиц
+            clear_tables(self.conn)
+            self.conn.commit()
+            print("Таблицы успешно очищены.")
+        except sqlite3.Error as e:
+            print(f"Ошибка при очистке таблиц: {e}")
+            self.conn.rollback()
 
         # Восстановление из бэкапа
-        restore_from_backup()
+        restore_from_backup(self.conn)
 
         # Сброс состояния приложения
         self.selected_kingdom = None
 
         # Полная очистка корневого виджета
-        self.root.clear_widgets()
+        if self.root:
+            self.root.clear_widgets()
 
         # Пересоздание главного меню
         Clock.schedule_once(self.recreate_main_menu, 0.2)
 
     def recreate_main_menu(self, dt):
-        self.root.add_widget(MenuWidget())
+        """Пересоздание главного меню после очистки."""
+        self.root.add_widget(MenuWidget(self.conn))
         print("Главное меню полностью пересоздано")
 
     def on_stop(self):
-        # Закрываем все соединения при завершении
-        for child in self.root.children:
-            if hasattr(child, 'conn'):
-                child.conn.close()
+        """Вызывается при завершении работы приложения."""
+        print("Завершение работы приложения...")
+
+        # Явно закрываем главное соединение
+        if hasattr(self, 'conn') and self.conn:
+            try:
+                # Сбрасываем WAL обратно в основную БД
+                self.conn.execute("PRAGMA wal_checkpoint(FULL);")
+                # Отключаем WAL
+                self.conn.execute("PRAGMA journal_mode=DELETE;")
+                self.conn.close()
+                print("Главное соединение с БД закрыто корректно.")
+            except sqlite3.Error as e:
+                print(f"Ошибка при закрытии главного соединения с БД: {e}")
+
+        # Дополнительно: удаляем остаточные файлы WAL/SHM
+        for ext in [".db-wal", ".db-shm"]:
+            fpath = db_path + ext
+            if os.path.exists(fpath):
+                try:
+                    os.remove(fpath)
+                    print(f"Файл {fpath} удален вручную.")
+                except Exception as e:
+                    print(f"Не удалось удалить файл {fpath}: {e}")
+
+        # Также можно выполнить любую другую финальную очистку
+        print("Приложение завершило работу.")
+
+    def get_connection(self):
+        """Возвращает текущее соединение с БД."""
+        return self.conn
+
+    def close_all_connections(self):
+        """Метод для закрытия всех дочерних соединений (если используются)."""
+        if self.root:
+            for child in self.root.children:
+                if hasattr(child, 'conn') and child.conn:
+                    try:
+                        child.conn.execute("PRAGMA wal_checkpoint(FULL);")
+                        child.conn.execute("PRAGMA journal_mode=DELETE;")
+                        child.conn.close()
+                        print(f"Соединение {child} закрыто.")
+                    except sqlite3.Error as e:
+                        print(f"Ошибка при закрытии дочернего соединения: {e}")
 
 
 if __name__ == '__main__':
-    EmpireApp().run()  # Запуск приложения
+    EmpireApp().run()
+

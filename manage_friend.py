@@ -147,26 +147,15 @@ class StyledDropDown(DropDown):
         self.bg.size = self.size
         self.bg.pos = self.pos
 
-def has_pending_action():
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM last_click")
-    count = cur.fetchone()[0]
-    conn.close()
-    return count > 0
-
-
-def get_city_faction(city_name):
-    conn = sqlite3.connect(db_path)
+def get_city_faction(city_name, conn):
     cur = conn.cursor()
     cur.execute("SELECT faction FROM cities WHERE name=?", (city_name,))
     result = cur.fetchone()
-    conn.close()
+
     return result[0] if result else None
 
 
-def get_allies_for_faction(faction_name):
-    conn = sqlite3.connect(db_path)
+def get_allies_for_faction(faction_name, conn):
     cur = conn.cursor()
     cur.execute(
         "SELECT faction1, faction2 FROM diplomacies "
@@ -177,7 +166,7 @@ def get_allies_for_faction(faction_name):
         row[1] if row[0] == faction_name else row[0]
         for row in cur.fetchall()
     }
-    conn.close()
+
     return allies
 
 
@@ -185,10 +174,11 @@ class ManageFriend(Popup):
     """
     Окно союзников с улучшенным дизайном
     """
-    def __init__(self, faction_name, game_area, **kwargs):
+    def __init__(self, faction_name, game_area, conn, **kwargs):
         super().__init__(**kwargs)
         self.game_area = game_area
         self.faction_name = faction_name
+        self.conn = conn
         allies = self._get_allies_from_db()
         ally_name = allies[0] if allies else "Нет союзника"
         self.title = f"Союзник: {ally_name}"
@@ -240,8 +230,8 @@ class ManageFriend(Popup):
         popup.open()
 
     def _finalize_city_selection(self, city_name, action, ally):
-        city_faction = get_city_faction(city_name)
-        allies = get_allies_for_faction(self.faction_name)
+        city_faction = get_city_faction(city_name, self.conn)
+        allies = get_allies_for_faction(self.faction_name, self.conn)
 
         final_msg = ""
         if action == "defense":
@@ -453,7 +443,7 @@ class ManageFriend(Popup):
         self._send_request(ally, resource)
 
     def _get_allies_from_db(self):
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cur = conn.cursor()
         cur.execute(
             "SELECT faction1, faction2 FROM diplomacies "
@@ -464,7 +454,6 @@ class ManageFriend(Popup):
             r[1] if r[0] == self.faction_name else r[0]
             for r in cur.fetchall()
         }
-        conn.close()
         return list(allies)
 
     def _cancel_selection(self, action, ally):
@@ -504,11 +493,10 @@ class ManageFriend(Popup):
         self._cancel_selection(action, ally)
 
     def _check_city_selection(self, dt, action, ally):
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cur = conn.cursor()
         cur.execute("SELECT city_name FROM last_click")
         row = cur.fetchone()
-        conn.close()
         current_city = row[0] if row and row[0] else None
 
         if current_city:
@@ -551,34 +539,34 @@ class ManageFriend(Popup):
             label.opacity = 0 if label.opacity == 1 else 1
 
     def save_query_attack_to_db(self, attack_city):
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO queries (resource, defense_city, attack_city, faction) VALUES (?, ?, ?, ?)",
             ("", "", attack_city, self.faction_name)
         )
         conn.commit()
-        conn.close()
+
 
     def save_query_defense_to_db(self, defense_city):
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO queries (resource, defense_city, attack_city, faction) VALUES (?, ?, ?, ?)",
             ("", defense_city, "", self.faction_name)
         )
         conn.commit()
-        conn.close()
+
 
     def save_query_resources_to_db(self, resource):
-        conn = sqlite3.connect(db_path)
+        conn = self.conn
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO queries (resource, defense_city, attack_city, faction) VALUES (?, ?, ?, ?)",
             (resource, "", "", self.faction_name)
         )
         conn.commit()
-        conn.close()
+
 
     def _send_request(self, ally, resource):
         self.save_query_resources_to_db(resource)

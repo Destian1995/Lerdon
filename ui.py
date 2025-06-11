@@ -12,11 +12,11 @@ def dict_factory(cursor, row):
     return d
 
 class FortressInfoPopup(Popup):
-    def __init__(self, ai_fraction, city_coords, player_fraction, **kwargs):
+    def __init__(self, ai_fraction, city_coords, player_fraction, conn, **kwargs):
         super(FortressInfoPopup, self).__init__(**kwargs)
 
         # Создаем подключение к БД
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn = conn
         self.conn.execute("PRAGMA journal_mode=WAL;")
         self.conn.execute("PRAGMA synchronous=NORMAL;")
         self.cursor = self.conn.cursor()
@@ -1410,7 +1410,7 @@ class FortressInfoPopup(Popup):
                 attacking_army=attacking_army,
                 attacking_fraction=source_owner,
                 defending_fraction=destination_owner,
-                db_connection=self.conn
+                conn=self.conn
             )
             self.close_current_popup()
         except Exception as e:
@@ -1442,6 +1442,7 @@ class FortressInfoPopup(Popup):
         :param taken_count: Количество юнитов для переноса.
         """
         try:
+            self.conn.execute("BEGIN IMMEDIATE")  # Явная блокировка
             cursor = self.cursor
 
             # Шаг 1: Проверяем наличие юнитов в исходном городе
@@ -1455,11 +1456,10 @@ class FortressInfoPopup(Popup):
                 print(f"Ошибка: недостаточно юнитов '{unit_name}' в городе '{source_fortress_name}'.")
                 return
 
-            # Получаем изображение юнита
             unit_image = source_unit[1]
+            remaining_count = source_unit[0] - taken_count
 
             # Шаг 2: Обновляем количество юнитов в исходном городе
-            remaining_count = source_unit[0] - taken_count
             if remaining_count > 0:
                 cursor.execute("""
                     UPDATE garrisons 
@@ -1480,7 +1480,6 @@ class FortressInfoPopup(Popup):
             destination_unit = cursor.fetchone()
 
             if destination_unit:
-                # Если юнит уже есть, увеличиваем его количество
                 new_count = destination_unit[0] + taken_count
                 cursor.execute("""
                     UPDATE garrisons 
@@ -1488,21 +1487,24 @@ class FortressInfoPopup(Popup):
                     WHERE city_id = ? AND unit_name = ?
                 """, (new_count, destination_fortress_name, unit_name))
             else:
-                # Если юнита нет, добавляем новую запись с изображением
                 cursor.execute("""
                     INSERT INTO garrisons (city_id, unit_name, unit_count, unit_image)
                     VALUES (?, ?, ?, ?)
                 """, (destination_fortress_name, unit_name, taken_count, unit_image))
 
-            # Сохраняем изменения в базе данных
-            self.conn.commit()
+            self.conn.commit()  # Фиксируем изменения
             print("Войска успешно перенесены.")
             self.close_current_popup()
 
         except sqlite3.Error as e:
-            print(f"Произошла ошибка при работе с базой данных(move _ troops): {e}")
+            self.conn.rollback()  # Откатываем изменения
+            print(f"[ERROR] Ошибка SQLite при перемещении войск: {e}")
+            show_popup_message("Ошибка", f"Не удалось переместить войска: {e}")
+
         except Exception as e:
-            print(f"Произошла ошибка при переносе войск: {e}")
+            self.conn.rollback()
+            print(f"[ERROR] Неожиданная ошибка при перемещении войск: {e}")
+            show_popup_message("Ошибка", f"Произошла системная ошибка: {e}")
 
     def is_ally(self, faction1_id, faction2_id):
         """
