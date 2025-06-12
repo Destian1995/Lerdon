@@ -43,7 +43,6 @@ class AdvisorView(FloatLayout):
         self.faction = faction
         self.db_connection = conn  # Единое подключение к базе
         self.cursor = self.db_connection.cursor()
-        self._exp_points = 0
         self._attack_progress = 0
         self._defense_progress = 0
         # Инициализация таблицы political_systems

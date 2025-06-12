@@ -337,15 +337,16 @@ def clear_tables(conn):
         "resources",
         "trade_agreements",
         "turn",
+        "turn_save",
         "armies",
         "political_systems",
         "karma",
         "user_faction",
         "units",
-        "experience",
         "queries",
         "results",
-        "auto_build_settings"
+        "auto_build_settings",
+        "interface_coord"
     ]
 
     cursor = conn.cursor()
@@ -476,45 +477,60 @@ class MapWidget(Widget):
                 cursor.execute("SELECT fortress_name, kingdom, coordinates FROM city")
                 fortresses_data = cursor.fetchall()
             except sqlite3.Error as e:
-                print(f"Ошибка при загрузке данных о городах: {e}")
+                print(f"[ERROR] Ошибка при загрузке данных о городах: {e}")
                 return
+            finally:
+                cursor.close()
 
             if not fortresses_data:
-                print("Нет данных о городах в базе данных.")
+                print("[DEBUG] Нет данных о крепостях в базе данных.")
                 return
 
-            for fortress_name, kingdom, coords_str in fortresses_data:
-                try:
-                    coords = ast.literal_eval(coords_str)
-                    if len(coords) == 2:
-                        fort_x, fort_y = coords
-                    else:
-                        continue
-                except (ValueError, SyntaxError) as e:
-                    print(f"Ошибка при разборе координат города '{fortress_name}': {e}")
+            for row in fortresses_data:
+                # --- Получаем значения, совместимые и с Row, и с tuple ---
+                if isinstance(row, sqlite3.Row):
+                    fortress_name = row['fortress_name']
+                    kingdom = row['kingdom']
+                    coords_str = row['coordinates']
+                elif isinstance(row, (list, tuple)):
+                    fortress_name = row[0]
+                    kingdom = row[1]
+                    coords_str = row[2]
+                else:
+                    print(f"[WARNING] Неизвестный тип данных: {type(row)}")
                     continue
 
-                # Вычисляем позицию с учётом масштаба
+                # --- Парсим координаты ---
+                if not coords_str or not isinstance(coords_str, str):
+                    print(f"[WARNING] Координаты пустые или не являются строкой: {coords_str}")
+                    continue
+
+                try:
+                    coords = ast.literal_eval(coords_str)
+                    if len(coords) != 2:
+                        raise ValueError(f"Координаты должны быть в формате [x, y], получено: {coords}")
+                except Exception as e:
+                    print(f"[ERROR] Ошибка разбора координат для '{fortress_name}': {e}")
+                    continue
+
+                fort_x, fort_y = coords
                 drawn_x = fort_x * self.map_scale + self.map_pos[0]
                 drawn_y = fort_y * self.map_scale + self.map_pos[1]
 
-                # Получаем путь к изображению
+                # --- Получаем путь к изображению ---
                 image_path = faction_images.get(kingdom, 'files/buildings/default.png')
                 if not os.path.exists(image_path):
                     image_path = 'files/buildings/default.png'
 
-                # Сохраняем данные о крепости
+                # --- Сохраняем данные для кликов ---
                 fort_rect = (drawn_x, drawn_y, 77, 77)
-                self.fortress_rectangles.append((
-                    fort_rect,
-                    {"coordinates": (fort_x, fort_y), "name": fortress_name},
-                    kingdom
-                ))
+                self.fortress_rectangles.append(
+                    (fort_rect, {"coordinates": (fort_x, fort_y), "name": fortress_name}, kingdom))
 
-                # Рисуем крепость
+                # --- Рисуем крепость ---
                 Rectangle(source=image_path, pos=(drawn_x, drawn_y), size=(77, 77))
 
-                # Добавляем название города
+                # --- Добавляем название города ---
                 display_name = fortress_name[:20] + "..." if len(fortress_name) > 20 else fortress_name
                 label = CoreLabel(text=display_name, font_size=25, color=(0, 0, 0, 1))
                 label.refresh()
@@ -526,20 +542,24 @@ class MapWidget(Widget):
                 Color(1, 1, 1, 1)
                 Rectangle(texture=text_texture, pos=(text_x, text_y), size=(text_width, text_height))
 
-                # --- Записываем координаты в базу данных ---
+                # --- Обновляем icon_coordinates и label_coordinates ---
                 try:
-                    cursor.execute("""
-                        UPDATE cities
+                    cursor_update = self.conn.cursor()
+                    cursor_update.execute("""
+                        UPDATE cities 
                         SET icon_coordinates = ?, label_coordinates = ?
                         WHERE name = ?
                     """, (
-                        f"({drawn_x}, {drawn_y})",  # icon_coordinates
-                        f"({text_x}, {text_y})",  # label_coordinates
+                        f"({drawn_x}, {drawn_y})",
+                        f"({text_x}, {text_y})",
                         fortress_name
                     ))
                     self.conn.commit()
                 except sqlite3.Error as e:
-                    print(f"Ошибка при обновлении координат для {fortress_name}: {e}")
+                    self.conn.rollback()
+                    print(f"[ERROR] Не удалось обновить координаты в cities для {fortress_name}: {e}")
+                finally:
+                    cursor_update.close()
 
     def check_fortress_click(self, touch):
         """Проверяет нажатие на крепость"""
@@ -900,7 +920,7 @@ class KingdomSelectionWidget(FloatLayout):
         self.stop_border_animation()  # останавливает предыдущую анимацию
         if getattr(self, 'buttons_locked', False):
             return
-        
+
         self.selected_button = instance
         kingdom_name = instance.text
 
@@ -1944,9 +1964,9 @@ class HowToPlayScreen(FloatLayout):
         app.root.add_widget(MenuWidget(self.conn))
 
 
-class EmpireApp(App):
+class Lerdon(App):
     def __init__(self, **kwargs):
-        super(EmpireApp, self).__init__(**kwargs)
+        super(Lerdon, self).__init__(**kwargs)
         print("app starting...")
         # Флаг, что мы на мобильной платформе Android
         self.is_mobile = (platform == 'android')
@@ -1955,6 +1975,7 @@ class EmpireApp(App):
 
         # Инициализация соединения с базой данных
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA journal_mode=WAL;")
         self.conn.execute("PRAGMA synchronous=NORMAL;")
         self.conn.execute("PRAGMA busy_timeout=5000;")
@@ -1993,52 +2014,36 @@ class EmpireApp(App):
         print("Главное меню полностью пересоздано")
 
     def on_stop(self):
-        """Вызывается при завершении работы приложения."""
         print("Завершение работы приложения...")
 
-        # Явно закрываем главное соединение
-        if hasattr(self, 'conn') and self.conn:
-            try:
-                # Сбрасываем WAL обратно в основную БД
-                self.conn.execute("PRAGMA wal_checkpoint(FULL);")
-                # Отключаем WAL
-                self.conn.execute("PRAGMA journal_mode=DELETE;")
-                self.conn.close()
-                print("Главное соединение с БД закрыто корректно.")
-            except sqlite3.Error as e:
-                print(f"Ошибка при закрытии главного соединения с БД: {e}")
+        # 1) Делаем checkpoint и сразу закрываем — без переключения journal_mode
+        try:
+            self.conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+        except sqlite3.Error as e:
+            print(f"[WARNING] Не удалось сделать WAL checkpoint: {e}")
 
-        # Дополнительно: удаляем остаточные файлы WAL/SHM
-        for ext in [".db-wal", ".db-shm"]:
-            fpath = db_path + ext
-            if os.path.exists(fpath):
+        try:
+            self.conn.close()
+            print("Соединение с БД закрыто корректно.")
+        except sqlite3.Error as e:
+            print(f"Ошибка при закрытии соединения с БД: {e}")
+
+        # 2) Удаляем файлы WAL/SHM (опционально)
+        for ext in (".db-wal", ".db-shm"):
+            path = db_path + ext
+            if os.path.exists(path):
                 try:
-                    os.remove(fpath)
-                    print(f"Файл {fpath} удален вручную.")
-                except Exception as e:
-                    print(f"Не удалось удалить файл {fpath}: {e}")
+                    os.remove(path)
+                    print(f"Удалён файл {path}")
+                except OSError as e:
+                    print(f"Не удалось удалить {path}: {e}")
 
-        # Также можно выполнить любую другую финальную очистку
         print("Приложение завершило работу.")
 
     def get_connection(self):
         """Возвращает текущее соединение с БД."""
         return self.conn
 
-    def close_all_connections(self):
-        """Метод для закрытия всех дочерних соединений (если используются)."""
-        if self.root:
-            for child in self.root.children:
-                if hasattr(child, 'conn') and child.conn:
-                    try:
-                        child.conn.execute("PRAGMA wal_checkpoint(FULL);")
-                        child.conn.execute("PRAGMA journal_mode=DELETE;")
-                        child.conn.close()
-                        print(f"Соединение {child} закрыто.")
-                    except sqlite3.Error as e:
-                        print(f"Ошибка при закрытии дочернего соединения: {e}")
-
-
 if __name__ == '__main__':
-    EmpireApp().run()
+    Lerdon().run()
 

@@ -5,21 +5,15 @@ from fight import fight
 from economic import format_number
 
 
-def dict_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
 class FortressInfoPopup(Popup):
     def __init__(self, ai_fraction, city_coords, player_fraction, conn, **kwargs):
         super(FortressInfoPopup, self).__init__(**kwargs)
 
         # Создаем подключение к БД
         self.conn = conn
+        self.cursor = self.conn.cursor()
         self.conn.execute("PRAGMA journal_mode=WAL;")
         self.conn.execute("PRAGMA synchronous=NORMAL;")
-        self.cursor = self.conn.cursor()
         self.ai_fraction = ai_fraction
         self.city_name = ''
         self.city_coords = list(city_coords)
@@ -32,7 +26,6 @@ class FortressInfoPopup(Popup):
 
         # Преобразуем координаты в строку для сравнения с БД
         coords_str = f"[{self.city_coords[0]}, {self.city_coords[1]}]"
-
         # Получаем информацию о городе из таблицы cities
         self.cursor.execute("""
             SELECT name FROM cities 
@@ -138,13 +131,15 @@ class FortressInfoPopup(Popup):
             return btn
 
         # Ввести войска
-        send_troops_button = create_styled_button("Ввести войска", (0.2, 0.8, 0.2, 1), height=dp(40) if is_android else 30)
+        send_troops_button = create_styled_button("Ввести войска", (0.2, 0.8, 0.2, 1),
+                                                  height=dp(40) if is_android else 30)
         send_troops_button.size_hint_x = 1
         send_troops_button.bind(on_release=self.select_troop_type)
         button_layout.add_widget(send_troops_button)
 
         # Разместить армию
-        place_army_button = create_styled_button("Разместить армию", (0.2, 0.6, 0.9, 1), height=dp(40) if is_android else 30)
+        place_army_button = create_styled_button("Разместить армию", (0.2, 0.6, 0.9, 1),
+                                                 height=dp(40) if is_android else 30)
         place_army_button.size_hint_x = 1
         place_army_button.bind(on_release=self.place_army)
         button_layout.add_widget(place_army_button)
@@ -292,15 +287,16 @@ class FortressInfoPopup(Popup):
 
     def get_buildings(self):
         """Получает количество зданий в указанном городе из таблицы buildings."""
+        cursor = self.conn.cursor()
         try:
             # Выполняем запрос к базе данных
-            self.cursor.execute("""
+            cursor.execute("""
                 SELECT building_type, count 
                 FROM buildings 
                 WHERE city_name = ? AND faction = ?
             """, (self.city_name, self.ai_fraction))
 
-            buildings_data = self.cursor.fetchall()
+            buildings_data = cursor.fetchall()
 
             # Формируем список с информацией о зданиях
             buildings = [f"{building_type}: {format_number(count)}" for building_type, count in buildings_data]
@@ -348,13 +344,13 @@ class FortressInfoPopup(Popup):
         try:
             # Закрываем предыдущее окно
             previous_popup.dismiss()
-
+            cursor = self.conn.cursor()
             # Шаг 1: Получаем все юниты из таблицы garrisons
-            self.cursor.execute("""
+            cursor.execute("""
                 SELECT city_id, unit_name, unit_count, unit_image 
                 FROM garrisons
             """)
-            all_troops = self.cursor.fetchall()
+            all_troops = cursor.fetchall()
 
             if not all_troops:
                 # Если войск нет, показываем сообщение
@@ -370,12 +366,12 @@ class FortressInfoPopup(Popup):
             filtered_troops = []
             for city_id, unit_name, unit_count, unit_image in all_troops:
                 # Получаем характеристики юнита из таблицы units
-                self.cursor.execute("""
+                cursor.execute("""
                     SELECT attack, defense, durability, faction 
                     FROM units 
                     WHERE unit_name = ?
                 """, (unit_name,))
-                unit_stats = self.cursor.fetchone()
+                unit_stats = cursor.fetchone()
 
                 if not unit_stats:
                     print(f"Характеристики для юнита '{unit_name}' не найдены.")
@@ -401,7 +397,7 @@ class FortressInfoPopup(Popup):
                 # Если подходящих войск нет, показываем сообщение
                 error_popup = Popup(
                     title="Ошибка",
-                    content=Label(text=f"Нет доступных {troop_type.lower()} войск вашей фракции."),
+                    content=Label(text=f"Нет доступных {troop_type} войск вашей фракции."),
                     size_hint=(0.6, 0.4)
                 )
                 error_popup.open()
@@ -736,7 +732,7 @@ class FortressInfoPopup(Popup):
             self.attacking_units_box.clear_widgets()
 
             # Получаем актуальные данные о гарнизоне из базы данных
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             cursor.execute("""
                 SELECT unit_name, unit_count, unit_image 
                 FROM garrisons 
@@ -825,7 +821,7 @@ class FortressInfoPopup(Popup):
                 self.current_popup.dismiss()
                 self.current_popup = None
 
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             current_city_owner = self.get_city_owner(self.city_name)
             current_player_kingdom = self.player_fraction
 
@@ -960,7 +956,7 @@ class FortressInfoPopup(Popup):
             # Кнопка закрытия
             close_btn = Button(
                 text="Закрыть",
-                font_size=sp(font_size+1),
+                font_size=sp(font_size + 1),
                 size_hint=(1, None),
                 height=int(30 * scale_factor),
                 background_color=(0.2, 0.2, 0.2, 1),
@@ -1106,7 +1102,7 @@ class FortressInfoPopup(Popup):
 
     def get_city_owner(self, fortress_name):
         try:
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             cursor.execute("""
                 SELECT kingdom FROM city 
                 WHERE fortress_name = ?
@@ -1115,7 +1111,7 @@ class FortressInfoPopup(Popup):
             if not result:
                 print(f"Город '{fortress_name}' не найден в таблице city.")
                 return None
-            print(f"Владелец города '{fortress_name}': {result[0]}")
+
             return result[0]
         except sqlite3.Error as e:
             print(f"Ошибка при получении владельца города: {e}")
@@ -1127,7 +1123,7 @@ class FortressInfoPopup(Popup):
         Устанавливает значение check_attack в True по умолчанию.
         """
         try:
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             # Проверяем, существует ли уже запись для текущей фракции
             cursor.execute("""
                 SELECT faction FROM turn_check_attack_faction 
@@ -1154,7 +1150,7 @@ class FortressInfoPopup(Popup):
         Устанавливает значение 'can_move' = True по умолчанию.
         """
         try:
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS turn_check_move (
                     faction TEXT PRIMARY KEY,
@@ -1204,11 +1200,10 @@ class FortressInfoPopup(Popup):
         :return: True, если действие возможно, иначе False.
         """
         try:
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             # Получаем владельцев городов
             source_owner = self.get_city_owner(source_fortress_name)
             destination_owner = self.get_city_owner(destination_fortress_name)
-
             if not source_owner or not destination_owner:
                 show_popup_message("Ошибка", "Один из городов не существует.")
                 return False
@@ -1333,89 +1328,194 @@ class FortressInfoPopup(Popup):
             return False
 
     def start_battle_group(self, source_fortress_name, destination_fortress_name, attacking_units):
-        """
-        Запускает сражение между атакующей и обороняющейся сторонами.
-        :param source_fortress_name: Название исходного города/крепости.
-        :param destination_fortress_name: Название целевого города/крепости.
-        :param attacking_units: Список юнитов для атаки.
-        """
         try:
             with self.conn:
-                self.conn.row_factory = dict_factory
+                try:
+                    self.conn.execute("PRAGMA wal_checkpoint(FULL);")
+                except sqlite3.Error as e:
+                    print(f"[WARNING] Не удалось выполнить wal_checkpoint: {e}")
+
                 cursor = self.conn.cursor()
-                # Получаем владельцев городов
+
                 source_owner = self.get_city_owner(source_fortress_name)
                 destination_owner = self.get_city_owner(destination_fortress_name)
-                # Проверяем наличие гарнизона в целевом городе
-                cursor.execute("""
-                    SELECT unit_name, unit_count, unit_image FROM garrisons WHERE city_id = ?
-                """, (destination_fortress_name,))
-                defending_garrison = cursor.fetchall()
-                # Если гарнизон целевого города пуст, захватываем город без боя
+
+                if not source_owner or not destination_owner:
+                    print(f"[ERROR] Не удалось определить фракции. source={source_owner}, dest={destination_owner}")
+                    show_popup_message("Ошибка", "Не удалось определить фракции.")
+                    return
+
+                # вытаскиваем гарнизон
+                cursor.execute(
+                    "SELECT unit_name, unit_count, unit_image FROM garrisons WHERE city_id = ?",
+                    (destination_fortress_name,)
+                )
+                rows = cursor.fetchall()
+                # вот здесь конвертим Row в dict
+                defending_garrison = [dict(row) for row in rows]
+                print(f"defending_garrison={defending_garrison}")
+
                 if not defending_garrison:
                     self.capture_city(destination_fortress_name, source_owner, attacking_units)
-                    self.close_current_popup()  # Закрываем окно интерфейса
+                    self.close_current_popup()
                     return
-                # Собираем имена юнитов для оптимизации запросов
-                unit_names = [
-                    unit['unit_name'] for unit in attacking_units + defending_garrison
-                    if isinstance(unit, dict) and 'unit_name' in unit
-                ]
-                placeholders = ', '.join(['?'] * len(unit_names))
-                cursor.execute(f"""
+
+                # собираем имена из атакующих
+                unit_names = {u.get('unit_name', '').strip() for u in attacking_units if u.get('unit_name')}
+                # и из защищающихся
+                for unit in defending_garrison:
+                    name = unit.get('unit_name', '').strip()
+                    if name:
+                        unit_names.add(name)
+                unit_names = list(unit_names)
+                print(f"unit_names={unit_names}")
+
+                if not unit_names:
+                    print("[WARNING] Нет имён юнитов для запроса характеристик.")
+                    show_popup_message("Ошибка", "Нет данных о юнитах для боя.")
+                    return
+
+                # достаём статы
+                placeholders = ','.join('?' * len(unit_names))
+                query = f"""
                     SELECT unit_name, attack, durability, defense, unit_class, image_path 
                     FROM units 
                     WHERE unit_name IN ({placeholders})
-                """, unit_names)
-                unit_stats = {row['unit_name']: dict(row) for row in cursor.fetchall()}
-                # Формируем списки армий
-                attacking_army, defending_army = [], []
-                for unit in attacking_units:
-                    stats = unit_stats.get(unit['unit_name'])
+                """
+                cursor.execute(query, unit_names)
+                results = cursor.fetchall()
+
+                cols = [d[0] for d in cursor.description]
+                idx = {k: cols.index(k) for k in
+                       ('unit_name', 'attack', 'durability', 'defense', 'unit_class', 'image_path')}
+
+                unit_stats = {
+                    row[idx['unit_name']].strip(): {
+                        'unit_name': row[idx['unit_name']].strip(),
+                        'attack': row[idx['attack']],
+                        'durability': row[idx['durability']],
+                        'defense': row[idx['defense']],
+                        'unit_class': row[idx['unit_class']],
+                        'image_path': row[idx['image_path']],
+                    }
+                    for row in results
+                }
+
+                # Формируем армии
+                attacking_army = []
+                for u in attacking_units:
+                    name = u.get('unit_name', '').strip()
+                    stats = unit_stats.get(name)
                     if not stats:
-                        print(f"Ошибка: данные о юните '{unit['unit_name']}' не найдены.")
+                        print(f"Ошибка: данные о юните '{name}' не найдены.")
                         continue
                     attacking_army.append({
-                        "unit_name": unit['unit_name'],
-                        "unit_count": unit['unit_count'],
-                        "unit_image": stats.get("image_path", ""),
+                        "unit_name": name,
+                        "unit_count": u.get('unit_count', 0),
+                        "unit_image": stats['image_path'],
                         "units_stats": {
-                            "Урон": stats["attack"],
-                            "Живучесть": stats["durability"],
-                            "Защита": stats["defense"],
-                            "Класс юнита": stats["unit_class"]
+                            "Урон": stats['attack'],
+                            "Живучесть": stats['durability'],
+                            "Защита": stats['defense'],
+                            "Класс юнита": stats['unit_class'],
                         }
                     })
-                for unit in defending_garrison:
-                    stats = unit_stats.get(unit['unit_name'])
+
+                defending_army = []
+                for u in defending_garrison:
+                    name = u.get('unit_name', '').strip()
+                    stats = unit_stats.get(name)
                     if not stats:
-                        print(f"Ошибка: данные о юните '{unit['unit_name']}' не найдены.")
+                        print(f"Ошибка: данные о юните '{name}' не найдены.")
                         continue
                     defending_army.append({
-                        "unit_name": unit['unit_name'],
-                        "unit_count": unit['unit_count'],
-                        "unit_image": stats.get("image_path", ""),
+                        "unit_name": name,
+                        "unit_count": u.get('unit_count', 0),
+                        "unit_image": stats['image_path'],
                         "units_stats": {
-                            "Урон": stats["attack"],
-                            "Живучесть": stats["durability"],
-                            "Защита": stats["defense"],
-                            "Класс юнита": stats["unit_class"]
+                            "Урон": stats['attack'],
+                            "Живучесть": stats['durability'],
+                            "Защита": stats['defense'],
+                            "Класс юнита": stats['unit_class'],
                         }
                     })
-            # Запускаем бой (вне транзакции)
-            fight(
-                attacking_city=source_fortress_name,
-                defending_city=destination_fortress_name,
-                defending_army=defending_army,
-                attacking_army=attacking_army,
-                attacking_fraction=source_owner,
-                defending_fraction=destination_owner,
-                conn=self.conn
-            )
+
+                # Запускаем сам бой
+                fight(
+                    attacking_city=source_fortress_name,
+                    defending_city=destination_fortress_name,
+                    defending_army=defending_army,
+                    attacking_army=attacking_army,
+                    attacking_fraction=source_owner,
+                    defending_fraction=destination_owner,
+                    conn=self.conn
+                )
+                self.close_current_popup()
+
+        except sqlite3.Error as e:
+            print(f"[ERROR] Ошибка базы данных при запуске боя: {e}")
+            show_popup_message("Ошибка", f"Ошибка БД: {e}")
             self.close_current_popup()
         except Exception as e:
-            print(f"Ошибка при запуске боя: {e}")
+            print(f"[ERROR] Неожиданная ошибка при запуске боя: {e}")
+            show_popup_message("Ошибка", f"Неизвестная ошибка: {e}")
             self.close_current_popup()
+
+    def capture_city(self, fortress_name, new_owner, attacking_units):
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+
+                # 1. Обновляем владельца города
+                cursor.execute("""
+                    UPDATE city 
+                    SET kingdom = ? 
+                    WHERE fortress_name = ?
+                """, (new_owner, fortress_name))
+
+                cursor.execute("""
+                    UPDATE cities 
+                    SET faction = ? 
+                    WHERE name = ?
+                """, (new_owner, fortress_name))
+
+                # 2. Переносим только атакующие юниты
+                for unit in attacking_units:
+                    # Удаляем из исходного города
+                    cursor.execute("""
+                        UPDATE garrisons 
+                        SET unit_count = unit_count - ? 
+                        WHERE city_id = ? AND unit_name = ?
+                    """, (unit["unit_count"], unit["city_id"], unit["unit_name"]))
+
+                    # Удаляем запись, если юнитов больше нет
+                    cursor.execute("""
+                        DELETE FROM garrisons 
+                        WHERE city_id = ? AND unit_name = ? AND unit_count <= 0
+                    """, (unit["city_id"], unit["unit_name"]))
+
+                    # Добавляем в захваченный город
+                    cursor.execute("""
+                        INSERT INTO garrisons 
+                        (city_id, unit_name, unit_count, unit_image) 
+                        VALUES (?, ?, ?, ?)
+                        ON CONFLICT(city_id, unit_name) DO UPDATE 
+                        SET unit_count = unit_count + ?
+                    """, (fortress_name, unit["unit_name"], unit["unit_count"],
+                          unit["unit_image"], unit["unit_count"]))
+
+                # 3. Передаем здания новому владельцу
+                cursor.execute("""
+                    UPDATE buildings 
+                    SET faction = ? 
+                    WHERE city_name = ?
+                """, (new_owner, fortress_name))
+
+            show_popup_message("Успех", f"Город {fortress_name} захвачен!")
+            self.update_garrison()
+
+        except sqlite3.Error as e:
+            show_popup_message("Ошибка", f"Ошибка при захвате города: {e}")
 
     def get_city_coordinates(self, city_name):
         """
@@ -1423,7 +1523,7 @@ class FortressInfoPopup(Popup):
         :param city_name: Название города.
         :return: Кортеж (x, y) с координатами города.
         """
-        cursor = self.cursor
+        cursor = self.conn.cursor()
         cursor.execute("SELECT coordinates FROM cities WHERE name = ?", (city_name,))
         result = cursor.fetchone()
         if result:
@@ -1442,7 +1542,7 @@ class FortressInfoPopup(Popup):
         :param taken_count: Количество юнитов для переноса.
         """
         try:
-            cursor = self.cursor
+            cursor = self.conn.cursor()
 
             # Шаг 1: Проверяем наличие юнитов в исходном городе
             cursor.execute("""
@@ -1513,7 +1613,7 @@ class FortressInfoPopup(Popup):
         :return: True, если фракции союзники, иначе False.
         """
         try:
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             cursor.execute("""
                 SELECT relationship FROM diplomacies 
                 WHERE (faction1 = ? AND faction2 = ?) OR (faction1 = ? AND faction2 = ?)
@@ -1532,7 +1632,7 @@ class FortressInfoPopup(Popup):
         :return: True, если фракции враги, иначе False.
         """
         try:
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             cursor.execute("""
                 SELECT relationship FROM diplomacies 
                 WHERE (faction1 = ? AND faction2 = ?) OR (faction1 = ? AND faction2 = ?)
@@ -1544,161 +1644,57 @@ class FortressInfoPopup(Popup):
             return False
 
     def transfer_army_to_garrison(self, selected_unit, taken_count):
-        """
-        Переносит данные о войсках из таблицы armies в таблицу garrisons.
-        :param selected_unit: Словарь с данными о юните (тип, статистика, изображение и т.д.).
-        :param taken_count: Количество юнитов для переноса.
-        """
-        print('selected_unit прилетает в transfer_army_to_garrison в таком виде:', selected_unit)
-        print(f'Количество юнитов для переноса: {taken_count}')
         try:
-            cursor = self.cursor
+            with self.conn:
+                cursor = self.conn.cursor()
 
-            # Извлекаем данные из selected_unit
-            unit_type = selected_unit.get("unit_type")
-            stats = selected_unit.get("stats", {})
-            unit_image = selected_unit.get("unit_image")
+                unit_type = selected_unit.get("unit_type")
+                stats = selected_unit.get("stats", {})
+                unit_image = selected_unit.get("unit_image")
 
-            # Проверяем, что все необходимые данные присутствуют
-            if not all([unit_type, taken_count, stats, unit_image]):
-                raise ValueError("Некорректные данные для переноса юнита.")
+                if not all([unit_type, taken_count, stats, unit_image]):
+                    raise ValueError("Некорректные данные для переноса юнита.")
 
-            # Преобразуем stats обратно в отдельные характеристики
-            total_attack = stats.get("Attack", 0)
-            total_defense = stats.get("Defense", 0)
-            total_durability = stats.get("Durability", 0)
-
-            # Получаем текущее количество юнитов из таблицы armies
-            cursor.execute("""
-                SELECT quantity, total_attack, total_defense, total_durability 
-                FROM armies
-                WHERE faction = ? AND unit_type = ?
-            """, (self.player_fraction, unit_type))
-
-            result = cursor.fetchone()
-
-            if not result:
-                print(f"Юнит '{unit_type}' не найден в таблице armies.")
-                return
-
-            old_count, current_attack, current_defense, current_durability = result
-
-            # Проверяем, что можно взять указанное количество юнитов
-            if taken_count > old_count:
-                print(f"Ошибка: нельзя взять больше, чем есть. {unit_type}: {taken_count} > {old_count}")
-                return
-
-            # Проверяем, есть ли уже такой юнит в гарнизоне
-            cursor.execute("""
-                SELECT unit_count FROM garrisons 
-                WHERE city_id = ? AND unit_name = ?
-            """, (self.city_name, unit_type))
-
-            existing_unit = cursor.fetchone()
-
-            if existing_unit:
-                # Если юнит уже есть, обновляем количество
-                new_count = existing_unit[0] + taken_count
+                # Получаем текущее количество юнитов в гарнизоне
                 cursor.execute("""
-                    UPDATE garrisons 
-                    SET unit_count = ? 
+                    SELECT unit_count FROM garrisons 
                     WHERE city_id = ? AND unit_name = ?
-                """, (new_count, self.city_name, unit_type))
-            else:
-                # Если юнита нет, добавляем новую запись
-                cursor.execute("""
-                    INSERT INTO garrisons (city_id, unit_name, unit_count, unit_image)
-                    VALUES (?, ?, ?, ?)
-                """, (self.city_name, unit_type, taken_count, unit_image))
+                """, (self.city_name, unit_type))
+                existing_unit = cursor.fetchone()
 
-            # Обновляем оставшиеся войска в таблице armies
-            remaining_count = old_count - taken_count
-            if remaining_count > 0:
+                if existing_unit:
+                    new_count = existing_unit[0] + taken_count
+                    cursor.execute("""
+                        UPDATE garrisons 
+                        SET unit_count = ? 
+                        WHERE city_id = ? AND unit_name = ?
+                    """, (new_count, self.city_name, unit_type))
+                else:
+                    cursor.execute("""
+                        INSERT INTO garrisons 
+                        (city_id, unit_name, unit_count, unit_image) 
+                        VALUES (?, ?, ?, ?)
+                    """, (self.city_name, unit_type, taken_count, unit_image))
+
+                # Уменьшаем количество юнитов в армии
                 cursor.execute("""
                     UPDATE armies 
-                    SET quantity = ?, total_attack = ?, total_defense = ?, total_durability = ?
-                    WHERE faction = ? AND unit_type = ?
-                """, (
-                    remaining_count,
-                    round(current_attack * (remaining_count / old_count), 2),
-                    round(current_defense * (remaining_count / old_count), 2),
-                    round(current_durability * (remaining_count / old_count), 2),
-                    self.player_fraction,
-                    unit_type
-                ))
-            else:
-                # Удаляем запись, если юнитов больше не осталось
+                    SET quantity = quantity - ? 
+                    WHERE unit_type = ?
+                """, (taken_count, unit_type))
+
                 cursor.execute("""
                     DELETE FROM armies 
-                    WHERE faction = ? AND unit_type = ?
-                """, (self.player_fraction, unit_type))
+                    WHERE unit_type = ? AND quantity <= 0
+                """, (unit_type,))
 
-            # Сохраняем изменения в базе данных
-            self.conn.commit()
-            print("Данные успешно перенесены из таблицы armies в таблицу garrisons.")
-            self.close_current_popup()
-        except sqlite3.Error as e:
-            print(f"Произошла ошибка при работе с базой данных(transfer_army_to_garrison): {e}")
-        except Exception as e:
-            print(f"Произошла ошибка при переносе данных: {e}")
-
-    def capture_city(self, fortress_name, new_owner, attacking_units):
-        try:
-            cursor = self.cursor
-
-            # 1. Обновляем владельца города
-            cursor.execute("""
-                UPDATE city 
-                SET kingdom = ? 
-                WHERE fortress_name = ?
-            """, (new_owner, fortress_name))
-
-            cursor.execute("""
-                UPDATE cities 
-                SET faction = ? 
-                WHERE name = ?
-            """, (new_owner, fortress_name))
-
-            # 2. Переносим только атакующие юниты
-            for unit in attacking_units:
-                # Удаляем из исходного города
-                cursor.execute("""
-                    UPDATE garrisons 
-                    SET unit_count = unit_count - ? 
-                    WHERE city_id = ? AND unit_name = ?
-                """, (unit["unit_count"], unit["city_id"], unit["unit_name"]))
-
-                # Удаляем запись, если юнитов больше нет
-                cursor.execute("""
-                    DELETE FROM garrisons 
-                    WHERE city_id = ? AND unit_name = ? AND unit_count <= 0
-                """, (unit["city_id"], unit["unit_name"]))
-
-                # Добавляем в захваченный город
-                cursor.execute("""
-                    INSERT INTO garrisons 
-                    (city_id, unit_name, unit_count, unit_image) 
-                    VALUES (?, ?, ?, ?)
-                    ON CONFLICT(city_id, unit_name) DO UPDATE 
-                    SET unit_count = unit_count + ?
-                """, (fortress_name, unit["unit_name"], unit["unit_count"],
-                      unit["unit_image"], unit["unit_count"]))
-
-            # 3. Передаем здания новому владельцу
-            cursor.execute("""
-                UPDATE buildings 
-                SET faction = ? 
-                WHERE city_name = ?
-            """, (new_owner, fortress_name))
-
-            self.conn.commit()
-            show_popup_message("Успех", f"Город {fortress_name} захвачен!")
             self.update_garrison()
+            self.close_current_popup()
 
+        except sqlite3.Error as e:
+            show_popup_message("Ошибка", f"Не удалось перенести юниты: {e}")
         except Exception as e:
-            self.conn.rollback()
-            show_popup_message("Ошибка", f"Ошибка захвата: {e}")
-
+            show_popup_message("Ошибка", f"Произошла ошибка: {e}")
 
     def close_current_popup(self):
         """Закрывает текущее всплывающее окно."""

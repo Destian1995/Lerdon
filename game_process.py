@@ -761,18 +761,18 @@ class GameScreen(Screen):
         """
 
         current_faction = self.selected_faction
-
+        cursor = self.conn.cursor()
         # Сохраняем предыдущее состояние, если оно еще не было загружено
         if not hasattr(self, 'prev_diplomacy_state'):
             self.prev_diplomacy_state = {}
         message = "фракци"
         try:
             # Получаем текущие отношения для текущей фракции
-            self.cursor.execute("""
+            cursor.execute("""
                 SELECT faction2, relationship FROM diplomacies
                 WHERE faction1 = ?
             """, (current_faction,))
-            current_records = dict(self.cursor.fetchall())
+            current_records = dict(cursor.fetchall())
 
             # Словарь для хранения изменений по типам
             changes = {
@@ -1161,10 +1161,11 @@ class GameScreen(Screen):
         если она пуста. Политическая система для каждой фракции выбирается случайным образом.
         Условие: не может быть меньше 2 и больше 3 стран с одним политическим строем.
         """
+        cursor = self.conn.cursor()
         try:
             # Проверяем, есть ли записи в таблице
-            self.cursor.execute("SELECT COUNT(*) FROM political_systems")
-            count = self.cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM political_systems")
+            count = cursor.fetchone()[0]
             if count == 0:
                 # Список всех фракций
                 factions = ["Аркадия", "Селестия", "Хиперион", "Этерия", "Халидон"]
@@ -1186,7 +1187,7 @@ class GameScreen(Screen):
                         break
 
                 # Вставляем данные в таблицу
-                self.cursor.executemany(
+                cursor.executemany(
                     "INSERT INTO political_systems (faction, system) VALUES (?, ?)",
                     default_systems
                 )
@@ -1235,20 +1236,21 @@ class GameScreen(Screen):
         Если у фракции нет ни одного города в таблице city,
         все записи для этой фракции в таблице diplomacies помечаются как "уничтожена".
         """
+        cursor = self.conn.cursor()
         try:
             # Шаг 1: Получаем список всех фракций, у которых есть города
-            self.cursor.execute("""
+            cursor.execute("""
                 SELECT DISTINCT kingdom
                 FROM city
             """)
-            factions_with_cities = {row[0] for row in self.cursor.fetchall()}
+            factions_with_cities = {row[0] for row in cursor.fetchall()}
 
             # Шаг 2: Получаем все уникальные фракции из таблицы diplomacies
-            self.cursor.execute("""
+            cursor.execute("""
                 SELECT DISTINCT faction1
                 FROM diplomacies
             """)
-            all_factions = {row[0] for row in self.cursor.fetchall()}
+            all_factions = {row[0] for row in cursor.fetchall()}
 
             # Шаг 3: Определяем фракции, у которых нет ни одного города
             destroyed_factions = all_factions - factions_with_cities
@@ -1258,7 +1260,7 @@ class GameScreen(Screen):
 
                 # Шаг 4: Обновляем записи в таблице diplomacies для уничтоженных фракций
                 for faction in destroyed_factions:
-                    self.cursor.execute("""
+                    cursor.execute("""
                         UPDATE diplomacies
                         SET relationship = ?
                         WHERE faction1 = ? OR faction2 = ?
@@ -1277,8 +1279,9 @@ class GameScreen(Screen):
         """
         Обновляет значения check_attack на False для всех записей в таблице turn_check_attack_faction.
         """
+        cursor = self.conn.cursor()
         try:
-            self.cursor.execute("""
+            cursor.execute("""
                 UPDATE turn_check_attack_faction
                 SET check_attack = ?
             """, (False,))
@@ -1344,6 +1347,7 @@ class GameScreen(Screen):
 
     def get_total_army_strength_by_faction(self, faction):
         """Возвращает общую мощь армии фракции."""
+        cursor = self.conn.cursor()
         class_coefficients = {
             "1": 1.3,
             "2": 1.7,
@@ -1352,14 +1356,14 @@ class GameScreen(Screen):
             "5": 4.0
         }
         try:
-            self.cursor.execute("""
+            cursor.execute("""
                 SELECT g.unit_name, g.unit_count, u.attack, u.defense, u.durability, u.unit_class
                 FROM garrisons g
                 JOIN units u ON g.unit_name = u.unit_name
                 WHERE u.faction = ?
                   AND g.city_id IN (SELECT name FROM cities WHERE faction = ?)
             """, (faction, faction))
-            rows = self.cursor.fetchall()
+            rows = cursor.fetchall()
             total_strength = 0
             for row in rows:
                 unit_name, count, attack, defense, durability, unit_class = row
@@ -1373,6 +1377,7 @@ class GameScreen(Screen):
 
     def get_city_army_strength_by_faction(self, city_id, faction):
         """Возвращает мощь армии фракции в конкретном городе."""
+        cursor = self.conn.cursor()
         class_coefficients = {
             "1": 1.3,
             "2": 1.7,
@@ -1381,13 +1386,13 @@ class GameScreen(Screen):
             "5": 4.0
         }
         try:
-            self.cursor.execute("""
+            cursor.execute("""
                 SELECT g.unit_name, g.unit_count, u.attack, u.defense, u.durability, u.unit_class
                 FROM garrisons g
                 JOIN units u ON g.unit_name = u.unit_name
                 WHERE g.city_id = ? AND u.faction = ?
             """, (city_id, faction))
-            rows = self.cursor.fetchall()
+            rows = cursor.fetchall()
             city_strength = 0
             for row in rows:
                 unit_name, count, attack, defense, durability, unit_class = row
@@ -1425,13 +1430,14 @@ class GameScreen(Screen):
           5) Сохраняем в self.city_star_levels:
              { city_name: (star_level, icon_x, icon_y, city_name) }
         """
+        cursor = self.conn.cursor()
         try:
-            self.cursor.execute("""
+            cursor.execute("""
                 SELECT name, faction, icon_coordinates 
                 FROM cities 
                 WHERE icon_coordinates IS NOT NULL
             """)
-            raw_cities = self.cursor.fetchall()
+            raw_cities = cursor.fetchall()
         except sqlite3.Error as e:
             print(f"Ошибка при получении городов с гарнизонами: {e}")
             self.city_star_levels = {}
@@ -1486,9 +1492,9 @@ class GameScreen(Screen):
         Инициализирует запись о возможности перемещения для текущей фракции.
         Устанавливает значение 'can_move' = True по умолчанию.
         """
-
+        cursor = self.conn.cursor()
         try:
-            self.cursor.execute("""
+            cursor.execute("""
                 UPDATE turn_check_move
                 SET can_move = ?
             """, (True,))
@@ -1505,13 +1511,15 @@ class GameScreen(Screen):
 
     def load_turn(self, faction):
         """Загрузка текущего значения хода для фракции."""
-        self.cursor.execute('SELECT turn_count FROM turn WHERE faction = ?', (faction,))
-        result = self.cursor.fetchone()
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT turn_count FROM turn WHERE faction = ?', (faction,))
+        result = cursor.fetchone()
         return result[0] if result else 0
 
     def save_turn(self, faction, turn_count):
         """Сохранение текущего значения хода для фракции."""
-        self.cursor.execute('''
+        cursor = self.conn.cursor()
+        cursor.execute('''
             INSERT OR REPLACE INTO turn (faction, turn_count)
             VALUES (?, ?)
         ''', (faction, turn_count))
@@ -1519,7 +1527,8 @@ class GameScreen(Screen):
 
     def save_turn_history(self, faction, turn_count):
         """Сохранение истории ходов в таблицу turn_save."""
-        self.cursor.execute('''
+        cursor = self.conn.cursor()
+        cursor.execute('''
             INSERT INTO turn_save (faction, turn_count)
             VALUES (?, ?)
         ''', (faction, turn_count))
@@ -1529,13 +1538,13 @@ class GameScreen(Screen):
         """Сохраняет координаты и размер элемента интерфейса в базу данных."""
         if not self.conn:
             return
-
+        cursor = self.conn.cursor()
         try:
             pos = widget.pos
             size = widget.size
             pos_hint = str(widget.pos_hint) if widget.pos_hint else None
 
-            self.cursor.execute('''
+            cursor.execute('''
                 INSERT INTO interface_coord (
                     element_name, screen_section, x, y, width, height, size_hint_x, size_hint_y, pos_hint
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

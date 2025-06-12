@@ -1532,7 +1532,7 @@ class AIController:
                 attacking_army=attacking_army,
                 attacking_fraction=self.faction,
                 defending_fraction=faction,
-                db_connection=self.db_connection
+                conn=self.db_connection
             )
             print(f"Результат битвы: {result}")
 

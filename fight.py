@@ -24,6 +24,7 @@ def merge_units(army):
 def update_results_table(db_connection, faction, units_combat, units_destroyed, enemy_losses):
     """
     Обновляет или создает запись в таблице results для указанной фракции.
+
     :param db_connection: Соединение с базой данных.
     :param faction: Название фракции.
     :param units_combat: Общее число юнитов фракции на начало боя.
@@ -31,97 +32,41 @@ def update_results_table(db_connection, faction, units_combat, units_destroyed, 
     :param enemy_losses: Потери противника (количество уничтоженных юнитов).
     """
     try:
-        cursor = db_connection.cursor()
-        db_connection.execute("BEGIN")
-
-        # Проверяем, существует ли уже запись для этой фракции
-        cursor.execute("SELECT COUNT(*) FROM results WHERE faction = ?", (faction,))
-        exists = cursor.fetchone()[0]
-
-        if exists > 0:
-            # Обновляем существующую запись
-            cursor.execute("""
-                UPDATE results
-                SET 
-                    Units_Combat = Units_Combat + ?, 
-                    Units_Destroyed = Units_Destroyed + ?,
-                    Units_killed = Units_killed + ?
-                WHERE faction = ?
-            """, (units_combat, units_destroyed, enemy_losses, faction))
-        else:
-            # Вставляем новую запись
-            cursor.execute("""
-                INSERT INTO results (
-                    Units_Combat, Units_Destroyed, Units_killed, 
-                    Army_Efficiency_Ratio, Average_Deal_Ratio, 
-                    Average_Net_Profit_Coins, Average_Net_Profit_Raw, 
-                    Economic_Efficiency, faction
-                )
-                VALUES (?, ?, ?, 0, 0, 0, 0, 0, ?)
-            """, (units_combat, units_destroyed, enemy_losses, faction))
-
-        db_connection.commit()
-    except Exception as e:
-        db_connection.rollback()
-        print(f"Ошибка при обновлении таблицы results: {e}")
-
-def calculate_experience(losing_side, db_connection):
-    experience_points = {
-        '1': 0.5,
-        '2': 1.4,
-        '3': 4.3,
-        '4': 8.0,
-        '5': 23.0,
-    }
-
-    total_experience = 0
-
-    for unit in losing_side:
-        try:
-            print(f"Обработка юнита: {unit.get('unit_name')}")
-            print(f"Данные юнита: {unit}")
-
-            if 'units_stats' not in unit or 'Класс юнита' not in unit['units_stats']:
-                print(f"Проблема с данными юнита: {unit.get('unit_name')}")
-                continue
-
-            unit_class = unit['units_stats']['Класс юнита']
-            killed_units = unit['killed_count']
-
-            if killed_units > 0 and unit_class in experience_points:
-                experience = experience_points[unit_class] * killed_units
-                total_experience += experience
-                print(f"Юнит: {unit['unit_name']}, Класс: {unit_class}, Убито: {killed_units}, Опыт: {experience}")
-        except Exception as e:
-            print(f"Ошибка при обработке юнита {unit.get('unit_name')}: {e}")
-
-    if total_experience > 0:
-        try:
+        with db_connection:  # BEGIN + commit() / rollback() автоматически
             cursor = db_connection.cursor()
-            db_connection.execute("BEGIN")
 
-            # Проверяем, существует ли уже запись с id=1
-            cursor.execute("SELECT COUNT(*) FROM experience WHERE id = 1")
-            exists = cursor.fetchone()
+            # Проверяем, существует ли уже запись для этой фракции
+            cursor.execute("SELECT COUNT(*) FROM results WHERE faction = ?", (faction,))
+            exists = cursor.fetchone()[0]
 
-            if exists['COUNT(*)'] > 0:
-                # Обновляем существующее значение
+            if exists > 0:
+                # Обновляем существующую запись
                 cursor.execute("""
-                    UPDATE experience
-                    SET experience_value = experience_value + ?
-                    WHERE id = 1
-                """, (total_experience,))
+                    UPDATE results
+                    SET 
+                        Units_Combat = Units_Combat + ?, 
+                        Units_Destroyed = Units_Destroyed + ?,
+                        Units_killed = Units_killed + ?
+                    WHERE faction = ?
+                """, (units_combat, units_destroyed, enemy_losses, faction))
             else:
                 # Вставляем новую запись
                 cursor.execute("""
-                    INSERT INTO experience (id, experience_value)
-                    VALUES (1, ?)
-                """, (total_experience,))
+                    INSERT INTO results (
+                        Units_Combat, Units_Destroyed, Units_killed, 
+                        Army_Efficiency_Ratio, Average_Deal_Ratio, 
+                        Average_Net_Profit_Coins, Average_Net_Profit_Raw, 
+                        Economic_Efficiency, faction
+                    )
+                    VALUES (?, ?, ?, 0, 0, 0, 0, 0, ?)
+                """, (units_combat, units_destroyed, enemy_losses, faction))
 
-            db_connection.commit()
-        except Exception as e:
-            db_connection.rollback()
-            print(f"Ошибка при обновлении таблицы experience: {e}")
+    except sqlite3.IntegrityError as e:
+        print(f"[ERROR] Ошибка целостности данных в results: {e}")
+    except sqlite3.Error as e:
+        print(f"[ERROR] Ошибка базы данных в update_results_table: {e}")
+    except Exception as e:
+        print(f"[ERROR] Неожиданная ошибка в update_results_table: {e}")
 
 def show_battle_report(report_data, is_user_involved=False, user_faction=None, conn=None):
     """
@@ -278,60 +223,91 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
           attacking_fraction, defending_fraction, conn):
     """
     Основная функция боя между двумя армиями.
+
+    :param attacking_city: Название города, откуда идёт атака
+    :param defending_city: Название города, который защищается
+    :param defending_army: Список оборонительных юнитов
+    :param attacking_army: Список атакующих юнитов
+    :param attacking_fraction: Фракция атакующего
+    :param defending_fraction: Фракция защитника
+    :param conn: Активное соединение с БД
+    :return: dict с результатами боя
     """
     print('Армия attacking_army: ', attacking_army)
-    conn.row_factory = sqlite3.Row
+    print('Армия defending_army: ', defending_army)
+
+    # Создаем новый курсор для работы с базой данных
     cursor = conn.cursor()
+
     try:
+        # Получаем фракцию игрока
         cursor.execute("SELECT faction_name FROM user_faction")
         result = cursor.fetchone()
-        user_faction = result['faction_name'] if result else None
+        user_faction = result[0] if result else None
     except Exception as e:
-        print(f"Ошибка загрузки faction_name: {e}")
+        print(f"[ERROR] Не удалось получить фракцию игрока: {e}")
         user_faction = None
+
     is_user_involved = False
 
+    # Проверяем участие игрока в бою
     if user_faction:
         # Проверяем атакующую армию
         for unit in attacking_army:
-            unit_name = unit['unit_name']
+            if isinstance(unit, dict) and 'unit_name' in unit:
+                unit_name = unit['unit_name']
+            elif isinstance(unit, (list, tuple)) and len(unit) > 0:
+                unit_name = unit[0]
+            else:
+                print("[WARNING] Неверный формат юнита в атакующей армии.")
+                continue
+
             try:
                 cursor.execute("SELECT faction FROM units WHERE unit_name = ?", (unit_name,))
                 result = cursor.fetchone()
-                if result and result['faction'] == user_faction:
+                if result and result[0] == user_faction:
                     is_user_involved = True
                     break
-            except Exception as e:
-                print(f"Ошибка при проверке фракции для {unit_name}: {e}")
+            except sqlite3.Error as e:
+                print(f"[ERROR] Не удалось проверить фракцию для '{unit_name}': {e}")
 
-        # Если не найдено, проверяем обороняющуюся армию
+        # Если атакующий игрок не участвует — проверяем оборону
         if not is_user_involved:
             for unit in defending_army:
-                unit_name = unit['unit_name']
+                if isinstance(unit, dict) and 'unit_name' in unit:
+                    unit_name = unit['unit_name']
+                elif isinstance(unit, (list, tuple)) and len(unit) > 0:
+                    unit_name = unit[0]
+                else:
+                    print("[WARNING] Неверный формат юнита в обороняющейся армии.")
+                    continue
+
                 try:
                     cursor.execute("SELECT faction FROM units WHERE unit_name = ?", (unit_name,))
                     result = cursor.fetchone()
-                    if result and result['faction'] == user_faction:
+                    if result and result[0] == user_faction:
                         is_user_involved = True
                         break
-                except Exception as e:
-                    print(f"Ошибка при проверке фракции для {unit_name}: {e}")
+                except sqlite3.Error as e:
+                    print(f"[ERROR] Не удалось проверить фракцию для '{unit_name}': {e}")
+
+    # Завершаем работу с курсором
+    cursor.close()
 
     # Объединяем одинаковые юниты
     merged_attacking = merge_units(attacking_army)
-    # Объединяем гарнизон
     merged_defending = merge_units(defending_army)
 
-    # Инициализируем счётчики для merged списков
+    # Инициализируем потери
     for u in merged_attacking + merged_defending:
         u['initial_count'] = u['unit_count']
         u['killed_count'] = 0
 
     # Приоритет для сортировки: класс (по возрастанию), затем атака (по убыванию)
     def priority(u):
-        stats = u['units_stats']
-        unit_class = int(stats.get('Класс юнита', 0))  # Класс юнита (чем меньше, тем раньше вступает в бой)
-        attack = int(stats.get('Урон', 0))  # Урон (чем больше, тем раньше вступает в бой)
+        stats = u.get('units_stats', {})
+        unit_class = int(stats.get('Класс юнита', 0))
+        attack = int(stats.get('Урон', 0))
         return (unit_class, -attack)  # Сортируем по классу (возрастание), затем по урону (убывание)
 
     merged_attacking.sort(key=priority)
@@ -342,7 +318,8 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
         for df in merged_defending:
             if atk['unit_count'] > 0 and df['unit_count'] > 0:
                 atk_new, df_new = battle_units(atk, df, defending_city, user_faction, conn)
-                atk['unit_count'], df['unit_count'] = atk_new['unit_count'], df_new['unit_count']
+                atk['unit_count'] = atk_new['unit_count']
+                df['unit_count'] = df_new['unit_count']
 
     # Вычисляем потери после боя
     for u in merged_attacking + merged_defending:
@@ -359,7 +336,7 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
         attacking_army=merged_attacking,
         defending_army=merged_defending,
         attacking_fraction=attacking_fraction,
-        cursor=conn.cursor()
+        conn=conn  # Передаем conn, чтобы внутри использовать свой курсор
     )
 
     # Подготовка данных для таблицы results
@@ -372,35 +349,23 @@ def fight(attacking_city, defending_city, defending_army, attacking_army,
     update_results_table(conn, attacking_fraction, total_attacking_units, total_attacking_losses, total_defending_losses)
     update_results_table(conn, defending_fraction, total_defending_units, total_defending_losses, total_attacking_losses)
 
-    # Начисляем опыт игроку
-    if is_user_involved:
-        if winner == 'attacking' and attacking_fraction == user_faction:
-            calculate_experience(merged_defending, conn)
-        elif winner == 'defending' and defending_fraction == user_faction:
-            calculate_experience(merged_attacking, conn)
 
-    # Подготовка итоговых списков для отчёта
-    final_report_attacking = []
-    for u in merged_attacking:
-        report_unit = {
-            'unit_name': u['unit_name'],
-            'initial_count': u['initial_count'],
-            'unit_count': u['unit_count'],
-            'killed_count': u['killed_count'],
-        }
-        final_report_attacking.append(report_unit)
+    # Формируем отчёт
+    final_report_attacking = [{
+        'unit_name': u['unit_name'],
+        'initial_count': u['initial_count'],
+        'unit_count': u['unit_count'],
+        'killed_count': u['killed_count']
+    } for u in merged_attacking]
 
-    final_report_defending = []
-    for u in merged_defending:
-        report_unit = {
-            'unit_name': u['unit_name'],
-            'initial_count': u['initial_count'],
-            'unit_count': u['unit_count'],
-            'killed_count': u['killed_count'],
-        }
-        final_report_defending.append(report_unit)
+    final_report_defending = [{
+        'unit_name': u['unit_name'],
+        'initial_count': u['initial_count'],
+        'unit_count': u['unit_count'],
+        'killed_count': u['killed_count']
+    } for u in merged_defending]
 
-    # Показываем единый отчёт при участии игрока
+    # Показываем отчет при участии игрока
     if is_user_involved:
         report_data = generate_battle_report(
             final_report_attacking,
@@ -559,12 +524,12 @@ def battle_units(attacking_unit, defending_unit, city, user_faction, conn):
 
 def update_garrisons_after_battle(winner, attacking_city, defending_city,
                                   attacking_army, defending_army,
-                                  attacking_fraction, cursor):
+                                  attacking_fraction, conn):
     """
     Обновляет гарнизоны после боя.
     """
     try:
-        with cursor.connection:
+            cursor = conn.cursor()
             if winner == 'attacking':
                 # Если победила атакующая сторона
                 # Удаляем гарнизон обороняющейся стороны
@@ -815,8 +780,8 @@ def update_dossier_battle_stats(conn, user_faction, is_victory):
                         faction, battle_victories, battle_defeats, last_data
                     ) VALUES (?, 0, 1, datetime('now'))
                 """, (user_faction,))
-        db_connection.commit()
+        conn.commit()
         print(f"[Досье] Обновлены данные для фракции '{user_faction}'")
     except Exception as e:
-        db_connection.rollback()
+        conn.rollback()
         print(f"[Ошибка] Не удалось обновить досье: {e}")
