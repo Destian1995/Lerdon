@@ -1442,7 +1442,6 @@ class FortressInfoPopup(Popup):
         :param taken_count: Количество юнитов для переноса.
         """
         try:
-            self.conn.execute("BEGIN IMMEDIATE")  # Явная блокировка
             cursor = self.cursor
 
             # Шаг 1: Проверяем наличие юнитов в исходном городе
