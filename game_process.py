@@ -489,8 +489,8 @@ class GameScreen(Screen):
         self.season_manager.update(self.current_idx, self.conn)
         # Запускаем обновление ресурсов каждую 1 секунду
         Clock.schedule_interval(self.update_cash, 1)
-        # Запускаем обновление рейтинга армии каждые 1 секунду
-        Clock.schedule_interval(self.update_army_rating, 1)
+        # Запускаем обновление рейтинга армии каждые 1.4 секунду
+        Clock.schedule_interval(self.update_army_rating, 1.4)
 
     def save_selected_faction_to_db(self):
         conn = self.conn
